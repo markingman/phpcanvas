@@ -1,0 +1,12 @@
+{
+	"name": "markingman/phpcanvas",
+	"description": "A web application framework written in PHP",
+	"license": "MIT",
+    "type": "library",
+    "require": {
+        "php": ">=7"
+    },
+	"require-dev": {
+		"phpunit/phpunit": "^7"
+	}
+}
