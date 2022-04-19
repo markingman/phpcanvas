@@ -2,7 +2,7 @@
 
 namespace PHPCanvas\Scope;
 
-class Scope
+class Scope implements ScopeInterface
 {
 
 }
