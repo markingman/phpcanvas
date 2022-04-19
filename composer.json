@@ -5,7 +5,7 @@
     "type": "library",
     "autoload": {
         "psr-4": {
-            "PHPCanvas\\": "src/classes/PHPCanvas",
+            "PHPCanvas\\": "src/classes/PHPCanvas"
         },
 	    "files": ["src/phpcanvas.php"]
     },
