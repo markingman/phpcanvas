@@ -1,1 +1,6 @@
 .DS_Store
+.phpunit*
+/.idea
+/composer.lock
+/tmp
+/vendor
