@@ -20,7 +20,7 @@ class Container implements ContainerInterface, ArrayAccess
 		$this->store_path = $path;
 	}
 
-	public function get_store(): void
+	public function get_store(): string
 	{
 		return $this->store_path;
 	}
