@@ -305,7 +305,7 @@ class Router implements RouterInterface
 			$link = vsprintf($route[static::PRNTF], $vars);
 
 			if ($query_vars) {
-				$link .= '?' . http_build_query($query_vars, null, '&', PHP_QUERY_RFC3986);
+				$link .= '?' . http_build_query($query_vars, '', '&', PHP_QUERY_RFC3986);
 			}
 
 			return '/' . $link;
