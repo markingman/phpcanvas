@@ -3,6 +3,9 @@
 	"description": "A lightweight PHP web application framework",
 	"license": "MIT",
     "type": "library",
+	"config": {
+        "vendor-dir": "vendor"
+    },
     "autoload": {
         "psr-4": {
             "PHPCanvas\\": "src/classes/PHPCanvas"
