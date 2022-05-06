@@ -12,11 +12,11 @@ use PHPCanvas\Routing\DispatchInterface;
 class Application
 {
 	const PHPCANVAS_VERSION = 2.0;
-	public $Config;
-	public $Container;
-	public $Request;
-	public $Response;
-	public $Dispatch;
+	public ConfigInterface $Config;
+	public ContainerInterface $Container;
+	public RequestInterface $Request;
+	public ResponseInterface $Response;
+	public DispatchInterface $Dispatch;
 
 	public function __construct(
 		ConfigInterface $Config,
