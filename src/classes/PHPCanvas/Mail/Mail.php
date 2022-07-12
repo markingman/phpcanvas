@@ -1,12 +1,4 @@
 <?php
-/**
- * This file is part of PHPCanvas
- *
- * $Id: Mail.php 823 2020-09-23 22:55:23Z mark $
- *
- * @copyright   Copyright (C) 2016 Mark Ingman, Valhalla Software
- * @license     http://phpcanvas.org/liecnse
- */
 
 namespace PHPCanvas\Mail;
 
@@ -15,13 +7,13 @@ use PHPCanvas\Logs\LogHandlerInterface;
 
 class Mail implements MailInterface
 {
-	protected $LogHandler;
-	public $mail_sender;
-	protected $active;
-	protected $regx;
-	public $log_mbx_name = 'mail_log_dev.mbx';
+	protected LogHandlerInterface $LogHandler;
+	protected bool $active;
+	protected string $regx;
+	public string $mail_sender;
+	public string $log_mbx_name = 'mail_log_dev.mbx';
 
-	function __construct(LogHandlerInterface $LogHandler, $mail_sender, $active = false, $regx = '')
+	function __construct(LogHandlerInterface $LogHandler, string $mail_sender, bool $active = false, string $regx = '')
 	{
 		$this->LogHandler = $LogHandler;
 		$this->mail_sender = $mail_sender;
