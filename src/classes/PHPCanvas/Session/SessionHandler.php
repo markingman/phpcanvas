@@ -4,9 +4,9 @@ namespace PHPCanvas\Session;
 
 class SessionHandler implements \SessionHandlerInterface
 {
-	protected $_SESSION;
-	private $dir;
-	private $ref;
+	protected array $_SESSION;
+	private string $dir;
+	private string $ref;
 
 	public function init(array $s = null)
 	{
@@ -98,7 +98,7 @@ class SessionHandler implements \SessionHandlerInterface
 
 	public function gc(int $t): int|false
 	{
-		foreach ((array)glob($this->dir . /*'/**/'/*') as $f) {
+		foreach ((array)glob($this->dir . /*'/**/ '/*') as $f) {
 			if ((filemtime($f) + $t) < time()) {
 				unlink($f);
 			}
