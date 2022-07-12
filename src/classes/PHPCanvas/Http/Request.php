@@ -29,12 +29,12 @@ class Request implements RequestInterface
 		$this->set_cookie($cookie);
 	}
 
-	public function set_headers($headers = null)
+	public function set_headers($headers = null): void
 	{
 		$this->headers = $headers;//dont want to call apache_request_headers each page load, 'lazy load' default in get_header()
 	}
 
-	public function set_get($get = null)
+	public function set_get($get = null): void
 	{
 		if (is_null($get)) {
 			$this->set('_GET', $_GET);
@@ -43,7 +43,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_post($post = null)
+	public function set_post($post = null): void
 	{
 		if (is_null($post)) {
 			$this->set('_POST', $_POST);
@@ -52,7 +52,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_files($files = null)
+	public function set_files($files = null): void
 	{
 		if (is_null($files)) {
 			$this->set('_FILES', $_FILES);
@@ -61,7 +61,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_server($server = null)
+	public function set_server($server = null): void
 	{
 		if (is_null($server)) {
 			$this->set('_SERVER', $_SERVER);
@@ -70,7 +70,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_cookie($cookie = null)
+	public function set_cookie($cookie = null): void
 	{
 		if (is_null($cookie)) {
 			$this->set('_COOKIE', $_COOKIE);
@@ -79,17 +79,17 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_method(string $method)
+	public function set_method(string $method): void
 	{
 		$this->method = strtoupper((string)filter_var($method, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
 	}
 
-	public function set_path(string $url)
+	public function set_path(string $url): void
 	{
 		$this->path = parse_url((string)filter_var($url, FILTER_SANITIZE_URL), PHP_URL_PATH);
 	}
 
-	public function set_ua($ua = null)
+	public function set_ua($ua = null): void
 	{
 		if (is_string($ua)) {
 			$this->ua = $ua;
@@ -98,7 +98,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_ip($ip = null)//@todo: include forwarded for?
+	public function set_ip($ip = null):void //@todo: include forwarded for?
 	{
 		if (is_string($ip)) {
 			$this->ip = $ip;
@@ -108,7 +108,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_ref($ref)
+	public function set_ref($ref): void
 	{
 		if (is_string($ref)) {
 			$this->ref = $ref;
@@ -118,7 +118,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	protected function set($var, &$values)
+	protected function set($var, &$values): void
 	{
 		$this->$var =& $values;
 	}
@@ -134,7 +134,7 @@ class Request implements RequestInterface
 // 		return $ua;
 // 	}
 
-	public function get_header($header)
+	public function get_header($header): string|null
 	{
 		if (is_null($this->headers)) {
 			$this->headers = apache_request_headers();
@@ -147,7 +147,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function get_id($ids = 'id', $where = self::GP, $default = 0, $min_range = 0)
+	public function get_id(string|array $ids = 'id', int $where = self::GP, int $default = 0, int $min_range = 0)
 	{
 		foreach ((array)$ids as $id) {
 			if ($where != self::P and isset($this->_GET[$id])) {
@@ -160,7 +160,7 @@ class Request implements RequestInterface
 		return $default;
 	}
 
-	public function get_var($vars = 'arg1', $where = self::GP, $default = '')
+	public function get_var($vars = 'arg1', int $where = self::GP, $default = '')
 	{
 		foreach ((array)$vars as $var) {
 			if ($where != self::P and isset($this->_GET[$var])) {
@@ -173,7 +173,7 @@ class Request implements RequestInterface
 		return $default;
 	}
 
-	public function get_val($vars = 'arg1', $where = self::GP, $default = '')
+	public function get_val($vars = 'arg1', int $where = self::GP, $default = '')
 	{
 		foreach ((array)$vars as $var) {
 			if ($where != self::P and isset($this->_GET[$var])) {
@@ -186,7 +186,7 @@ class Request implements RequestInterface
 		return $default;
 	}
 
-	public function get_array($var, $where = self::GP, $default = [], $filter = 'filter_val')
+	public function get_array($var, int $where = self::GP, $default = [], $filter = 'filter_val')
 	{
 		//force single level array
 		$return = $default;
@@ -205,7 +205,7 @@ class Request implements RequestInterface
 		return array_map([$this, $filter], array_values($return));
 	}
 
-	public function get_id_array($var, $where = self::GP, $default = [])
+	public function get_id_array($var, int $where = self::GP, array $default = [])
 	{
 		//force single level array
 		$return = $default;
@@ -224,12 +224,12 @@ class Request implements RequestInterface
 		return array_values($return);
 	}
 
-	public function get_sel($vars = 'arg1', $opts, $where = self::GP)
+	public function get_sel($vars = 'arg1', $opts, int $where = self::GP)
 	{
 		return in_array($sel = $this->get_var($vars, $where), $opts) ? $sel : $opts[0];
 	}
 
-	public function get_ua()
+	public function get_ua(): string
 	{
 		if (is_null($this->ua)) {
 			$this->set_ua();
@@ -238,7 +238,7 @@ class Request implements RequestInterface
 		return $this->ua;
 	}
 
-	public function get_ip()
+	public function get_ip(): string
 	{
 		if (is_null($this->ip)) {
 			$this->set_ip();
@@ -247,7 +247,7 @@ class Request implements RequestInterface
 		return $this->ip;
 	}
 
-	public function get_ref()
+	public function get_ref(): string
 	{
 		if (is_null($this->ref)) {
 			$this->set_ref();
@@ -256,7 +256,7 @@ class Request implements RequestInterface
 		return $this->ref;
 	}
 
-	public function get_method()
+	public function get_method(): string
 	{
 		if (is_null($this->method)) {
 			$this->set_method((string)@$this->_SERVER['REQUEST_METHOD']);
@@ -265,7 +265,7 @@ class Request implements RequestInterface
 		return $this->method;
 	}
 
-	public function get_path()
+	public function get_path(): string
 	{
 		if (is_null($this->path)) {
 			$this->set_path((string)@$this->_SERVER['REDIRECT_URL']);
@@ -274,7 +274,7 @@ class Request implements RequestInterface
 		return $this->path;
 	}
 
-	public function get_request($method = null, $path = null)
+	public function get_request(?string $method = null, ?string $path = null): array
 	{
 		if (!is_null($method)) {
 			$this->set_method($method);
@@ -287,27 +287,30 @@ class Request implements RequestInterface
 		return [$this->get_method(), $this->get_path()];
 	}
 
-	public function is_ssl($port = 443)
+	public function is_ssl(?int $port = 443, bool $no_cache = false): bool
 	{
 		static $is_ssl;
 
-		if (is_null($is_ssl)) {
+		if (is_null($is_ssl) or $no_cache) {
+			if (is_null($port)) {
+				$port = 443;
+			}
 			$is_ssl = (!empty($this->_SERVER['HTTPS']) and !empty($this->_SERVER['SERVER_PORT']) and $this->_SERVER['SERVER_PORT'] === $port);
 		}
 
 		return $is_ssl;
 	}
 
-	public function is_post()
+	public function is_post(): bool
 	{
 		return ($this->get_method() === 'POST');
 	}
 
-	public function is_ajax()
+	public function is_ajax(bool $no_cache = false): bool
 	{
 		static $is_ajax;
 
-		if (is_null($is_ajax)) {
+		if (is_null($is_ajax) or $no_cache) {
 			//or accept application/json header
 			$is_ajax = (strtolower((string)filter_var(@$this->_SERVER['HTTP_X_REQUESTED_WITH'])) === 'xmlhttprequest');
 		}
@@ -315,12 +318,12 @@ class Request implements RequestInterface
 		return $is_ajax;
 	}
 
-	protected function filter_regx_var($value)
+	protected function filter_regx_var(mixed $value): string
 	{
 		return (is_string($value) and preg_match('~^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]**$~i', $value)) ? $value : '';
 	}
 
-	protected function filter_val($var)
+	protected function filter_val(mixed $var): string
 	{
 		return trim((string)filter_var($var, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_HIGH | FILTER_FLAG_STRIP_LOW));
 	}
