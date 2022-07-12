@@ -10,7 +10,7 @@ interface FinderInterface
 
 	public function get_dirs();
 
-	public function get(string $path, $dir = null, $cache = true);
+	public function get(string $path, ?string $dir = null, bool $cache = true): ?string;
 
 	public function glob(string $glob, $dir = null);
 }

@@ -13,7 +13,7 @@ class Finder implements FinderInterface
 		}
 	}
 
-	public function set_dirs(array $dirs)
+	public function set_dirs(array $dirs): bool
 	{
 		//[vendor/project => /path/to/dir, ...]
 
@@ -32,7 +32,7 @@ class Finder implements FinderInterface
 		return true;
 	}
 
-	public function get_dir(string $dir)
+	public function get_dir(string $dir): ?string
 	{
 		return @$this->dirs[$dir] ?: null;
 	}
@@ -42,12 +42,15 @@ class Finder implements FinderInterface
 		return $this->dirs;
 	}
 
-	public function get(string $path, $dir = null, $cache = true)
+	public function get(string $path, ?string $dir = null, bool $cache = true): ?string
 	{
 		static $paths = [];
 
-		if ($cache and isset($paths[$path])) {
-			return $paths[$path];
+		if ($cache) {
+			$cachep = ($dir ? $dir . ':' : '') . $path;
+			if (isset($paths[$cachep])) {
+				return $paths[$cachep];
+			}
 		}
 
 		$file = null;
@@ -70,42 +73,45 @@ class Finder implements FinderInterface
 		}
 
 		if ($cache) {
-			$paths[$path] = $file;
+			$paths[$cachep] = $file;
 		}
 
 		return $file;
 	}
 
-	public function glob(string $glob, $dir = null)
+	public function glob(string $glob, mixed $dir = null): array
 	{
+		$files = [];
+
 		if (is_string($dir)) {
 
 			if (isset($this->dirs[$dir])) {
-				return glob($this->dirs[$dir] . '/' . $glob);
+				$len = strlen($this->dirs[$dir]) + 1;
+				foreach (glob($this->dirs[$dir] . '/' . $glob) as $file) {
+					$files[substr($file, $len)] = $file;
+				}
 			}
 
 		} elseif (is_array($dir)) {
 
-			$files = [];
-			foreach (array_intersect($this->dirs, $dir) as $dir) {
-				foreach (glob($dir . '/' . $glob) as $file) {
-					$files[$file] = null;
+			foreach (array_intersect(array_keys($this->dirs), $dir) as $dir) {
+				$len = strlen($this->dirs[$dir]) + 1;
+				foreach (glob($this->dirs[$dir] . '/' . $glob) as $file) {
+					$files[substr($file, $len)] = $file;
 				}
 			}
-
-			return array_keys($files);
 
 		} else {
 
-			$files = [];
 			foreach ($this->dirs as $dir) {
+				$len = strlen($dir) + 1;
 				foreach (glob($dir . '/' . $glob) as $file) {
-					$files[$file] = null;
+					$files[substr($file, $len)] = $file;
 				}
 			}
 
-			return array_keys($files);
-
 		}
+
+		return $files;
 	}
 }
