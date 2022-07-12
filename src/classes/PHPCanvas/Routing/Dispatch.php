@@ -66,7 +66,7 @@ class Dispatch implements DispatchInterface
 		}
 
 		if (!is_callable([$Controller, $this->action])) {
-			throw new Exception(sprintf('NO_ACTION; Could not call action for %s::%s', $this->controller, $this->action), 500);
+			throw new Exception(sprintf('NO_ACTION; Could not call action for %s::%s', $this->controller, $this->action), 404);
 		}
 
 		try {
