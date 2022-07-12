@@ -9,17 +9,17 @@ class ErrorHandler
 	protected $view;
 	protected $log;
 
-	public function set_view(callable $view)
+	public function set_view(callable $view): void
 	{
 		$this->view = $view;
 	}
 
-	public function set_log(callable $log)
+	public function set_log(callable $log): void
 	{
 		$this->log = $log;
 	}
 
-	public function handle_error($num, $str, $file, $line, $context = null)
+	public function handle_error($num, $str, $file, $line, $context = null): void
 	{
 		if ($num === 0 or is_null($num)) {
 			return;
@@ -30,7 +30,7 @@ class ErrorHandler
 		);
 	}
 
-	public function handle_exception(Throwable $e)
+	public function handle_exception(Throwable $e): void
 	{
 		if ($this->ignore($e)) {
 			return;
@@ -47,14 +47,14 @@ class ErrorHandler
 		exit;
 	}
 
-	public function handle_fatal()
+	public function handle_fatal(): void
 	{
 		if ($error = error_get_last()) {
 			$this->handle_error($error['type'], $error['message'], $error['file'], $error['line']);
 		}
 	}
 
-	public function handle_shutdown()
+	public function handle_shutdown(): void
 	{
 		if (($error = error_get_last()) !== null) {
 			if (in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
