@@ -35,7 +35,10 @@ class Application
 	public function run(?string $method = null, ?string $path = null): void
 	{
 		try {
-			$this->Dispatch->call_controller($method ?: $this->Request->get_method(), $path ?: $this->Request->get_path());
+			$this->Dispatch->call_controller(
+				$method ?: $this->Request->get_method(),
+				$path ?: $this->Request->get_path()
+			);
 		} catch (Exception $e) {
 			throw $e;
 		}
