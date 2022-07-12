@@ -32,7 +32,7 @@ class Application
 		$this->Dispatch = $Dispatch;
 	}
 
-	public function run(string $method = null, string $path = null)
+	public function run(?string $method = null, ?string $path = null): void
 	{
 		try {
 			$this->Dispatch->call_controller($method ?: $this->Request->get_method(), $path ?: $this->Request->get_path());
