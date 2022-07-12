@@ -2,7 +2,7 @@
 
 namespace PHPCanvas;
 
-use \Exception;
+use Exception;
 use PHPCanvas\ConfigInterface;
 use PHPCanvas\ContainerInterface;
 use PHPCanvas\Http\RequestInterface;
