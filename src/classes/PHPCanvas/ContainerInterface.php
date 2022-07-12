@@ -14,9 +14,9 @@ interface ContainerInterface
 
 	public function register_if_not_exists(string $name, Closure $closure): void;
 
-	public function locate(string $name, $path, $args = null): void;
+	public function locate(string $name, string $path, $args = null): void;
 
-	public function locate_if_not_exists(string $name, $path, $args = null): void;
+	public function locate_if_not_exists(string $name, string $path, $args = null): void;
 
 	public function locates(array $locations): void;
 
@@ -26,13 +26,13 @@ interface ContainerInterface
 
 	public function call($class, $method_name, $args = [], $force_new = false);
 
-	public function create($name, $store = false);
+	public function create(string $name, bool $store = false): mixed;
 
-	public function get($name);
+	public function get(string $name): mixed;
 
-	public function exists($name);
+	public function exists(string $name): bool;
 
-	public function get_cache($name);
+	public function get_cache(string $name): bool;
 
-	public function cache($name, $instance = null);
+	public function cache(string $name, ?string $instance = null): bool;
 }

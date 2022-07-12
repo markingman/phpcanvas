@@ -1,10 +1,10 @@
-<?php // $Id: ContainerTest.php 772 2018-05-17 09:12:20Z dev $
+<?php
 
-use PHPCanvasTestHelpersTrait as PHPCanvasTestHelpersTrait;
 use PHPCanvas\Container;
 use PHPCanvas\ContainerInterface;
+use PHPUnit\Framework\TestCase;
 
-class ContainerTest extends PHPUnit_Framework_TestCase
+class ContainerTest extends TestCase
 {
 	use PHPCanvasTestHelpersTrait;
 
@@ -12,7 +12,7 @@ class ContainerTest extends PHPUnit_Framework_TestCase
 	public static $dir_classes;
 	public static $dir_locations;
 
-	public static function mock_autoload($class)
+	public static function mock_autoload($class): void
 	{
 		include_once static::$dir_classes . '/' . $class . '.php';
 	}
@@ -24,7 +24,7 @@ class ContainerTest extends PHPUnit_Framework_TestCase
 		return new TestClass1;
 	}*/
 
-	public static function setUpBeforeClass()
+	public static function setUpBeforeClass(): void
 	{
 		$class = self::class;
 
@@ -123,7 +123,7 @@ __
 		);
 	}
 
-	public function setUp()
+	public function setUp(): void
 	{
 		$this->Container = new Container();
 	}
@@ -135,9 +135,6 @@ __
 
 	public function testStore()
 	{
-		//public function set_store($path)
-		//public function get_store()
-
 		$store = static::$tmpdir;
 		$this->Container->set_store($store);
 		
@@ -146,20 +143,61 @@ __
 		
 		$this->assertEquals($store_expected, $store_from_container);
 	}
-	
+
+	public function testRegister()
+	{
+		$class = 'TestClass1';
+		$closure = function() use ($class) {
+			self::mock_autoload($class);
+
+			return new $class;
+		};
+
+		$this->Container->register($class, $closure);
+
+		$from_container = $this->Container->list_registry();
+		$expected = [$class => $closure];
+
+		$this->assertEquals($expected, $from_container);
+	}
+
+	public function testRegisterIfNotExists()
+	{
+		$class = 'TestClass1';
+		$closure = function() use ($class) {
+			self::mock_autoload($class);
+
+			return new $class;
+		};
+
+		$class2 = 'TestClass2';
+		$closure2 = function() use ($class2) {
+			self::mock_autoload($class2);
+
+			return new $class2;
+		};
+
+		$this->Container->register($class, $closure);
+		$this->Container->register_if_not_exists($class, $closure2);
+		$this->Container->register_if_not_exists($class2, $closure2);
+
+		$from_container = $this->Container->list_registry();
+		$expected = [$class => $closure, $class2 => $closure2];
+		
+		$this->assertEquals($expected, $from_container);
+	}
+
 	public function testLocate()
 	{
-		//public function locate($name, $path[, $args = null])
-
 		$class = 'TestClass1';
-		$path = static::$dir_locations . "/$class.php";
+		$path = static::$dir_locations . "/register.$class.php";
 
 		$this->Container->locate($class, $path);
 		
-		$locations_from_container = $this->Container->list_locations();
-		$locations_expected = [$class => $path];
+		$from_container = $this->Container->list_locations();
+		$expected = [$class => $path];
 		
-		$this->assertEquals($locations_expected, $locations_from_container);
+		$this->assertEquals($expected, $from_container);
 	}
 
 	public function testLocateWithArguments()
@@ -167,111 +205,84 @@ __
 		//public function lcate($name, $path, $args = null)
 
 		$class = 'TestClass1';
-		$path = static::$dir_classes . "/$class.php";
+		$path = static::$dir_locations . "/register.$class.php";
 		$a = 123;
 		$b = 'test';
 		$args = ['a' => $a, 'b' => $b];
 
 		$this->Container->locate($class, $path, $args);
 		
-		$locations_from_container = $this->Container->list_locations();
-		$locations_expected = [$class => [$path, $args]];
+		$from_container = $this->Container->list_locations();
+		$expected = [$class => [$path, $args]];
 		
-		$this->assertArrayHasKey($class, $locations_from_container);
-		$this->assertEquals($locations_from_container[$class], $locations_expected[$class]);
+		$this->assertEquals($from_container, $expected);
 	}
-	
 	
 	public function testLocateIfNotExists()
 	{
-		//public function locate_if_not_exists($name, $path[, $args = null])
+		$class = 'TestClass1';
+		$path = static::$dir_locations . "/register.$class.php";
 
-		$class_name = 'TestClass1';
-		$path = static::$dir_locations . "/$class_name.php";
+		$class2 = 'TestClass2';
+		$path2 = static::$dir_locations . "/$class2.php";
 
-		$this->Container->locate($class_name, $path);
-		$this->Container->locate_if_not_exists($class_name, $path);
+		$this->Container->locate($class, $path);
+		$this->Container->locate_if_not_exists($class, $path2);
+		$this->Container->locate_if_not_exists($class2, $path2);
 
-		$class_name2 = 'TestClass2';
-		$path2 = static::$dir_locations . "/$class_name2.php";
-
-		$this->Container->locate_if_not_exists($class_name2, $path2);
-
-		$locations_from_container = $this->Container->list_locations();
-		$locations_expected = [$class_name => $path, $class_name2 => $path2];
+		$from_container = $this->Container->list_locations();
+		$expected = [$class => $path, $class2 => $path2];
 		
-		$this->assertArrayHasKey($class_name, $locations_from_container);
-		$this->assertEquals($locations_from_container[$class_name], $locations_expected[$class_name]);
-
-		$this->assertArrayHasKey($class_name2, $locations_from_container);
-		$this->assertEquals($locations_from_container[$class_name2], $locations_expected[$class_name2]);
+		$this->assertEquals($from_container, $expected);
 	}
-	
+
+	public function testLocates()
+	{
+		$locates = [
+			['TestClass1', static::$dir_locations . '/register.TestClass1.php'],
+			['TestClass2', static::$dir_locations . '/register.TestClass2.php', ['a']]
+		];
+
+		$this->Container->locates($locates);
+		
+		$from_container = $this->Container->list_locations();
+		$expected = [
+			'TestClass1' => static::$dir_locations . '/register.TestClass1.php',
+			'TestClass2' => [
+				static::$dir_locations . '/register.TestClass2.php',
+				['a']
+			]
+		];
+		
+		$this->assertEquals($expected, $from_container);
+	}
+
 	public function testCreateFromLocation()
 	{
-		$class_name = 'TestClass1';
-		$path = static::$dir_classes . "/$class_name.php";
+		$class = 'TestClass1';
+		$path = static::$dir_locations . "/register.$class.php";
 
-		$this->Container->locate($class_name, $path);
+		$this->Container->locate($class, $path);
 		
-		$locations_from_container = $this->Container->list_locations();
-		$locations_expected = [$class_name => $path];
-		
-		$this->assertEquals($locations_expected, $locations_from_container);
+		$TestClass1 = $this->Container->create($class);
 
-		$TestClass1 = $this->Container->create($class_name);
-
-		$this->assertInstanceOf($class_name, $TestClass1);
+		$this->assertInstanceOf($class, $TestClass1);
 	}
-
-	public function testRegister()
-	{
-		//public function register($name, \Closure $closure)
-
-		$class_name = 'TestClass1';
-		$this->Container->register($class_name, function() use ($class_name) {
-			self::mock_autoload($class_name);
-
-			return new $class_name;
-		});
-
-		$registrations_from_container = $this->Container->list_registry();
-
-		$this->assertArrayHasKey($class_name, $registrations_from_container);
-		
-		$A = $registrations_from_container[$class_name]();
-		$this->assertInstanceOf($class_name, $A);
-	}
-
-	public function testRegisterFromFile()
-	{
-		$class_name = 'TestClass1';
-		$path = static::$dir_locations . "/register.$class_name.php";
-
-		$this->Container->register($class_name, include $path);
-
-		$registrations_from_container = $this->Container->list_registry();
-
-		$this->assertArrayHasKey($class_name, $registrations_from_container);
-		
-		$A = $registrations_from_container[$class_name]();
-		$this->assertInstanceOf($class_name, $A);
-	}
-
-	//public function register_if_not_exists($name, \Closure $closure)
 
 	public function testCreateFromRegistry()
 	{
-		$class_name = 'TestClass1';
-		$this->Container->register($class_name, function() use ($class_name) {
-			self::mock_autoload($class_name);
+		$class = 'TestClass1';
+		$closure = function() use ($class) {
+			self::mock_autoload($class);
 
-			return new $class_name;
-		});
+			return new $class;
+		};
 
-		$TestClass1 = $this->Container->create($class_name);
+		$this->Container->register($class, $closure);
 
-		$this->assertInstanceOf($class_name, $TestClass1);
+		$TestClass1 = $this->Container->create($class);
+
+		$this->assertInstanceOf($class, $TestClass1);
 	}
 
 	//testCreateWhenInstanciasted
@@ -290,7 +301,7 @@ __
 	
 	//testReflection
 
-	public static function tearDownAfterClass()
+	public static function tearDownAfterClass(): void
 	{
 		static::tmpdir_remove();
 	}
