@@ -20,6 +20,8 @@ class FinderTest extends TestCase
 
 	public static function setUpBeforeClass(): void
 	{
+// 		static::tmpdir_remove();
+
 		static::tmpdir_make(md5(self::class));//md5() as OSX didn't like "FinderTest"??
 
 		static::$dirs = [];
@@ -30,7 +32,11 @@ class FinderTest extends TestCase
 			'xyz/dir3' => '/dir3',
 		] as $name => $path) {
 			$dir = static::$tmpdir . $path;
-			mkdir($dir, 0755, true);
+			if (!is_dir($dir)) {
+				mkdir($dir, 0755, true);
+			}
+			$file = ($name === 'xyz/dir3') ? 'xyz' : 'test';
+			file_put_contents($dir . '/test', $file);
 			static::$dirs[$name] = realpath($dir);
 		}
 	}
@@ -64,35 +70,80 @@ class FinderTest extends TestCase
 		$this->assertEquals($result, static::$dirs);
 	}
 
-// 	public function testGet()
-// 	{
-//
-// 	}
+	public function testGet()
+	{
+		$res = $this->Finder->get('test');
+		$this->assertIsReadable($res);
 
-// 	public function testGetScopeOneDir()
-// 	{
-//
-// 	}
+		$res2 = file_get_contents($res);
+		$this->assertEquals($res2, 'test');
+	}
 
-// 	public function testGetScopeArrayDirs()
-// 	{
-//
-// 	}
+	public function testGetNotFound()
+	{
+		$res = $this->Finder->get('testx');
+		$this->assertNull($res);
+	}
 
-// 	public function testGlob()
-// 	{
-//
-// 	}
+	public function testGetCache()
+	{
+		foreach (range(1, 3) as $i) {
+			$res = $this->Finder->get('test', null, true);
+			$this->assertIsReadable($res);
 
-// 	public function testGlobScopeOneDir()
-// 	{
-//
-// 	}
+			$res2 = file_get_contents($res);
+			$this->assertEquals($res2, 'test');
+		}
+	}
 
-// 	public function testGlobScopeArrayDirs()
-// 	{
-//
-// 	}
+	public function testGetNameDir()
+	{
+		$res = $this->Finder->get('test', 'xyz/dir3');
+		$this->assertNotNull($res);
+		$this->assertIsReadable($res);
+
+		$res2 = file_get_contents($res);
+		$this->assertEquals($res2, 'xyz');
+	}
+
+	public function testGetNameDirCache()
+	{
+		foreach (range(1, 3) as $i) {
+			$res = $this->Finder->get('test', 'xyz/dir3', true);
+			$this->assertIsReadable($res);
+
+			$res2 = file_get_contents($res);
+			$this->assertEquals($res2, 'xyz');
+		}
+	}
+
+	public function testGlob()
+	{
+		$res = $this->Finder->glob('*');
+		foreach ($res as $k => $v) {
+			$this->assertTrue($k === 'test');
+			$this->assertIsReadable($v);
+		}
+	}
+
+	public function testGlobDir()
+	{
+		$res = $this->Finder->glob('*', 'xyz/dir3');
+		foreach ($res as $k => $v) {
+			$this->assertTrue($k === 'test');
+			$this->assertIsReadable($v);
+		}
+	}
+
+	public function testGlobDirs()
+	{
+		$dirs = ['test/dir2', 'xyz/dir3' ];
+		$res = $this->Finder->glob('*', $dirs);
+		foreach ($res as $k => $v) {
+			$this->assertTrue($k === 'test');
+			$this->assertIsReadable($v);
+		}
+	}
 
 	public function testSerializable()
 	{
