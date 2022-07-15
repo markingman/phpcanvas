@@ -2,13 +2,17 @@
 
 namespace PHPCanvas\Cache;
 
+use RecursiveIteratorIterator;
+use RecursiveDirectoryIterator;
+use FilesystemIterator;
+
 class Cache implements CacheInterface
 {
-	protected $dir;
-	protected $prm = 0755;
-	protected $ttl_default = 900;
+	protected string $dir;
+	protected int $prm = 0755;
+	protected int $ttl_default = 900;
 
-	public function __construct(string $dir, $prm = null, ?int $ttl_default = null)
+	public function __construct(string $dir, ?int $prm = null, ?int $ttl_default = null)
 	{
 		$this->dir = $dir;
 
@@ -38,7 +42,7 @@ class Cache implements CacheInterface
 		}
 	}
 
-	public function put(string|array $fp, /*?mixed string|seliaiaable*/ $cache): bool
+	public function put(string|array $fp, mixed $cache, ?int $ttl = null): bool
 	{
 		if (is_array($fp)) {
 			$fp = $this->index($fp[0], $fp[1]);
@@ -59,17 +63,26 @@ class Cache implements CacheInterface
 			$cache = serialize($cache);
 		}
 
+		if (is_null($ttl)) {
+			$ttl = $this->ttl_default;
+		}
+
 		if (file_put_contents($tmp, $cache)) {
+			touch($tmp, time() + $ttl);
 			return rename($tmp, $this->dir . DIRECTORY_SEPARATOR . $fp);
 		} else {
 			return false;
 		}
 	}
 
-	public function get(string|array $fp, int|bool $ttl = false): mixed
+	public function get(string|array $fp, ?int $ttl = null): mixed
 	{
 		if (is_array($fp)) {
 			$fp = $this->index($fp[0], $fp[1]);
+		}
+
+		if (is_null($ttl)) {
+			$ttl = 0;
 		}
 
 		if ($this->test($fp, $ttl)) {
@@ -102,7 +115,7 @@ class Cache implements CacheInterface
 		}
 	}
 
-	public function test(string|array $fp, int|bool $ttl = false): bool
+	public function test(string|array $fp, int $ttl = 0): bool
 	{
 		if (is_array($fp)) {
 			$fp = $this->index($fp[0], $fp[1]);
@@ -110,7 +123,51 @@ class Cache implements CacheInterface
 
 		return (
 			is_readable($this->dir . DIRECTORY_SEPARATOR . $fp)
-			and ($ttl === true or filemtime($this->dir . DIRECTORY_SEPARATOR . $fp) > (time() - ($ttl !== false ? $ttl : $this->ttl_default)))
+			and filemtime($this->dir . DIRECTORY_SEPARATOR . $fp) >= time() + $ttl
 		);
 	}
+
+	public function gc(?int $ttl = null, ?int $max = null): int
+	{
+		if (is_null($ttl)) {
+			$ttl = 0;
+		}
+
+		if (is_null($max)) {
+			$max = PHP_INT_MAX;
+		}
+
+
+	    $it = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator(
+				$this->dir, 
+				FilesystemIterator::SKIP_DOTS// |*/ FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::CURRENT_AS_FILEINFO
+			),
+			RecursiveIteratorIterator::CHILD_FIRST
+
+	    );
+
+	    $files = [];
+	    $dirs = [];
+	    $n = 0;
+	    $t = time() + $ttl;
+
+		$it->rewind();
+		while($it->valid()) {
+			$n++;
+			if (!$it->isDir()) {
+				if ($it->getMtime() < $t) {
+					unlink($it->getPathname());
+				}
+			} else if (iterator_count($it->getChildren()) === 0) {
+				rmdir($it->getPathname());
+			}
+			if ($n >= $max) {
+				break;
+			}
+			$it->next();
+		}
+
+		return $n;
+    }
 }
