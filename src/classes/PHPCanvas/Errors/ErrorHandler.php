@@ -65,13 +65,13 @@ class ErrorHandler
 
 	protected function ignore(Throwable $e = null): bool
 	{
-		switch(error_reporting()) {
+		switch (error_reporting()) {
 			case null:
 			case 0:
 			case E_ERROR | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR | E_PARSE: // 4437
 				return true;
-			default: 
-				return false;	
+			default:
+				return false;
 		}
 	}
 }

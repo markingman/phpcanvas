@@ -98,7 +98,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_ip($ip = null):void //@todo: include forwarded for?
+	public function set_ip($ip = null): void //@todo: include forwarded for?
 	{
 		if (is_string($ip)) {
 			$this->ip = $ip;

@@ -69,6 +69,7 @@ class Cache implements CacheInterface
 
 		if (file_put_contents($tmp, $cache)) {
 			touch($tmp, time() + $ttl);
+
 			return rename($tmp, $this->dir . DIRECTORY_SEPARATOR . $fp);
 		} else {
 			return false;
@@ -138,29 +139,27 @@ class Cache implements CacheInterface
 		}
 
 
-	    $it = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator(
-				$this->dir, 
-				FilesystemIterator::SKIP_DOTS// |*/ FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::CURRENT_AS_FILEINFO
-			),
+		$it = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator($this->dir, FilesystemIterator::SKIP_DOTS),
 			RecursiveIteratorIterator::CHILD_FIRST
+		);
 
-	    );
-
-	    $files = [];
-	    $dirs = [];
-	    $n = 0;
-	    $t = time() + $ttl;
+		$files = [];
+		$dirs = [];
+		$n = 0;
+		$t = time() + $ttl;
 
 		$it->rewind();
-		while($it->valid()) {
+		while ($it->valid()) {
 			$n++;
 			if (!$it->isDir()) {
 				if ($it->getMtime() < $t) {
 					unlink($it->getPathname());
 				}
-			} else if (iterator_count($it->getChildren()) === 0) {
-				rmdir($it->getPathname());
+			} else {
+				if (iterator_count($it->getChildren()) === 0) {
+					rmdir($it->getPathname());
+				}
 			}
 			if ($n >= $max) {
 				break;
@@ -169,5 +168,5 @@ class Cache implements CacheInterface
 		}
 
 		return $n;
-    }
+	}
 }

@@ -212,7 +212,7 @@ class Router implements RouterInterface
 
 		return $routes;
 	}
-	
+
 	public function dump()
 	{
 		return [
@@ -261,7 +261,8 @@ class Router implements RouterInterface
 				if ($ret === false) {
 					return false;
 				}
-				list($controller, $action, $vars) = $ret;
+				[$controller, $action, $vars] = $ret;
+
 				return [$controller, $action, $vars];
 			} else {
 				return false;
@@ -276,7 +277,7 @@ class Router implements RouterInterface
 			return false;
 		}
 
-		$vars =  static::get_route_vars($route[static::VARS], $m);
+		$vars = static::get_route_vars($route[static::VARS], $m);
 		$controller = $route[static::CONTROLLER];
 
 		if (isset($route[static::ACTION]) and strlen($route[static::ACTION])) {//use hardcoded single value
@@ -332,7 +333,7 @@ class Router implements RouterInterface
 		return $this->action_default;
 	}
 
-	public static function test_route_method(string $method, array $route): bool 
+	public static function test_route_method(string $method, array $route): bool
 	{
 		if ($route[static::METHOD] > 0) {
 			if (isset(static::METHODS[$method])) {
@@ -348,6 +349,7 @@ class Router implements RouterInterface
 	public static function get_route_vars(array $route_vars, array $m)
 	{
 		array_shift($m);
+
 		return array_combine(array_keys($route_vars), $m);
 	}
 }

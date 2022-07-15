@@ -136,7 +136,7 @@ class Container implements ContainerInterface, ArrayAccess
 						$this->locate($name, $this->locate_path . '/register.' . $name . '.php');
 					}
 				}
-				
+
 				if (!isset($this->locations[$name])) {
 					try {
 						return $this->instanciate($name);
