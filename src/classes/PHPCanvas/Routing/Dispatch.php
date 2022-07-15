@@ -116,7 +116,7 @@ class Dispatch implements DispatchInterface
 
 	public function instanciate($class, $name, $store = false)
 	{
-		return $this->Container->instanciate($class, $name, $store);
+		return $this->Container->instanciate($class, $name, [], $store);
 	}
 
 	public function call($class, $method, $params = [])

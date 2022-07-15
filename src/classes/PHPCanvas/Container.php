@@ -9,8 +9,8 @@ use ReflectionClass;
 
 class Container implements ContainerInterface, ArrayAccess
 {
-	protected bool $store_path = false;
-	protected string $locate_path;
+	protected string $store_path = '';
+	protected string $locate_path = '';
 	protected array $registry = [];
 	protected array $locations = [];
 	protected array $instances = [];
@@ -64,7 +64,7 @@ class Container implements ContainerInterface, ArrayAccess
 	{
 		foreach ($locations as $location) {
 			if (isset($location[3])) {
-				if ($Container->get_cache($location[0])) {
+				if ($this->get_cache($location[0])) {
 					continue;
 				}
 			}
@@ -82,7 +82,7 @@ class Container implements ContainerInterface, ArrayAccess
 		}
 	}
 
-	public function instanciate($class_name, $name = null, $args = [], $store_reflection = false): mixed
+	public function instanciate(string $class_name, ?string $name = null, array $args = [], bool $store_reflection = false): mixed
 	{
 		if (!is_null($name)) {
 			if (isset($this->registry[$name]) or isset($this->locations[$name])) {
@@ -249,7 +249,7 @@ class Container implements ContainerInterface, ArrayAccess
 		}
 	}
 
-	public function cache(string $name, ?string $instance = null): bool
+	public function cache(string $name, mixed $instance = null): bool
 	{
 		if ($this->store_path) {
 			if (!$instance and isset($this->instances[$name])) {

@@ -22,7 +22,7 @@ interface ContainerInterface
 
 	public function locates_if_not_exists(array $locations): void;
 
-	public function instanciate($class_name, $name = null, $args = [], $store_reflection = false);
+	public function instanciate(string $class_name, ?string $name = null, array $args = [], bool $store_reflection = false): mixed;
 
 	public function call($class, $method_name, $args = [], $force_new = false);
 
