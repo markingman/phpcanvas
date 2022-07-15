@@ -25,7 +25,7 @@ class Config implements ConfigInterface
 
 	public function __get(string $k): string|bool|array|int|null
 	{
-		return @$this->config[$k];
+		return isset($this->config[$k]) ? $this->config[$k] : null;
 	}
 
 	public function __set(string $k, string|bool|array|int $v): void
