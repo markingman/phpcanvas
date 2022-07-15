@@ -13,7 +13,7 @@ if (!$Container->get_cache('Config')) {
 $Container->locates([
 	['Finder', __DIR__ . '/register.Finder.php', null, true],
 	['Router', __DIR__ . '/register.Router.php', null, true],
-	['Request', __DIR__ . '/register.Request.php',
+	['Request', __DIR__ . '/register.Request.php'],
 	['Log', __DIR__ . '/register.Log.php'],
 	['Cache', __DIR__ . '/register.Cache.php'],
 	['Scope', __DIR__ . '/register.Scope.php'],
