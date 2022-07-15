@@ -224,7 +224,7 @@ class Request implements RequestInterface
 		return array_values($return);
 	}
 
-	public function get_sel($vars = 'arg1', $opts, int $where = self::GP)
+	public function get_sel($vars = 'arg1', array $opts = [], int $where = self::GP)
 	{
 		return in_array($sel = $this->get_var($vars, $where), $opts) ? $sel : $opts[0];
 	}
