@@ -28,16 +28,16 @@ class HtmlTest extends PHPUnit_Framework_TestCase
 			'onkey' => 'onkey-value',
 			'esc' => '£'
 		];
-		
+
 		$set_attributes = $this->Html->set_attributes($atts);
 
 		$test = 'key="value" boolean_true ' .
 			'data-key="data-value" onkey="onkey-value" ' .
 			'esc="&pound;"';
-		
+
 		$this->assertEquals($test, $set_attributes);
 	}
-	
+
 	public function testSetInputText()
 	{
 		$atts = [
@@ -45,16 +45,16 @@ class HtmlTest extends PHPUnit_Framework_TestCase
 			'onclick' => "this.value='test'",
 			'placeholder' => 'Example',
 		];
-		
+
 		$type = 'text';
 		$name = 'test';
 		$value = 'test-value';
-		
+
 		$input = $this->Html->input($type, $name, $value, $atts);
 
-		$test = '<input type="text" name="test" value="test-value" ' . 
+		$test = '<input type="text" name="test" value="test-value" ' .
 			'size="32" onclick="this.value=\'test\'" placeholder="Example" />';
-	
+
 		$this->assertEquals($test, $input);
 	}
 
@@ -63,16 +63,16 @@ class HtmlTest extends PHPUnit_Framework_TestCase
 		$atts = [
 			'key' => 'value',
 		];
-		
+
 		$name = 'test';
 		$value = 'test-value';
 		$option_value = 'test-value';
-	
+
 		$checkbox = $this->Html->checkbox($name, $value, $option_value, $atts);
 
-		$test = '<input type="checkbox" name="test" value="test-value" ' . 
+		$test = '<input type="checkbox" name="test" value="test-value" ' .
 			'key="value" checked />';
-	
+
 		$this->assertEquals($test, $checkbox);
 	}
 
@@ -86,7 +86,7 @@ class HtmlTest extends PHPUnit_Framework_TestCase
 				'three' => 'Three',
 			]
 		];
-		
+
 		$name = 'test';
 		$value = 'three';
 
@@ -97,7 +97,7 @@ class HtmlTest extends PHPUnit_Framework_TestCase
 			'<option value="two">Two</option>' .
 			'<option value="three" selected>Three</option>' .
 			'</select>';
-	
+
 		$this->assertEquals($test, $select);
 	}
 
@@ -107,14 +107,14 @@ class HtmlTest extends PHPUnit_Framework_TestCase
 			'key' => 'value',
 			'rows' => '10',
 		];
-		
+
 		$name = 'test';
 		$value = "This is long text\n\nThis is a new line";
 
 		$set_textarea = $this->Html->textarea($name, $value, $atts);
 
 		$test = '<textarea name="test" key="value" rows="10">' .
-			"This is long text\n\nThis is a new line" . 
+			"This is long text\n\nThis is a new line" .
 			'</textarea>';
 
 		$this->assertEquals($test, $set_textarea);

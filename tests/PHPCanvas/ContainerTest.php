@@ -137,17 +137,17 @@ __
 	{
 		$store = static::$tmpdir;
 		$this->Container->set_store($store);
-		
+
 		$store_from_container = $this->Container->get_store();
 		$store_expected = $store;
-		
+
 		$this->assertEquals($store_expected, $store_from_container);
 	}
 
 	public function testRegister()
 	{
 		$class = 'TestClass1';
-		$closure = function() use ($class) {
+		$closure = function () use ($class) {
 			self::mock_autoload($class);
 
 			return new $class;
@@ -164,14 +164,14 @@ __
 	public function testRegisterIfNotExists()
 	{
 		$class = 'TestClass1';
-		$closure = function() use ($class) {
+		$closure = function () use ($class) {
 			self::mock_autoload($class);
 
 			return new $class;
 		};
 
 		$class2 = 'TestClass2';
-		$closure2 = function() use ($class2) {
+		$closure2 = function () use ($class2) {
 			self::mock_autoload($class2);
 
 			return new $class2;
@@ -183,7 +183,7 @@ __
 
 		$from_container = $this->Container->list_registry();
 		$expected = [$class => $closure, $class2 => $closure2];
-		
+
 		$this->assertEquals($expected, $from_container);
 	}
 
@@ -193,10 +193,10 @@ __
 		$path = static::$dir_locations . "/register.$class.php";
 
 		$this->Container->locate($class, $path);
-		
+
 		$from_container = $this->Container->list_locations();
 		$expected = [$class => $path];
-		
+
 		$this->assertEquals($expected, $from_container);
 	}
 
@@ -211,13 +211,13 @@ __
 		$args = ['a' => $a, 'b' => $b];
 
 		$this->Container->locate($class, $path, $args);
-		
+
 		$from_container = $this->Container->list_locations();
 		$expected = [$class => [$path, $args]];
-		
+
 		$this->assertEquals($from_container, $expected);
 	}
-	
+
 	public function testLocateIfNotExists()
 	{
 		$class = 'TestClass1';
@@ -232,7 +232,7 @@ __
 
 		$from_container = $this->Container->list_locations();
 		$expected = [$class => $path, $class2 => $path2];
-		
+
 		$this->assertEquals($from_container, $expected);
 	}
 
@@ -244,7 +244,7 @@ __
 		];
 
 		$this->Container->locates($locates);
-		
+
 		$from_container = $this->Container->list_locations();
 		$expected = [
 			'TestClass1' => static::$dir_locations . '/register.TestClass1.php',
@@ -253,7 +253,7 @@ __
 				['a']
 			]
 		];
-		
+
 		$this->assertEquals($expected, $from_container);
 	}
 
@@ -263,7 +263,7 @@ __
 		$path = static::$dir_locations . "/register.$class.php";
 
 		$this->Container->locate($class, $path);
-		
+
 		$TestClass1 = $this->Container->create($class);
 
 		$this->assertInstanceOf($class, $TestClass1);
@@ -272,7 +272,7 @@ __
 	public function testCreateFromRegistry()
 	{
 		$class = 'TestClass1';
-		$closure = function() use ($class) {
+		$closure = function () use ($class) {
 			self::mock_autoload($class);
 
 			return new $class;
@@ -298,7 +298,7 @@ __
 	//testCreateWithInjectionAndArgs
 
 	//testCreateWithInheritedInjection
-	
+
 	//testReflection
 
 	public static function tearDownAfterClass(): void

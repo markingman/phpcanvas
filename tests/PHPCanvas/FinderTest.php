@@ -25,12 +25,12 @@ class FinderTest extends TestCase
 		static::tmpdir_make(md5(self::class));//md5() as OSX didn't like "FinderTest"??
 
 		static::$dirs = [];
-		
+
 		foreach ([
-			'test/dir1' => '/sample/dir1',
-			'test/dir2' => '/sample/dir2',
-			'xyz/dir3' => '/dir3',
-		] as $name => $path) {
+					 'test/dir1' => '/sample/dir1',
+					 'test/dir2' => '/sample/dir2',
+					 'xyz/dir3' => '/dir3',
+				 ] as $name => $path) {
 			$dir = static::$tmpdir . $path;
 			if (!is_dir($dir)) {
 				mkdir($dir, 0755, true);
@@ -137,7 +137,7 @@ class FinderTest extends TestCase
 
 	public function testGlobDirs()
 	{
-		$dirs = ['test/dir2', 'xyz/dir3' ];
+		$dirs = ['test/dir2', 'xyz/dir3'];
 		$res = $this->Finder->glob('*', $dirs);
 		foreach ($res as $k => $v) {
 			$this->assertTrue($k === 'test');

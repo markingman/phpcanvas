@@ -43,7 +43,7 @@ class CacheTest extends TestCase
 		$index_path = $this->Cache->index('ab', 5);
 		$this->assertEquals('ab/ab', $index_path);
 	}
-	
+
 	public function testPutString()
 	{
 		$path = 'put/test';
@@ -64,7 +64,7 @@ class CacheTest extends TestCase
 		$result = $this->Cache->put($path, $data);
 		$this->assertEquals(true, $result);
 	}
-	
+
 	public function testPutBoolean()
 	{
 		$path = 'put/test_bool';
@@ -73,7 +73,7 @@ class CacheTest extends TestCase
 		$result = $this->Cache->put($path, $data);
 		$this->assertEquals(true, $result);
 	}
-	
+
 	public function testPutArray()
 	{
 		$path = 'put/test_array';
@@ -82,7 +82,7 @@ class CacheTest extends TestCase
 		$result = $this->Cache->put($path, $data);
 		$this->assertEquals(true, $result);
 	}
-	
+
 	public function testPutObject()
 	{
 		$path = 'put/test_object';
@@ -93,7 +93,7 @@ class CacheTest extends TestCase
 		$result = $this->Cache->put($path, $data);
 		$this->assertEquals(true, $result);
 	}
-	
+
 	public function testPermission()
 	{
 		$path = 'permission/test';
@@ -118,7 +118,7 @@ class CacheTest extends TestCase
 
 		$this->assertEquals($data, $cache_data);
 	}
-	
+
 	public function testGetWithIndex()
 	{
 		$path = ['get/123with_index', 3];
@@ -129,7 +129,7 @@ class CacheTest extends TestCase
 
 		$this->assertEquals($data, $cache_data);
 	}
-	
+
 	public function testGetBoolean()
 	{
 		$path = 'get/boolean';
@@ -138,9 +138,9 @@ class CacheTest extends TestCase
 		$this->Cache->put($path, $data);
 		$cache_data = $this->Cache->get($path);
 
-		$this->assertEquals($data, $cache_data);		
+		$this->assertEquals($data, $cache_data);
 	}
-	
+
 	public function testGetArray()
 	{
 		$path = 'get/array';
@@ -151,7 +151,7 @@ class CacheTest extends TestCase
 
 		$this->assertEquals($data, $cache_data);
 	}
-	
+
 	public function testGetObject()
 	{
 		$path = 'get/object';
@@ -196,7 +196,7 @@ class CacheTest extends TestCase
 		$cache_data = $this->Cache->get($path);
 		$this->assertEquals('', $cache_data);
 	}
-	
+
 	public function testDelete()
 	{
 		$path = 'get/string';
@@ -214,7 +214,7 @@ class CacheTest extends TestCase
 		$cache_data = $this->Cache->get($path);
 		$this->assertEquals('', $cache_data);
 	}
-	
+
 	public function testDeleteWithIndex()
 	{
 		$index = '123';
@@ -233,7 +233,7 @@ class CacheTest extends TestCase
 		$cache_data = $this->Cache->get($path);
 		$this->assertEquals('', $cache_data);
 	}
-	
+
 	public function testTest()
 	{
 		$path = 'test';
@@ -255,7 +255,7 @@ class CacheTest extends TestCase
 		$test = $this->Cache->test($path, 100);
 		$this->assertFalse($test);
 	}
-	
+
 	public function testGC()
 	{
 		$this->Cache->gc(10000);

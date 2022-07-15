@@ -25,7 +25,7 @@ class RouterTest extends TestCase
 	{
 		$this->assertInstanceOf(RouterInterface::class, $this->Router);
 	}
-	
+
 	public function testDefaultAction()
 	{
 		$this->assertEquals($this->Router->get_action_default(), $this->action_default);
@@ -42,7 +42,7 @@ class RouterTest extends TestCase
 				'controller' => 'App\\Controller\\Empty'
 			],
 		];
-		
+
 		$exp_res = [
 			$routes['empty']['controller'],
 			$this->action_default,
@@ -137,7 +137,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->get_rewrite('multi-var', $vars);
 		$this->assertEquals($res, $path);
 	}
-	
+
 	public function testSimpleMethodRoute()
 	{
 		$path = '/method';
@@ -207,7 +207,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->get_rewrite('method');
 		$this->assertEquals($res, $path);
 	}
-	
+
 	public function testSimpleAction()
 	{
 		$path = '/simple/action';
@@ -365,7 +365,7 @@ class RouterTest extends TestCase
 	{
 		return false;
 	}
-	
+
 	public static function __test_callback_route_function(string $method, array $route, array $m, string $url): array|false
 	{
 		if ($method !== 'POST') {

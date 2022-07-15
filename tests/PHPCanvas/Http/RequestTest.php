@@ -10,7 +10,7 @@ require '../../../src/classes/PHPCanvas/Http/Request.php';
 
 $url = '/foo/bar';
 exit('here');
-$get = ['a'=> 'A'];
+$get = ['a' => 'A'];
 $Request = new Request($url, null, $get);
 
 var_dump($Request->_GET);

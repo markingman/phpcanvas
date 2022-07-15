@@ -17,31 +17,31 @@ class ConfigTest extends TestCase
 	{
 		static::tmpdir_make(self::class);
 
-		$config1 = array(
+		$config1 = [
 			'a' => 'A',
 			'b' => 'B',
 			'c' => 'C',
 			'd' => 'D',
-		);
-		
-		$config2 = array(
+		];
+
+		$config2 = [
 			'E' => 'E',
 			'd' => 'D-NEW',
-		);
-		
-		foreach(array('config1' => 100, 'config2' => 30) as $config_name => $n) {
+		];
+
+		foreach (['config1' => 100, 'config2' => 30] as $config_name => $n) {
 			$a = $$config_name;
 			foreach (range(1, $n) as $i) {
 				$a['a_b_c_' . $i] = md5(rand(100000, 999999));
 			}
-			self::$$config_name = static::$tmpdir . '/' . $config_name. '.php';
+			self::$$config_name = static::$tmpdir . '/' . $config_name . '.php';
 			file_put_contents(self::$$config_name, '<?php return ' . var_export($a, true) . ';');
 		}
 	}
 
 	public function setUp(): void
 	{
-		$this->Config = new Config(array(self::$config1, self::$config2));
+		$this->Config = new Config([self::$config1, self::$config2]);
 	}
 
 	public function testCreate()
@@ -51,10 +51,10 @@ class ConfigTest extends TestCase
 
 	public function testCreateWithExtraParameters()
 	{
-		$Config = new Config(array(self::$config1), array('adhoc1' => 'value1', 'adhoc2' => false));
+		$Config = new Config([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => false]);
 		$this->assertTrue($Config->adhoc1 === 'value1');
 	}
-	
+
 	public function testGet()
 	{
 		$this->assertTrue($this->Config->a === 'A');

@@ -18,13 +18,13 @@ class ScopeTest extends PHPUnit_Framework_TestCase
 		$this->assertEquals($scope->bar, $scope2->bar);
 		$this->assertEquals($scope->foo, $scope2->foo);
 	}
-	
+
 	public function testScope()
 	{
 		$this->set_scope_data();
 		$this->assertEquals(123, $this->get_scope_data());
 	}
-	
+
 	private function set_scope_data()
 	{
 		Scope::instance()->test = 123;
