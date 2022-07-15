@@ -4,6 +4,8 @@ use PHPCanvas\Cache\Cache;
 use PHPCanvas\Cache\CacheInterface;
 use PHPCanvasTestHelpersTrait as PHPCanvasTestHelpersTrait;
 use PHPUnit\Framework\TestCase;
+use RecursiveIteratorIterator as RecursiveIteratorIterator;
+use RecursiveDirectoryIterator as RecursiveDirectoryIterator;
 
 class CacheTest extends TestCase
 {
@@ -53,7 +55,7 @@ class CacheTest extends TestCase
 		$cache_data = file_get_contents(static::$tmpdir . '/' . $path);
 		$this->assertEquals($data, $cache_data);
 	}
-	
+
 	public function testPutWithIndex()
 	{
 		$path = ['put/123_test_with_index', 3];
@@ -119,7 +121,7 @@ class CacheTest extends TestCase
 	
 	public function testGetWithIndex()
 	{
-		$path = ['get/with_index', 3];
+		$path = ['get/123with_index', 3];
 		$data = 'data';
 
 		$this->Cache->put($path, $data);
@@ -162,34 +164,36 @@ class CacheTest extends TestCase
 
 		$this->assertEquals($data, $cache_data);
 	}
-	
+
 	public function testGetWithTTL()
 	{
 		$path = 'get/ttl';
 		$data = 'data';
 
 		$this->Cache->put($path, $data);
-		touch(static::$tmpdir . '/' . $path, time() - 100);
-		
-		$cache_data = $this->Cache->get($path, 10);
+		touch(static::$tmpdir . '/' . $path, time() - 1);
+		clearstatcache();
+		$cache_data = $this->Cache->get($path);
 		$this->assertEquals('', $cache_data);
 
-		$cache_data = $this->Cache->get($path, 300);
+		$this->Cache->put($path, $data, 100);
+		touch(static::$tmpdir . '/' . $path, time() - 101);
+		clearstatcache();
+		$cache_data = $this->Cache->get($path);
+		$this->assertEquals('', $cache_data);
+
+		$this->Cache->put($path, $data, 1000);
+		$cache_data = $this->Cache->get($path, 1001);
+		$this->assertEquals('', $cache_data);
+		$cache_data = $this->Cache->get($path, 500);
 		$this->assertEquals($data, $cache_data);
 
-		$cache_data = $this->Cache->get($path, true);
-		$this->assertEquals($data, $cache_data);
-
-		//path2 and path3 to work around file stat cache:
-
-		$this->Cache->put("{$path}2", $data);
-		touch(static::$tmpdir . '/' . "{$path}2", time() - self::$ttl + 100);
+		$this->Cache->put($path, $data, 100);
 		$cache_data = $this->Cache->get($path);
 		$this->assertEquals($data, $cache_data);
-
-		$this->Cache->put("{$path}3", $data);
-		touch(static::$tmpdir . '/' . "{$path}3", time() - self::$ttl - 100);
-		$cache_data = $this->Cache->get("{$path}3");
+		touch(static::$tmpdir . '/' . $path, time() - 1);
+		clearstatcache();
+		$cache_data = $this->Cache->get($path);
 		$this->assertEquals('', $cache_data);
 	}
 	
@@ -235,8 +239,7 @@ class CacheTest extends TestCase
 		$path = 'test';
 		$data = 'data';
 
-		$this->Cache->put($path, $data);
-		touch(static::$tmpdir . '/' . $path, time() - 100);
+		$this->Cache->put($path, $data, 300);
 
 		$test = $this->Cache->test($path);
 		$this->assertTrue($test);
@@ -244,15 +247,48 @@ class CacheTest extends TestCase
 		$test = $this->Cache->test($path, 200);
 		$this->assertTrue($test);
 
-		$test = $this->Cache->test($path, 10);
+		$test = $this->Cache->test($path, 400);
 		$this->assertFalse($test);
 
-		$test = $this->Cache->test($path, true);
-		$this->assertTrue($test);
+		touch(static::$tmpdir . '/' . $path, time() + 50);
+		clearstatcache();
+		$test = $this->Cache->test($path, 100);
+		$this->assertFalse($test);
 	}
 	
+	public function testGC()
+	{
+		$this->Cache->gc(10000);
+		$this->assertEquals([], $this->listFiles(static::$tmpdir));
+
+		$path1 = 'test1';
+		$data1 = 'data1';
+		$this->Cache->put($path1, $data1, 100);
+
+		$path2 = 'test2';
+		$data2 = 'data2';
+		$this->Cache->put($path2, $data2, 200);
+
+		$this->Cache->gc(101);
+		$this->assertEquals([static::$tmpdir . '/' . $path2], $this->listFiles(static::$tmpdir));
+	}
+
 	public static function tearDownAfterClass(): void
 	{
 		static::tmpdir_remove();
+	}
+
+	protected function listFiles($dir): array
+	{
+		$files = [];
+
+		$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir));
+		foreach ($it as $f) {
+			if (!$it->isDir()) {
+				$files[] = $f->getPathname();
+			}
+		}
+
+		return $files;
 	}
 }
