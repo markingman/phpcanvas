@@ -255,13 +255,13 @@ $config['ROUTES_GLOB'] = 'config/routes.php';
  * Default finder paths
  */
 $config['DIRS_FINDER'] = [
+	'phpcanvas/phpcanvas' => realpath(__DIR__ . '/..'),//first
 	'app/app' => $config['DIR_ROOT'] . '/app',
-	'phpcanvas/phpcanvas' => realpath(__DIR__ . '/..'),
 ];
 
 $config['DIRS_VIEW'] = [
+	'phpcanvas/phpcanvas' => realpath(__DIR__ . '/../views'),//first
 	'app/app' => $config['DIR_ROOT'] . '/app/views',
-	'phpcanvas/phpcanvas' => realpath(__DIR__ . '/../views'),
 ];
 
 return $config;
