@@ -6,7 +6,7 @@
 		  <file>tests/PHPCanvas/Cache/CacheTest.php</file>
 		  <file>tests/PHPCanvas/ConfigTest.php</file>
 		  <file>tests/PHPCanvas/FinderTest.php</file>
-		  <!--<file>tests/PHPCanvas/ContainerTest.php</file>-->
+		  <file>tests/PHPCanvas/ContainerTest.php</file>
 		  <file>tests/PHPCanvas/Routing/RouterTest.php</file>
 		</testsuite>
 	</testsuites>
