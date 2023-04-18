@@ -53,7 +53,7 @@ class Cache implements CacheInterface
 			if (!file_exists($this->dir . DIRECTORY_SEPARATOR . $dir)) {
 				mkdir($this->dir . DIRECTORY_SEPARATOR . $dir, $this->prm, true);
 			} elseif (!is_dir($this->dir . DIRECTORY_SEPARATOR . $dir)) {
-				trigger_error('Trying to write cache directory where file exists', E_USER_ERROR);
+				trigger_error('CACHE_FILE_EXISTS; Trying to write cache directory where file exists', E_USER_ERROR);
 			}
 		}
 
@@ -89,7 +89,7 @@ class Cache implements CacheInterface
 		if ($this->test($fp, $ttl)) {
 			$cache = file_get_contents($this->dir . DIRECTORY_SEPARATOR . $fp);
 
-			if (strlen($cache) >= 4 and $cache[1] === ':' and (substr($cache, -1) === ';' or substr($cache, -1) === '}')) {
+			if (strlen($cache) >= 4 and $cache[1] === ':' and (str_ends_with($cache, ';') or str_ends_with($cache, '}'))) {
 				return unserialize($cache);
 			} else {
 				return $cache;
@@ -114,6 +114,8 @@ class Cache implements CacheInterface
 		} elseif (is_file($this->dir . DIRECTORY_SEPARATOR . $fp)) {
 			return unlink($this->dir . DIRECTORY_SEPARATOR . $fp);
 		}
+
+		return false;
 	}
 
 	public function test(string|array $fp, int $ttl = 0): bool
@@ -138,27 +140,25 @@ class Cache implements CacheInterface
 			$max = PHP_INT_MAX;
 		}
 
-
 		$it = new RecursiveIteratorIterator(
 			new RecursiveDirectoryIterator($this->dir, FilesystemIterator::SKIP_DOTS),
 			RecursiveIteratorIterator::CHILD_FIRST
 		);
 
-		$files = [];
-		$dirs = [];
 		$n = 0;
 		$t = time() + $ttl;
 
 		$it->rewind();
 		while ($it->valid()) {
 			$n++;
-			if (!$it->isDir()) {
-				if ($it->getMtime() < $t) {
-					unlink($it->getPathname());
+			$f = $it->current();
+			if (!$f->isDir()) {
+				if ($f->getMtime() < $t) {
+					unlink($f->getPathname());
 				}
 			} else {
-				if (iterator_count($it->getChildren()) === 0) {
-					rmdir($it->getPathname());
+				if (iterator_count($it->callGetChildren()) === 0) {
+					rmdir($f->getPathname());
 				}
 			}
 			if ($n >= $max) {
