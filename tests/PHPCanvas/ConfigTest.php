@@ -1,39 +1,47 @@
 <?php
 
-use PHPCanvas\Config;
-use PHPCanvas\ConfigInterface;
+namespace PHPCanvas;
+
 use PHPUnit\Framework\TestCase;
+use PHPCanvasTestHelpersTrait;
 
 class ConfigTest extends TestCase
 {
 	use PHPCanvasTestHelpersTrait;
 
-	protected $Config;
-	public static $config1;
-	public static $config2;
-	public static $serialized;
+	protected ConfigInterface $Config;
+	public static string $config1;
+	public static string $config2;
+	public static string $serialized;
 
 	public static function setUpBeforeClass(): void
 	{
 		static::tmpdir_make(self::class);
 
-		$config1 = [
-			'a' => 'A',
-			'b' => 'B',
-			'c' => 'C',
-			'd' => 'D',
-		];
-
-		$config2 = [
-			'E' => 'E',
-			'd' => 'D-NEW',
-		];
+//		$config1 = [
+//			'a' => 'A',
+//			'b' => 'B',
+//			'c' => 'C',
+//			'd' => 'D',
+//		];
+//
+//		$config2 = [
+//			'E' => 'E',
+//			'd' => 'D-NEW',
+//		];
 
 		foreach (['config1' => 100, 'config2' => 30] as $config_name => $n) {
 			$a = $$config_name;
 			foreach (range(1, $n) as $i) {
-				$a['a_b_c_' . $i] = md5(rand(100000, 999999));
+				$a['a_b_c_' . $i] = md5($i);
 			}
+			if ($config_name === 'config1') {
+				$a['aaa'] = 'AAA';
+			}
+			if ($config_name === 'config2') {
+				$a['BBB'] = 'bbb';
+			}
+
 			self::$$config_name = static::$tmpdir . '/' . $config_name . '.php';
 			file_put_contents(self::$$config_name, '<?php return ' . var_export($a, true) . ';');
 		}
@@ -52,30 +60,33 @@ class ConfigTest extends TestCase
 	public function testCreateWithExtraParameters()
 	{
 		$Config = new Config([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => false]);
-		$this->assertTrue($Config->adhoc1 === 'value1');
+		$this->assertEquals('value1', $Config->adhoc1);
+		$this->assertFalse($Config->adhoc2);
 	}
 
 	public function testGet()
 	{
-		$this->assertTrue($this->Config->a === 'A');
+		$this->assertEquals('AAA', $this->Config->aaa);
+		$this->assertEquals('bbb', $this->Config->BBB);
 	}
 
 	public function testSet()
 	{
 		$this->Config->b = 'B2';
-		$this->assertTrue($this->Config->b === 'B2');
+		$this->assertEquals('B2', $this->Config->b);
 	}
 
 	public function testUnset()
 	{
-		unset($this->Config->b);
-		$this->assertTrue(!isset($this->Config->b));
+		unset($this->Config->bbb);
+		$this->assertFalse(isset($this->Config->bbb));
 	}
 
 	public function testList()
 	{
 		$config = $this->Config->list();
 		$this->assertIsArray($config);
+		$this->assertCount(102, $config);
 	}
 
 	public function testSerializable()
@@ -83,7 +94,7 @@ class ConfigTest extends TestCase
 		// Config is typically cached via Container class
 
 		$serialized = serialize($this->Config);
-		$this->assertTrue($serialized !== false);
+		$this->assertNotFalse($serialized);
 	}
 
 	public function testUnSerializable()

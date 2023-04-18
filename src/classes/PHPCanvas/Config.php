@@ -4,7 +4,7 @@ namespace PHPCanvas;
 
 class Config implements ConfigInterface
 {
-	protected $config = [];
+	protected array $config = [];
 
 	public function __construct(array $paths = [], ?array $config = null)
 	{
@@ -25,7 +25,7 @@ class Config implements ConfigInterface
 
 	public function __get(string $k): string|bool|array|int|null
 	{
-		return isset($this->config[$k]) ? $this->config[$k] : null;
+		return $this->config[$k] ?? null;
 	}
 
 	public function __set(string $k, string|bool|array|int $v): void
