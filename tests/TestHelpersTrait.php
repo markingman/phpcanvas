@@ -4,37 +4,32 @@ trait PHPCanvasTestHelpersTrait
 {
 	protected static $tmpdir;
 
-	protected static function tmpdir_make($dir_name)
+	protected static function tmpdir_make($dir_name): bool
 	{
-		static::$tmpdir = rtrim(sys_get_temp_dir(), '/') . '/' . $dir_name;
+		static::$tmpdir = rtrim(sys_get_temp_dir(), '/') . '/' . md5(random_bytes(10)) . '/' . $dir_name;
 
-		if (file_exists(static::$tmpdir)) {
-			static::tmpdir_remove();
-		}
+    	mkdir(static::$tmpdir, 0755, true);
 
-		if (!file_exists(static::$tmpdir)) {
-			mkdir(static::$tmpdir);
-		}
-		
 		return file_exists(static::$tmpdir);
 	}
 
-	protected static function tmpdir_remove($tmpdir = null)
+	protected static function tmpdir_remove(): void
 	{
-		$tmpdir = is_null($tmpdir) ? static::$tmpdir : $tmpdir;
-		$iterator = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator($tmpdir, \FilesystemIterator::SKIP_DOTS), 
-			RecursiveIteratorIterator::CHILD_FIRST
-		);
+		if (is_dir(static::$tmpdir)) {
+			$iterator = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator(static::$tmpdir, FilesystemIterator::SKIP_DOTS), 
+				RecursiveIteratorIterator::CHILD_FIRST
+			);
 
-		foreach ($iterator as $filename => $fileInfo) {
-			if ($fileInfo->isDir()) {
-				rmdir($filename);
-			} else {
-				unlink($filename);
+			foreach ($iterator as $file => $info) {
+				if ($info->isDir()) {
+					rmdir($file);
+				} else {
+					unlink($file);
+				}
 			}
-		}
 
-		rmdir($tmpdir);
+			rmdir(static::$tmpdir);
+		}
 	}
 }
