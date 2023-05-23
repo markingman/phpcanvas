@@ -1,6 +1,6 @@
 <?php
 
-return function ($c) {
+return function (PHPCanvas\ContainerInterface $c) {
 	$Router = new PHPCanvas\Routing\Router($c['Config']->ACTION_DEFAULT);
 
 	$routes = $c['Finder']->glob($c['Config']->ROUTES_GLOB, @$c['Config']->ROUTES_DIRS ?: null);

@@ -1,5 +1,5 @@
 <?php
 
-return function ($c) {
+return function () {
 	return new PHPCanvas\Http\Response();
 };

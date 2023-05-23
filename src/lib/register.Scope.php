@@ -1,5 +1,5 @@
-<?php // $Id: register.Scope.php 720 2017-09-07 12:56:50Z dev $
+<?php
 
-return function ($c) {
+return function () {
 	return new PHPCanvas\Scope\Scope();
 };
