@@ -28,12 +28,7 @@ class Cache implements CacheInterface
 	public function index(string $path, int $chars = 0): string
 	{
 		$base = basename($path);
-
-		if (strlen($path) > strlen($base)) {
-			$path = dirname($path) . DIRECTORY_SEPARATOR;
-		} else {
-			$path = '';
-		}
+		$path = strlen($path) > strlen($base) ? dirname($path) . DIRECTORY_SEPARATOR : '';
 
 		if (is_numeric($base)) {
 			return $path . floor((int)$base / pow(10, $chars)) . DIRECTORY_SEPARATOR . $base;
@@ -157,7 +152,7 @@ class Cache implements CacheInterface
 					unlink($f->getPathname());
 				}
 			} else {
-				if (iterator_count($it->callGetChildren()) === 0) {
+				if (!$it->callHasChildren()) {
 					rmdir($f->getPathname());
 				}
 			}
