@@ -2,16 +2,16 @@
 
 namespace PHPCanvas\Routing;
 
-use \Exception;
+use Exception;
 
 class Router implements RouterInterface
 {
 	const CONTROLLER = 0;
 	const VARS = 1;
 	const ACTION = 2;
-	const ACTION_MAPS = 3;
 	const METHOD = 4;
-	const PRNTF = 7;
+	const REGX = 5;
+	const SPRNTF = 7;
 	const NAME = 8;
 	const CALLBACK = 10;
 
@@ -27,26 +27,26 @@ class Router implements RouterInterface
 		'PATCH' => 512,
 	];
 
-	protected $routes = [];
-	protected $index = [];
-	protected $regx = [];
-
-	protected $action_default;
+	protected array $iname = [];
+	protected array $routes = [];
+	protected array $index = [];
+	protected int $i = 0;
+	protected string $action_default = 'default';
 
 	public function __construct(string $action_default = 'default')
 	{
 		$this->action_default = $action_default;
 	}
 
-	public function add_route(string $name, array $params)
+	public function add_route(string $name, array $params): bool
 	{
 		if (!isset($params['path'])) {
-			throw new Exception('No path set for route');
+			throw new Exception('ROUTER_NO_PATH; No path set for route');
 		}
 
 		if (!isset($params['controller'])) {
 			if (!isset($params['callback'])) {
-				throw new Exception('No controller set for route');
+				throw new Exception('ROUTER_NO_CONTROLLER; No controller set for route');
 			} else {
 				$params['controller'] = '';
 			}
@@ -55,7 +55,6 @@ class Router implements RouterInterface
 		$params = array_merge(
 			[
 				'action' => $this->action_default,
-// 				'action_maps' => [],
 				'method' => 0,
 				'name' => '',
 			],
@@ -64,7 +63,7 @@ class Router implements RouterInterface
 
 		// can set action like 'path' => 'MyController::action'
 
-		if (strpos($params['controller'], '::') !== false) {
+		if (str_contains($params['controller'], '::')) {
 			$parts = explode('::', $params['controller'], 2);
 			$params['controller'] = $parts[0];
 			$params['action'] = $parts[1];
@@ -73,35 +72,26 @@ class Router implements RouterInterface
 		// 'any', e.g. 'foo/{var}' or 'foo' can be set like foo/{var}**
 
 		$any = false;
-		if (substr($params['path'], -2) === '**') {
+		if (str_ends_with($params['path'], '**')) {
 			$params['path'] = substr($params['path'], 0, -2);
 			$any = true;
 		}
 
-		// add base route if set via '*' character (e.g. foo/{action}* creates 'foo/{action}' and 'foo')
-
-		//@todo: change this so it's 'action_maps' '' => default_action (if not excplicty set)
-// 		if (substr($params['path'], -1) === '*') {
-// 			$params['path'] = substr($params['path'], 0, -1);
-// 			$base_route = preg_replace('~/[^/\*]*$~', '', $params['path']);
-// 			$base_params = $params;
-// 			if (substr($params['path'], -9) === '/{action}') {//if we're removing action from URL, also need to remove action maps
-// 				$base_params['action_maps'] = [];
-// 			}
-// 			$this->add_route($base_route, $base_params);
-// 		}
-
-		// get index (first path fragment, if present)
-
-		$params['path'] = ltrim($params['path'], '/');
-		preg_match('~^([^/{]+/)~', $params['path'], $m);
+		// get index (any override value or, if present, the first path fragment)
 
 		$index = '';
-		if (count($m) === 2 and strlen($m[1])) {
-			$index = substr($m[1], 0, -1);
+		if (isset($params['index'])) {
+			$index = $params['index'];
+		} else {
+			$params['path'] = ltrim($params['path'], '/');
+			preg_match('~^([^/{]+/)~', $params['path'], $m);
+
+			if (count($m) === 2 and strlen($m[1])) {
+				$index = substr($m[1], 0, -1);
+			}
 		}
 
-		// get vars (all the {var} items)
+		// get vars (all the {var} items and any explicitly set values)
 
 		preg_match_all('~{([^}]+)}~', $params['path'], $m);
 		$vars = [];
@@ -109,22 +99,28 @@ class Router implements RouterInterface
 			$vars = array_fill_keys($m[1], '');
 		}
 
+		if (isset($params['vars'])) {
+			foreach ($params['vars'] as $k => $v) {
+				$vars[$k] = $v;
+			}
+		}
+
 		// create URL regx (convert foo/{bar} notation to regx)
 
 		$esc = '~';
-		$route_esc = preg_replace('~\{[^\}]+\}~', PHP_EOL, $params['path']);//make {markers} into EOL placeholder chars for preg_quote()
+		$route_esc = preg_replace('~\{[^}]+}~', PHP_EOL, $params['path']);//make {markers} into EOL placeholder chars for preg_quote()
 		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
 		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholder chars back to reqx
 		if ($any) {
-			$route_esc .= '.*';
+			$route_esc .= '.*';//TODO is this .* or just * ?
 		}
 		$regx = $esc . '^' . $route_esc . '$' . $esc;//make regx using $esc chars
 
-		// create rewrite printf (so get link uses sprinf() rather than str_replace
+		// create rewrite sprintf (so get link uses sprintf() rather than str_replace
 
-		$printf = preg_replace('~{([^}]+)}\**~', '%s', $params['path']);
+		$sprintf = preg_replace('~{([^}]+)}\**~', '%s', $params['path']);
 		if ($any) {
-			$printf .= '%s';
+			$sprintf .= '%s';
 		}
 
 		// normalise method
@@ -139,27 +135,26 @@ class Router implements RouterInterface
 
 		// store as integer
 
-		$cname = crc32($name);
+		$i = $this->i++;
+		$this->iname[$name] = $i;
+
+		// route (each route leads to a controller from URL string)
+
 		$route = [];
 		if ($params['controller']) {
 			$route[static::CONTROLLER] = $params['controller'];
 		}
 		$route[static::VARS] = $vars;
 		$route[static::ACTION] = $params['action'];
-		if (!empty($params['action_maps'])) {
-			$route[static::ACTION_MAPS] = $params['action_maps'];
-		}
 		$route[static::METHOD] = $method;
-		$route[static::PRNTF] = $printf;
+		$route[static::SPRNTF] = $sprintf;
 		$route[static::NAME] = $name;
 		if (isset($params['callback'])) {
 			$route[static::CALLBACK] = $params['callback'];
 		}
-		$this->routes[$cname] = $route;
+		$route[static::REGX] = $regx;
 
-		// route (each route leads to a controller from URL string)
-
-		$this->regx[$cname] = $regx;
+		$this->routes[$i] = $route;
 
 		// routes can be indexed (first path fragment) 
 
@@ -168,35 +163,43 @@ class Router implements RouterInterface
 				$this->index[$index] = [];
 			}
 
-			$this->index[$index][] = $cname;
+			$this->index[$index][] = $i;
 		}
 
 		return true;
 	}
 
-	public function delete_route($name)
+	public function delete_route($name): bool
 	{
-// 		$cname = crc32($name);
-// 		unset($this->routes[$cname]);
-// 		$this->regx[$cname] = $regx;
-// 		recursive index 
-// 			$this->index[$index][] = $cname;
+		if (!isset($this->iname[$name])) {
+			return false;
+		}
+
+		$i = $this->iname[$name];
+		unset($this->routes[$i], $this->index[$i], $this->iname[$name]);
+
+		return true;
 	}
 
-	public function get_routes()
+	public function get_routes(): array
 	{
 		$routes = [];
-		foreach ($this->routes as $cname => $route) {
+
+		foreach ($this->routes as $route) {
 			$_route = [
-				'path' => $this->regx[$cname],
+				'path' => $route[static::REGX],
 			];
 
 			if (isset($route[static::CONTROLLER])) {
-				$routes['action'] = $route[static::CONTROLLER];
+				$_route['controller'] = $route[static::CONTROLLER];
 			}
 
 			if (isset($route[static::ACTION])) {
-				$routes['action'] = $route[static::ACTION];
+				$_route['action'] = $route[static::ACTION];
+			}
+
+			if (isset($route[static::METHOD]) and $route[static::METHOD] !== 0) {
+				$_route['method'] = $this->get_route_methods($route[static::METHOD]);
 			}
 
 			if (count($route[static::VARS])) {
@@ -204,7 +207,7 @@ class Router implements RouterInterface
 			}
 
 			if (isset($route[static::CALLBACK])) {
-				$routes['callback'] = $route[static::CALLBACK];
+				$_route['callback'] = $route[static::CALLBACK];
 			}
 
 			$routes[$route[static::NAME]] = $_route;
@@ -213,38 +216,38 @@ class Router implements RouterInterface
 		return $routes;
 	}
 
-	public function dump()
+	public function dump(): array
 	{
 		return [
+			'iname' => $this->iname,
 			'routes' => $this->routes,
 			'index' => $this->index,
-			'regx' => $this->regx,
 		];
 	}
 
-	public function get_route($method, $url)
+	public function get_route($method, $url): false|array
 	{
 		$url = trim($url, '/');
 		$url_index = strstr($url . '/', '/', true);
 		$tried = [];
 
 		if (isset($this->index[$url_index])) {
-			foreach ($this->index[$url_index] as $cname) {
-				if (preg_match($this->regx[$cname], $url, $m)) {
-					if (($return = $this->parse_route($method, $this->routes[$cname], $m, $url)) !== false) {
+			foreach ($this->index[$url_index] as $i) {
+				if (preg_match($this->routes[$i][static::REGX], $url, $m)) {
+					if (($return = $this->parse_route($method, $this->routes[$i], $m, $url)) !== false) {
 						return $return;
 					}
 				}
-				$tried[$cname] = true;
+				$tried[$i] = true;
 			}
 		}
 
-		foreach ($this->regx as $cname => $regx) {
-			if (isset($tried[$cname])) {
+		foreach ($this->iname as $i) {
+			if (isset($tried[$i])) {
 				continue;
 			}
-			if (preg_match($regx, $url, $m)) {
-				if (($return = $this->parse_route($method, $this->routes[$cname], $m, $url)) !== false) {
+			if (preg_match($this->routes[$i][static::REGX], $url, $m)) {
+				if (($return = $this->parse_route($method, $this->routes[$i], $m, $url)) !== false) {
 					return $return;
 				}
 			}
@@ -253,7 +256,7 @@ class Router implements RouterInterface
 		return false;
 	}
 
-	protected function parse_route(string $method, array $route, $m, $url)
+	protected function parse_route(string $method, array $route, $m, $url): false|array
 	{
 		if (isset($route[static::CALLBACK])) {
 			if (is_callable($route[static::CALLBACK])) {
@@ -273,37 +276,34 @@ class Router implements RouterInterface
 			return false;
 		}
 
-		if (!static::test_route_method($method, $route)) {
+		if (!$this->is_route_method($method, $route[static::METHOD])) {
 			return false;
 		}
 
-		$vars = static::get_route_vars($route[static::VARS], $m);
+		$vars = $this->get_route_vars($route[static::VARS], $m);
 		$controller = $route[static::CONTROLLER];
-
-		if (isset($route[static::ACTION]) and strlen($route[static::ACTION])) {//use hardcoded single value
-			$action = $route[static::ACTION];
-		} elseif (isset($vars['action']) and strlen($vars['action'])) {//or fallback to URL
-			$action = $vars['action'];//@todo this is external var!! //@todo: make 'action' configurable or more unique
-		} else {
-			$action = $this->action_default;
-		}
-
-		if (isset($route[static::ACTION_MAPS]) and isset($route[static::ACTION_MAPS][$action])) {//e.g. update => edit or edit_v2_temp etc., use action_name => null to block
-			$action = $route[static::ACTION_MAPS][$action];
-		}
+		$action = $route[static::ACTION];
 
 		return [$controller, $action, $vars];
 	}
 
-	public function get_rewrite($name, $vars = [])
+	public function get_rewrite($name, $vars = []): string
 	{
-		$cname = crc32($name);
-		if (isset($this->routes[$cname])) {
-// 			return $this->make_link($this->routes[$cname], $vars/*, $params*/);
-			$route =& $this->routes[$cname];
+		if (isset($this->iname[$name])) {
+			$i = $this->iname[$name];
+			$route =& $this->routes[$i];
+
+			if ($vars === []) {
+				if ($route[static::VARS] === []) {
+					return '/' . $route[static::SPRNTF];
+				}
+
+				return '/' . vsprintf($route[static::SPRNTF], $route[static::VARS]);
+			}
+
 			$query_vars = array_diff_key($vars, $route[static::VARS]);
 			$vars = array_replace($route[static::VARS], array_intersect_key($vars, $route[static::VARS]));
-			$link = vsprintf($route[static::PRNTF], $vars);
+			$link = vsprintf($route[static::SPRNTF], $vars);
 
 			if ($query_vars) {
 				$link .= '?' . http_build_query($query_vars, '', '&', PHP_QUERY_RFC3986);
@@ -311,33 +311,22 @@ class Router implements RouterInterface
 
 			return '/' . $link;
 		} else {
-			throw new Exception('NO_ROUTE; No link named ' . $name);
+			throw new Exception(sprintf('ROUTER_NO_ROUTE; No link named %s', $name));
 		}
 	}
 
-// 	protected function make_link($rewrite, $vars/*, $params*/)
-// 	{
-// 		$query_vars = array_diff_key($vars, $rewrite[static::VARS]);
-// 		$vars = array_replace($rewrite[static::VARS], array_intersect_key($vars, $rewrite[static::VARS]));
-// 		$link = vsprintf($rewrite[static::PRNTF], $vars);
-// 
-// 		if ($query_vars) {
-// 			$link .= '?' . http_build_query($query_vars, null, '&', PHP_QUERY_RFC3986);
-// 		}
-// 
-// 		return '/' . $link;
-// 	}
-
-	public function get_action_default()
+	public function get_action_default(): string
 	{
 		return $this->action_default;
 	}
 
-	public static function test_route_method(string $method, array $route): bool
+	public static function is_route_method(string $method, int $route_method): bool
 	{
-		if ($route[static::METHOD] > 0) {
+		// public static so callback functions can use this too
+
+		if ($route_method > 0) {
 			if (isset(static::METHODS[$method])) {
-				if (!(static::METHODS[$method] & $route[static::METHOD])) {
+				if (!(static::METHODS[$method] & $route_method)) {
 					return false;
 				}
 			}
@@ -346,8 +335,23 @@ class Router implements RouterInterface
 		return true;
 	}
 
-	public static function get_route_vars(array $route_vars, array $m)
+	public function get_route_methods(int $route_method): array
 	{
+		$methods = [];
+
+		foreach (static::METHODS as $k => $v) {
+			if (static::METHODS[$k] & $route_method) {
+				$methods[] = $k;
+			}
+		}
+
+		return $methods;
+	}
+
+	public static function get_route_vars(array $route_vars, array $m): array
+	{
+		// public static so callback functions can use this too
+
 		array_shift($m);
 
 		return array_combine(array_keys($route_vars), $m);

@@ -6,13 +6,12 @@ return function (PHPCanvas\ContainerInterface $c) {
 	$routes = $c['Finder']->glob($c['Config']->ROUTES_GLOB, @$c['Config']->ROUTES_DIRS ?: null);
 
 	foreach ($routes as $route) {
-// 		try {
 		foreach (include $route as $name => $params) {
 			$Router->add_route($name, $params);
 		}
 	}
 
-	$c->cache('Router', $Router);
+	$c->cache_put('Router', $Router);
 
 	return $Router;
 };

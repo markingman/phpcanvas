@@ -4,13 +4,21 @@ namespace PHPCanvas\Routing;
 
 interface RouterInterface
 {
-	/*function __construct($mpaths = array());
+	public function add_route(string $name, array $params): bool;
 
-	public function add_route($url_regx, $controller, array $options = array());
+	public function delete_route($name): bool;
 
-	public function get_route($url);
+	public function get_routes(): array;
 
-	public function add_rewrite($controller, $url_path, array $actions = array(), array $arguments = array());
+	public function dump(): array;
 
-	public function get_rewrite($controller_action, array $vars = array(), $arg_sep = null);*/
+	public function get_route($method, $url): false|array;
+
+	public function get_rewrite($name, $vars = []): string;
+
+	public function get_action_default(): string;
+
+	public static function is_route_method(string $method, int $route_method): bool;
+
+	public static function get_route_vars(array $route_vars, array $m): array;
 }

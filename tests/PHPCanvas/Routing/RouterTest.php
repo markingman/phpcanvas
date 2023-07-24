@@ -6,360 +6,602 @@ use PHPUnit\Framework\TestCase;
 
 class RouterTest extends TestCase
 {
-	use PHPCanvasTestHelpersTrait;
-
-	protected $Router, $action_default, $test_routes;
-
-	public static function setUpBeforeClass(): void
-	{
-		static::tmpdir_make(self::class);
-	}
+	protected Router $Router;
 
 	public function setUp(): void
 	{
-		$this->action_default = 'default';
-		$this->Router = new Router($this->action_default);
+		$this->Router = new Router('default');
 	}
 
-	public function testCreate()
+	public function testCreate(): void
 	{
 		$this->assertInstanceOf(RouterInterface::class, $this->Router);
 	}
 
-	public function testDefaultAction()
+	public function testGetActionDefault(): void
 	{
-		$this->assertEquals($this->Router->get_action_default(), $this->action_default);
+		$res = $this->Router->get_action_default();
+		$this->assertEquals('default', $res);
 	}
 
-	public function testEmptyRoute()
+	public function testRouteEmptyRoute()
 	{
-		$path = '/';
-		$path2 = '';
-		$path3 = '//';
-		$routes = [
-			'empty' => [
-				'path' => '/',
-				'controller' => 'App\\Controller\\Empty'
-			],
+		$route = [
+			'path' => '/',
+			'controller' => 'App\\Controller\\Test'
 		];
 
-		$exp_res = [
-			$routes['empty']['controller'],
-			$this->action_default,
+		$exp = [
+			'App\\Controller\\Test',
+			'default',
 			[]
 		];
 
-		$res = $this->Router->add_route('empty', $routes['empty']);
-		$this->assertTrue($res);
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, $exp_res);
+		$res = $this->Router->get_route('GET', '/');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_rewrite('empty');
-		$this->assertEquals($res, $path);
+		$res = $this->Router->get_route('GET', '');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', $path2);
-		$this->assertEquals($res, $exp_res);
+		$res = $this->Router->get_route('GET', '//');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', $path3);
-		$this->assertEquals($res, $exp_res);
+		$res = $this->Router->get_route('GET', '///');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+
+		$res = $this->Router->get_rewrite('test');
+		$this->assertEquals('/', $res, 'Should get expected rewrite from link name');
 	}
 
-	public function testSimpleRoute()
+	public function testRouteSimpleRoute()
 	{
-		$path = '/simple';
-		$routes = [
-			'simple' => [
-				'path' => '/simple',
-				'controller' => 'App\\Controller\\Simple'
-			]
+		$route = [
+			'path' => '/simple',
+			'controller' => 'App\\Controller\\Simple'
 		];
 
-		$res = $this->Router->add_route('simple', $routes['simple']);
-		$this->assertTrue($res);
-
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, [
-			$routes['simple']['controller'],
-			$this->action_default,
+		$exp = [
+			'App\\Controller\\Simple',
+			'default',
 			[]
-		]);
-
-		$res = $this->Router->get_rewrite('simple');
-		$this->assertEquals($res, $path);
-	}
-
-	public function testSimpleVarRoute()
-	{
-		$path = '/simple-var/123';
-		$routes = [
-			'simple-var' => [
-				'path' => 'simple-var/{id}',
-				'controller' => 'App\\Controller\\SimpleVar'
-			]
 		];
 
-		$res = $this->Router->add_route('simple-var', $routes['simple-var']);
-		$this->assertTrue($res);
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, [
-			$routes['simple-var']['controller'],
-			$this->action_default,
+		$res = $this->Router->get_route('GET', '/simple');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+
+		$res = $this->Router->get_route('GET', '/simple/');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+
+		$res = $this->Router->get_route('GET', '/simple///');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+
+		$res = $this->Router->get_route('GET', '///simple///');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+
+		$res = $this->Router->get_rewrite('test');
+		$this->assertEquals('/simple', $res, 'Should get expected rewrite from link name');
+	}
+
+	public function testRouteSimpleVarRoute()
+	{
+		$route = [
+			'path' => 'test/{id}',
+			'controller' => 'App\\Controller\\Test'
+		];
+
+		$exp = [
+			'App\\Controller\\Test',
+			'default',
 			['id' => '123']
-		]);
-
-		$res = $this->Router->get_rewrite('simple-var', ['id' => '123']);
-		$this->assertEquals($res, $path);
-	}
-
-	public function testMultiVarRoute()
-	{
-		$path = '/multi-var/123/test/abc/xyz';
-		$routes = [
-			'multi-var' => [
-				'path' => 'multi-var/{var1}/test/{var2}/{var3}',
-				'controller' => 'App\\Controller\\MultiVar'
-			]
-		];
-		$vars = ['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz'];
-
-		$res = $this->Router->add_route('multi-var', $routes['multi-var']);
-		$this->assertTrue($res);
-
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, [
-			$routes['multi-var']['controller'],
-			$this->action_default,
-			$vars
-		]);
-
-		$res = $this->Router->get_rewrite('multi-var', $vars);
-		$this->assertEquals($res, $path);
-	}
-
-	public function testSimpleMethodRoute()
-	{
-		$path = '/method';
-		$routes = [
-			'method' => [
-				'path' => '/method',
-				'controller' => 'App\\Controller\\Method',
-				'method' => 'POST'
-			]
 		];
 
-		$res = $this->Router->add_route('method', $routes['method']);
-		$this->assertTrue($res);
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertFalse($res);
+		$res = $this->Router->get_route('GET', '/test/123');
+		$this->assertEquals($exp, $res);
 
-		$res = $this->Router->get_route('PATCH', $path);
-		$this->assertFalse($res);
+		$res = $this->Router->get_route('GET', '/test/123//');
+		$this->assertEquals($exp, $res);
 
-		$res = $this->Router->get_route('HEAD', $path);
-		$this->assertFalse($res);
+		$res = $this->Router->get_rewrite('test', ['id' => '123']);
+		$this->assertEquals('/test/123', $res);
 
-		$res = $this->Router->get_route('POST', $path);
-		$this->assertEquals($res, [
-			$routes['method']['controller'],
-			$this->action_default,
-			[]
-		]);
-
-		$res = $this->Router->get_rewrite('method');
-		$this->assertEquals($res, $path);
+		$res = $this->Router->get_rewrite('test', ['id' => 'abc']);
+		$this->assertEquals('/test/abc', $res);
 	}
 
-	public function testMultiMethodRoute()
+	public function testRouteMultiVarRoute()
 	{
-		$path = '/method';
-		$routes = [
-			'method' => [
-				'path' => '/method',
-				'controller' => 'App\\Controller\\Method',
-				'method' => ['POST', 'PUT', 'PATCH']
-			]
+		$route = [
+			'path' => 'test/{var1}/test/{var2}/{var3}',
+			'controller' => 'App\\Controller\\MultiVar'
 		];
 
-		$res = $this->Router->add_route('method', $routes['method']);
-		$this->assertTrue($res);
+		$exp = [
+			'App\\Controller\\MultiVar',
+			'default',
+			['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']
+		];
 
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertFalse($res);
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
 
-		$expected = [
-			$routes['method']['controller'],
-			$this->action_default,
+		$res = $this->Router->get_route('GET', '/test/123/test/abc/xyz');
+		$this->assertEquals($exp, $res);
+
+		$res = $this->Router->get_rewrite('test', ['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']);
+		$this->assertEquals('/test/123/test/abc/xyz', $res);
+
+		$res = $this->Router->get_rewrite('test', ['var1' => 'aaa', 'var2' => '999', 'var3' => '---']);
+		$this->assertEquals('/test/aaa/test/999/---', $res);
+	}
+
+	public function testRouteSimpleMethodRoute()
+	{
+		$route = [
+			'path' => '/test',
+			'controller' => 'App\\Controller\\Test',
+			'method' => 'POST'
+		];
+
+		$exp = [
+			'App\\Controller\\Test',
+			'default',
 			[]
 		];
 
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		foreach (array_keys(Router::METHODS) as $test) {
+			if ($test === 'POST') {
+				continue;
+			}
+			$res = $this->Router->get_route($test, '/test');
+			$this->assertFalse($res);
+		}
+
+		$res = $this->Router->get_route('POST', '/test');
+		$this->assertEquals($exp, $res);
+
+		$res = $this->Router->get_rewrite('test');
+		$this->assertEquals('/test', $res);
+	}
+
+	public function testRouteMultiMethodRoute()
+	{
+		$path = '/method';
+		$route = [
+			'path' => '/method',
+			'controller' => 'App\\Controller\\Test',
+			'method' => ['POST', 'PUT', 'PATCH']
+		];
+
+		$res = $this->Router->add_route('method', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		foreach (array_keys(Router::METHODS) as $test) {
+			if (in_array($test, ['POST', 'PUT', 'PATCH'])) {
+				continue;
+			}
+			$res = $this->Router->get_route($test, '/method');
+			$this->assertFalse($res);
+		}
+
+		$exp = [
+			'App\\Controller\\Test',
+			'default',
+			[]
+		];
+
 		$res = $this->Router->get_route('PATCH', $path);
-		$this->assertEquals($res, $expected);
+		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_route('PUT', $path);
-		$this->assertEquals($res, $expected);
+		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_route('POST', $path);
-		$this->assertEquals($res, $expected);
+		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('method');
 		$this->assertEquals($res, $path);
 	}
 
-	public function testSimpleAction()
+	public function testRouteSimpleAction()
 	{
-		$path = '/simple/action';
-		$routes = [
-			'simple' => [
-				'path' => '/simple/action',
-				'controller' => 'App\\Controller\\Simple',
-				'action' => 'simple_action',
-			]
+		$route = [
+			'path' => '/simple/action',
+			'controller' => 'App\\Controller\\Simple',
+			'action' => 'simple_action',
 		];
 
-		$res = $this->Router->add_route('simple', $routes['simple']);
-		$this->assertTrue($res);
-
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, [
-			$routes['simple']['controller'],
-			$routes['simple']['action'],
+		$exp = [
+			'App\\Controller\\Simple',
+			'simple_action',
 			[]
-		]);
+		];
+
+		$res = $this->Router->add_route('simple', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/simple/action');
+		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('simple');
-		$this->assertEquals($res, $path);
+		$this->assertEquals('/simple/action', $res);
 	}
 
-	public function testCallback()
+	public function testRouteRewriteWithQueryVars()
 	{
-		$path = '/callback';
-		$routes = [
-			'callback' => [
-				'path' => '/callback',
-				'callback' => RouterTest::class . '::__test_callback_function'
-			]
+		$route = [
+			'path' => '/with/queries',
+			'controller' => 'App\\Controller\\TestClass',
+			'action' => 'test_action',
 		];
 
-		$res = $this->Router->add_route('callback', $routes['callback']);
-		$this->assertTrue($res);
+		$exp = [
+			'App\\Controller\\TestClass',
+			'test_action',
+			[]
+		];
 
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, false);
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/with/queries');
+		$this->assertEquals($exp, $res, 'Should get expected query var route');
+
+		$res = $this->Router->get_rewrite('test', ['var1' => '1', 'var2' => '2']);
+		$this->assertEquals('/with/queries?var1=1&var2=2', $res, 'Should write expected link');
+	}
+
+	public function testRouteRewriteWithPathVarsAndQueryVars()
+	{
+		$route = [
+			'path' => '/with/{var1}/{var2}/queries',
+			'controller' => 'App\\Controller\\TestClass',
+			'action' => 'test_action',
+		];
+
+		$exp = [
+			'App\\Controller\\TestClass',
+			'test_action',
+			['var1' => 'a', 'var2' => 'b']
+		];
+
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/with/a/b/queries');
+		$this->assertEquals($exp, $res, 'Should get expected query var route');
+
+		$res = $this->Router->get_rewrite('test', ['var1' => 'a', 'var2' => 'b', 'var3' => 'c']);
+		$this->assertEquals('/with/a/b/queries?var3=c', $res, 'Should write expected link');
+
+		$res = $this->Router->get_rewrite('test', ['var1' => '1', 'var2' => '2', 'var3' => '3', 'var4' => '4']);
+		$this->assertEquals('/with/1/2/queries?var3=3&var4=4', $res, 'Should write expected link');
+	}
+
+	public function testRouteCallback()
+	{
+		$route = [
+			'path' => '/callback',
+			'callback' => RouterTest::class . '::__test_callback_function'
+		];
+
+		$res = $this->Router->add_route('callback', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/callback');
+		$this->assertFalse($res, 'Callback can resolve FALSE itself');
 
 		$res = $this->Router->get_rewrite('callback');
-		$this->assertEquals($res, $path);
+		$this->assertEquals('/callback', $res);
 	}
 
-	public function testCallbackRoute()
+	public function testRouteCallbackRoute()
 	{
-		$path = '/callback';
-		$routes = [
-			'callback' => [
-				'path' => '/callback',
-				'callback' => RouterTest::class . '::__test_callback_route_function'
-			]
+		$route = [
+			'path' => '/callback',
+			'callback' => RouterTest::class . '::__test_callback_route_function'
 		];
 
-		$res = $this->Router->add_route('callback', $routes['callback']);
-		$this->assertTrue($res);
-
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, false);
-
-		$res = $this->Router->get_route('POST', $path);
-		$this->assertEquals($res, [
+		$exp = [
 			'App\\Controller\\Callback',
 			'callback_action',
 			['var1' => 'ONE', 'var2' => 'TWO']
-		]);
+		];
+
+		$res = $this->Router->add_route('callback', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/callback');
+		$this->assertFalse($res);
+
+		$res = $this->Router->get_route('POST', '/callback');
+		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('callback');
-		$this->assertEquals($res, $path);
+		$this->assertEquals('/callback', $res);
 	}
 
-	public function testCallbackMethod()
+	public function testRouteCallbackWithMethod()
 	{
-		$path = '/callback';
+		$route = [
+			'path' => '/callback',
+			'method' => ['POST', 'PUT'],
+			'callback' => RouterTest::class . '::__test_callback_method_function'
+		];
+
+		$exp = [
+			'App\\Controller\\Callback',
+			'callback_action',
+			[]
+		];
+
+		$res = $this->Router->add_route('callback', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/callback');
+		$this->assertFalse($res);
+
+		$res = $this->Router->get_route('POST', '/callback');
+		$this->assertEquals($exp, $res);
+
+		$res = $this->Router->get_rewrite('callback');
+		$this->assertEquals('/callback', $res);
+	}
+
+	public function testDeleteRoute(): void
+	{
+		$route = [
+			'path' => '/test',
+			'controller' => 'App\\Controller\\Test',
+		];
+
+		$exp = [
+			'App\\Controller\\Test',
+			'default',
+			[]
+		];
+
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/test');
+		$this->assertEquals($exp, $res);
+
+		$res = $this->Router->delete_route('test');
+		$this->assertTrue($res);
+
+		$res = $this->Router->get_route('GET', '/test');
+		$this->assertFalse($res);
+
+		$res = $this->Router->delete_route('test');
+		$this->assertFalse($res);
+	}
+
+	public function testGetRoutes()
+	{
 		$routes = [
-			'callback' => [
+			'test1' => [
+				'path' => '/test',
+				'controller' => 'App\\Controller\\Test',
+			],
+			'test2' => [
+				'path' => '/test2/foo',
+				'controller' => 'App\\Controller\\Test2',
+				'action' => 'foo'
+			],
+			'test3' => [
+				'path' => '/test3/foo/{var1}',
+				'controller' => 'App\\Controller\\Test3',
+				'method' => ['GET', 'POST'],
+				'vars' => ['var1' => 'VAR1_DEFAULT', 'var2' => '']
+			],
+			'test4' => [
 				'path' => '/callback',
 				'method' => ['POST', 'PUT'],
 				'callback' => RouterTest::class . '::__test_callback_method_function'
 			]
 		];
 
-		$res = $this->Router->add_route('callback', $routes['callback']);
-		$this->assertTrue($res);
+		foreach ($routes as $name => $route) {
+			$this->Router->add_route($name, $route);
+		}
 
-		$res = $this->Router->get_route('GET', $path);
-		$this->assertEquals($res, false);
+		$exp = [
+			'test1' => [
+				'path' => '~^test$~',
+				'controller' => 'App\\Controller\\Test',
+				'action' => 'default',
+			],
+			'test2' => [
+				'path' => '~^test2/foo$~',
+				'controller' => 'App\\Controller\\Test2',
+				'action' => 'foo',
+			],
+			'test3' => [
+				'path' => '~^test3/foo/([^/]+)$~',
+				'controller' => 'App\\Controller\\Test3',
+				'action' => 'default',
+				'method' => ['GET', 'POST'],
+				'vars' => [
+					'var1' => 'VAR1_DEFAULT',
+					'var2' => '',
+				]
+			],
+			'test4' => [
+				'path' => '~^callback$~',
+				'action' => 'default',
+				'method' => ['POST', 'PUT'],
+				'callback' => RouterTest::class . '::__test_callback_method_function',
+			]
+		];
 
-		$res = $this->Router->get_route('POST', $path);
-		$this->assertEquals($res, [
-			'App\\Controller\\Callback',
-			'callback_action',
-			[]
-		]);
-
-		$res = $this->Router->get_rewrite('callback');
-		$this->assertEquals($res, $path);
+		$res = $this->Router->get_routes();
+		$this->assertEquals($exp, $res);
 	}
 
-	/*public function testPriority()
+	public function testRouteMethod(): void
 	{
-		$path1 = '/priority/foo';
-		$path2 = '/priority/bar';
+		$route_method = Router::METHODS['GET'];
+
+		$res = Router::is_route_method('GET', $route_method);
+		$this->assertTrue($res);
+
+		foreach (array_keys(Router::METHODS) as $test) {
+			if ($test === 'GET') {
+				continue;
+			}
+			$res = Router::is_route_method($test, $route_method);
+			$this->assertFalse($res, $test . ' should asssert false');
+		}
+
+		$route_method += Router::METHODS['PATCH'];
+
+		$res = Router::is_route_method('GET', $route_method);
+		$this->assertTrue($res);
+
+		$res = Router::is_route_method('PATCH', $route_method);
+		$this->assertTrue($res);
+
+		foreach (array_keys(Router::METHODS) as $test) {
+			if ($test === 'GET' or $test === 'PATCH') {
+				continue;
+			}
+			$res = Router::is_route_method($test, $route_method);
+			$this->assertFalse($res);
+		}
+
+		$route_method += Router::METHODS['POST'];
+
+		$res = Router::is_route_method('GET', $route_method);
+		$this->assertTrue($res);
+
+		$res = Router::is_route_method('PATCH', $route_method);
+		$this->assertTrue($res);
+
+		$res = Router::is_route_method('POST', $route_method);
+		$this->assertTrue($res);
+
+		foreach (array_keys(Router::METHODS) as $test) {
+			if ($test === 'GET' or $test === 'PATCH' or $test === 'POST') {
+				continue;
+			}
+			$res = Router::is_route_method($test, $route_method);
+			$this->assertFalse($res);
+		}
+	}
+
+	public function getGetRouteMethods(): void
+	{
+		$res = $this->Router->get_route_methods(0);
+		$exp = array_keys($this->Router::METHODS);
+		$this->assertEquals($exp, $res);
+
+		$res = $this->Router->get_route_methods($this->Router::METHODS['GET'] + $this->Router::METHODS['OPTIONS']);
+		$exp = ['GET', 'OPTIONS'];
+		$this->assertEquals($exp, $res);
+
+		$res = $this->Router->get_route_methods(
+			$this->Router::METHODS['GET'] +
+			$this->Router::METHODS['OPTIONS'] +
+			$this->Router::METHODS['POST']
+		);
+		$exp = ['GET', 'POST', 'OPTIONS'];
+		$this->assertEquals($exp, $res);
+	}
+
+	public function testGetRouteVars(): void
+	{
+		preg_match('~^test3/foo/([^/]+)$~', 'test3/foo/test', $m);
+		$route_vars = ['var1' => ''];
+		$res = Router::get_route_vars($route_vars, $m);
+		$exp = ['var1' => 'test'];
+		$this->assertEquals($exp, $res);
+
+		preg_match('~^test3/foo/([^/]+)/([^/]+)$~', 'test3/foo/test1/test2', $m);
+		$route_vars = ['var1' => '', 'var2' => ''];
+		$res = Router::get_route_vars($route_vars, $m);
+		$exp = ['var1' => 'test1', 'var2' => 'test2'];
+		$this->assertEquals($exp, $res);
+	}
+
+	public function testDump(): void
+	{
 		$routes = [
-			'priority2' => [
-				'path' => '/priority/{var}',
-				'controller' => 'App\\Controller\\Priority2',
+			'test' => [
+				'path' => '/test',
+				'controller' => 'App\\Controller\\Test',
 			],
-			'priority1' => [
-				'path' => '/priority/foo',
-				'controller' => 'App\\Controller\\Priority1',
-				'priority' => 1
+			'test2' => [
+				'path' => '/test2/foo',
+				'controller' => 'App\\Controller\\Test2',
+				'action' => 'foo'
+			],
+			'test3' => [
+				'path' => '/test3/foo/{var1}',
+				'controller' => 'App\\Controller\\Test3',
+				'method' => ['GET', 'POST'],
+			]
+		];
+
+		$exp = [
+			'iname' => [
+				'test' => 0,
+				'test2' => 1,
+				'test3' => 2,
+			],
+			'routes' => [
+				0 => [
+					Router::CONTROLLER => 'App\Controller\Test',
+					Router::VARS => [],
+					Router::ACTION => 'default',
+					Router::METHOD => 0,
+					Router::SPRNTF => 'test',
+					Router::NAME => 'test',
+					Router::REGX => '~^test$~',
+				],
+				1 => [
+					Router::CONTROLLER => 'App\Controller\Test2',
+					Router::VARS => [],
+					Router::ACTION => 'foo',
+					Router::METHOD => 0,
+					Router::SPRNTF => 'test2/foo',
+					Router::NAME => 'test2',
+					Router::REGX => '~^test2/foo$~',
+				],
+				2 => [
+					Router::CONTROLLER => 'App\Controller\Test3',
+					Router::VARS => ['var1' => ''],
+					Router::ACTION => 'default',
+					Router::METHOD => Router::METHODS['GET'] + Router::METHODS['POST'],
+					Router::SPRNTF => 'test3/foo/%s',
+					Router::NAME => 'test3',
+					Router::REGX => '~^test3/foo/([^/]+)$~',
+				],
+			],
+			'index' => [
+				'test2' => [1],
+				'test3' => [2]
 			],
 		];
 
-		$res = $this->Router->add_route('priority2', $routes['priority2']);
-		$this->assertTrue($res);
+		foreach ($routes as $name => $route) {
+			$this->Router->add_route($name, $route);
+		}
 
-		$res = $this->Router->add_route('priority1', $routes['priority1']);
-		$this->assertTrue($res);
-
-		$res = $this->Router->get_route('GET', $path1);
-		$this->assertEquals($res, [
-			'App\\Controller\\Priority2',
-			$this->action_default,
-			['var' => 'foo']
-		]);
-
-		$res = $this->Router->get_route('GET', $path2);
-		$this->assertEquals($res, [
-			'App\\Controller\\Priority2',
-			$this->action_default,
-			['var' => 'bar']
-		]);
-
-		$this->Router->sort_priority();
-
-		$res = $this->Router->get_route('GET', $path1);
-		$this->assertEquals($res, [
-			'App\\Controller\\Priority1',
-			$this->action_default,
-			[]
-		]);
-
-		$res = $this->Router->get_route('GET', $path2);
-		$this->assertEquals($res, [
-			'App\\Controller\\Priority2',
-			$this->action_default,
-			['var' => 'bar']
-		]);
-	}*/
+		$res = $this->Router->dump();
+		$this->assertEquals($exp, $res);
+	}
 
 	public static function __test_callback_function(string $method, array $route, array $m, string $url): array|false
 	{
@@ -379,9 +621,9 @@ class RouterTest extends TestCase
 		return [$controller, $action, $vars];
 	}
 
-	public static function __test_callback_method_function(string $method, array $route, array $m, string $url)
+	public static function __test_callback_method_function(string $method, array $route, array $m, string $url): false|array
 	{
-		if (!ROUTER::test_route_method($method, $route)) {
+		if (!Router::is_route_method($method, $route[Router::METHOD])) {
 			return false;
 		}
 
@@ -390,10 +632,5 @@ class RouterTest extends TestCase
 		$vars = [];
 
 		return [$controller, $action, $vars];
-	}
-
-	public static function tearDownAfterClass(): void
-	{
-		static::tmpdir_remove();
 	}
 }
