@@ -4,9 +4,9 @@ namespace PHPCanvas\Logs;
 
 class Rotate
 {
-	protected $size;
-	protected $count;
-	protected $dir;
+	protected int $size;
+	protected int $count;
+	protected string $dir;
 
 	public function __construct(int $size = null, int $count = null)
 	{
@@ -14,7 +14,7 @@ class Rotate
 		$this->count = $count ?: 10;
 	}
 
-	public function rotate(string $file, int $size = null, int $count = null)
+	public function rotate(string $file, int $size = null, int $count = null): void
 	{
 		$size = $size ?: $this->size;
 		$count = $count ?: $this->count;
@@ -32,7 +32,7 @@ class Rotate
 		}
 	}
 
-	protected function archive($file)
+	protected function archive($file): string
 	{
 		$archive_name = $this->get_archive_name($file);
 		rename($file, $archive_name);
@@ -40,7 +40,7 @@ class Rotate
 		return $archive_name;
 	}
 
-	protected function compress($file)
+	protected function compress($file): string
 	{
 		$suffix = '.bz';
 		$bz = bzopen($file . $suffix, 'w');

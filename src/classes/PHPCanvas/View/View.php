@@ -2,17 +2,17 @@
 
 namespace PHPCanvas\View;
 
-use \Exception;
+use Exception;
 use PHPCanvas\FinderInterface;
 use PHPCanvas\Scope\ScopeInterface;
 use PHPCanvas\Routing\LinksInterface;
 
 class View implements ViewInterface
 {
-	protected $Finder;
-	protected $Scope;
-	protected $Links;
-	protected $Html;
+	protected ?FinderInterface $Finder = null;
+	protected ?ScopeInterface $Scope = null;
+	protected ?LinksInterface $Links = null;
+	protected ?HtmlInterface $Html = null;
 
 	public function set_finder(FinderInterface $Finder): void
 	{
@@ -34,20 +34,21 @@ class View implements ViewInterface
 		$this->Html = $Html;
 	}
 
-	public function get_view(string $view, $search_path = null, bool $use_cache = true): string
+	public function get_view(string $view, string $search_path = null, bool $use_cache = true): string
 	{
-		if (strpos($view, '/') === 0) {
+		if (str_starts_with($view, '/')) {
 			return $view;
-		} elseif (!is_null($this->Finder) and $path = $this->Finder->get($view, $search_path, $use_cache)) {
-			return $path;
+		} elseif ($path = $this->Finder?->get($view, $search_path, $use_cache)) {
+				return $path;
 		} else {
 			throw new Exception('Could not find view "' . $view . '"');
 		}
+
 	}
 
 	public function get_link(string $name, array $vars = [], bool $relative = true): string
 	{
-		return $this->Links->get_link($name, $vars, $relative);
+		return $this->Links?->get_link($name, $vars, $relative) ?: '';
 	}
 
 	public function view(string $view, array $_VARS = null, $search_path = null, $cache = true): mixed

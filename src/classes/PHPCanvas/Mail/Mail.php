@@ -21,7 +21,7 @@ class Mail implements MailInterface
 		$this->regx = $regx;
 	}
 
-	public function send($to, $subject = '', $message = '', $headers = '', $params = '', $log = '', $test = false)
+	public function send($to, $subject = '', $message = '', $headers = '', $params = '', $log = '', $test = false): bool
 	{
 		if (!$test and ($this->is_active() or (strlen($this->regx) and preg_match($to, $this->regx)))) {
 			if (strlen($headers)) {
@@ -49,12 +49,12 @@ class Mail implements MailInterface
 		}
 	}
 
-	public function is_active()
+	public function is_active(): bool
 	{
 		return $this->active;
 	}
 
-	public function log($to, $subject = '', $message = '', $headers = '', $params = '', $log = 'mail_log.mbx')
+	public function log($to, $subject = '', $message = '', $headers = '', $params = '', $log = 'mail_log.mbx'): bool
 	{
 		$time = time();
 		$this->LogHandler->add(
@@ -71,7 +71,7 @@ class Mail implements MailInterface
 		return true;
 	}
 
-	public function normalise_eol($string, $eol = "\n")
+	public function normalise_eol(string $string, string $eol = "\n"): string
 	{
 		return preg_replace('~\R~u', $eol, $string);
 	}

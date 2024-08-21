@@ -2,15 +2,16 @@
 
 namespace PHPCanvas\Cache;
 
-use PHPCanvasTestHelpersTrait;
+use PHPCanvas\TestHelpersTrait;
 use PHPUnit\Framework\TestCase;
-use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use stdClass;
 
+#[CoversClass(Cache::class)]
 class CacheTest extends TestCase
 {
-	use PHPCanvasTestHelpersTrait;
+	use TestHelpersTrait;
 
 	protected CacheInterface $Cache;
 	public static int $perm;
@@ -18,9 +19,14 @@ class CacheTest extends TestCase
 
 	public static function setUpBeforeClass(): void
 	{
-		static::tmpdir_make(self::class);
+		static::tmpdir_make();
 		self::$perm = 0755;
 		self::$ttl = 900;
+	}
+
+	public static function tearDownAfterClass(): void
+	{
+		static::tmpdir_remove();
 	}
 
 	public function setUp(): void
@@ -37,6 +43,10 @@ class CacheTest extends TestCase
 	{
 		$res = $this->Cache->index('foo/bar/123', 3);
 		$this->assertEquals('foo/bar/0/123', $res);
+		$res = $this->Cache->index('foo/bar/1234', 3);
+		$this->assertEquals('foo/bar/1/1234', $res);
+		$res = $this->Cache->index('foo/bar/2234', 3);
+		$this->assertEquals('foo/bar/2/2234', $res);
 
 		$res = $this->Cache->index('foo/bar/abcdef', 3);
 		$this->assertEquals('foo/bar/abc/abcdef', $res);
@@ -112,9 +122,9 @@ class CacheTest extends TestCase
 		$data = 'data';
 
 		$this->Cache->put($path, $data);
-		$cache_data = $this->Cache->get($path);
+		$res = $this->Cache->get($path);
 
-		$this->assertEquals($data, $cache_data);
+		$this->assertEquals($data, $res);
 	}
 
 	public function testGetWithIndex()
@@ -170,6 +180,7 @@ class CacheTest extends TestCase
 		$this->Cache->put($path, $data);
 		touch(static::$tmpdir . '/' . $path, time() - 1);
 		clearstatcache();
+
 		$res = $this->Cache->get($path);
 		$this->assertEquals('', $res);
 
@@ -272,11 +283,6 @@ class CacheTest extends TestCase
 
 		$this->Cache->gc(101);
 		$this->assertEquals([static::$tmpdir . '/' . $path2], $this->listFiles(static::$tmpdir));
-	}
-
-	public static function tearDownAfterClass(): void
-	{
-		static::tmpdir_remove();
 	}
 
 	protected function listFiles($dir): array

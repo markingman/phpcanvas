@@ -3,17 +3,13 @@
 $config = [];
 
 /**
- * Default app root directory
- *
- * Presumes we're in [root]/vendors/devname/projname/src/config/ or [root]/src/config/
+ *  Default app root directory (presumes [root]/vendors/name/project/src/config/ or [root]/src/config/)
  */
-$config['DIR_ROOT'] = strpos(__DIR__, '/vendor/') !== false ?
+$config['DIR_ROOT'] = str_contains(__DIR__, '/vendor/') ?
 	 realpath(__DIR__ . '/../../../../../') : realpath(__DIR__ . '/../../');
+
 /**
- * Application name (for internal use)
- *
- * Example use is being emailed to admin when an error occurs. Not intended for
- * display to regular users.
+ * Application name (for internal use, not intended for public display)
  */
 $config['APP_NAME'] = 'Sample App';
 
@@ -23,28 +19,22 @@ $config['APP_NAME'] = 'Sample App';
 $config['SITE_MODE'] = 'prod';
 
 /**
- * Domain name or IP address of the site
- *
- * No http:// or trailing slash
+ * Domain name or IP address of the site (no http:// or trailing slash)
  */
 $config['SITE_DOMAIN'] = 'localhost';
 
 /**
- * URL path of the site from domain
- *
- * Should not end with '/', e.g. '/dev/site/path'
+ * URL path of the site from domain (no trailing slash, e.g. "" or "/path")
  */
 $config['SITE_PATH'] = '';
 
 /**
- * URI of the site] = but no protocol - include all sub directories
+ * URI of the site (no protocol, include all sub paths)
  */
 $config['SITE_URL'] = $config['SITE_DOMAIN'] . $config['SITE_PATH'] . '/';
 
 /**
  * Email address of the site's system administrator
- *
- * Gets set error emails etcetera.
  */
 $config['MAIL_ADMIN'] = 'root';
 
@@ -54,9 +44,9 @@ $config['MAIL_ADMIN'] = 'root';
 $config['MAIL_SENDER'] = 'www';
 
 /**
- * Email on/off control (can work independently of {@link SITE_MODE})
+ * Email on/off control
  */
-$config['MAIL_ON'] = ($config['SITE_MODE'] == 'prod') ? true : false;
+$config['MAIL_ON'] = ($config['SITE_MODE'] === 'prod');
 
 /**
  * Default locale
@@ -64,9 +54,9 @@ $config['MAIL_ON'] = ($config['SITE_MODE'] == 'prod') ? true : false;
 $config['LOCALE'] = function_exists('locale_get_default') ? locale_get_default() : 'en-GB';
 
 /**
- * Default locale options
+ * Default locale options (space delimited list)
  */
-$config['LOCALE_OPTIONS'] = $config['LOCALE'];//space dellimited list
+$config['LOCALE_OPTIONS'] = $config['LOCALE'];
 
 /**
  * Controller action auto prefix (added to all URL actions)
@@ -79,35 +69,24 @@ $config['ACTION_PREFIX'] = '';
 $config['ACTION_SUFFIX'] = '_action';
 
 /**
- * Set common action (called before any specifc action)
+ * Set common action (called before any specific action)
  */
 $config['ACTION_DEFAULT'] = 'default';
 
 /**
- * Universal time Coordinate description (country and town name)
- *
- * See http://www.php.net/manual/en/timezones.php
+ * Universal Time Coordinate description (country and town name)
  */
-$config['TIMEZONE'] = /*function_exists get else : */ 'Europe/London';
+$config['TIMEZONE'] = date_default_timezone_get();
 
 /**
  * File type used by file writers to control line breaks
  */
-$config['LE'] = PHP_EOL;
+//$config['LE'] = PHP_EOL;
 
 /**
  * Directory separator
- *
- * Note: can use '/' in all strings, this for things like OS provided paths
  */
-$config['DS'] = DIRECTORY_SEPARATOR;
-
-/**
- * Table prefix
- *
- * Used with database tables.
- */
-// $config['TP'] = '';
+//$config['DS'] = DIRECTORY_SEPARATOR;
 
 /**
  * Filepath to the private filesystem
@@ -155,9 +134,7 @@ $config['DIR_LOGS'] = $config['DIR_APP'] . '/logs';
 $config['DIR_SITE'] = $config['DIR_ROOT'] . '/httpdocs';
 
 /**
- * Filepath to the application's sessions directory
- *
- * Used if using file based sessions
+ * Filepath to the application's sessions directory (if using file based sessions)
  */
 $config['DIR_SESS'] = $config['DIR_APP'] . '/sessions';
 
@@ -170,13 +147,6 @@ $config['DIR_TEMP'] = $config['DIR_APP'] . '/tmp';
  * Filepath to the DIR_VIEWS directory
  */
 $config['DIR_VIEWS'] = $config['DIR_APP'] . '/views';
-
-/**
- * Minimum PHP version
- *
- * Set a minium PHP version requirement
- */
-// $config['CONFIG_MIN_PHP'] = '7';
 
 /**
  * Developer debug
@@ -204,18 +174,12 @@ $config['ERROR_DISPLAY_LEVEL'] = E_ALL & ~E_NOTICE;
 $config['ERROR_ALERT_LEVEL'] = E_CORE_ERROR | E_COMPILE_ERROR;
 
 /**
- * General file permission
- *
- * File copying/creating functions should use at least this permission when
- * writing files (if nothing else is specified).
+ * General file permission (file writes should use at least this permission)
  */
 $config['PRM_FILE_COPY'] = 0644;
 
 /**
- * General directory permission
- *
- * Directory copying/creating functions should use at least this permission when
- * writing directories (if nothing else is specified).
+ * General directory permission (dir writes should use at least this permission)
  */
 $config['PRM_DIR_COPY'] = 0755;
 
@@ -230,9 +194,7 @@ $config['CHAR_TYPE'] = 'UTF-8';
 $config['CHAR_TYPE_DB'] = 'utf8';
 
 /**
- * Name of variable for URL variable prefix 'arg'[n]
- *
- * Note values start with '1' (arg1) not '0'
+ * Name of variable for URL variable prefix (note values start with 1 not 0, e.g: arg1, arg2)
  */
 $config['URL_ARG'] = 'arg';
 

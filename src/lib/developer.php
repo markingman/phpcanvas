@@ -1,12 +1,12 @@
 <?php
 
-function prx(...$vs)
+function prx(...$vs): never
 {
 	while (ob_get_length()) {
 		ob_end_clean();
 	}
 
-	if (strpos(PHP_SAPI, 'cli') === false) {
+	if (!str_contains(PHP_SAPI, 'cli')) {
 		header('Content-Type: text/plain; charset=UTF-8');
 	}
 	

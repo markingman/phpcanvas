@@ -1,6 +1,6 @@
 <?php
 
-return function ($e, $m = null) {
+return function (Throwable $e, $m = null) {
 	$html = <<<__
 <!DOCTYPE html>
 <html lang="en">

@@ -4,60 +4,86 @@ namespace PHPCanvas\Http;
 
 class Response implements ResponseInterface
 {
-	protected $response_code = 200;
-	protected $char_set = 'UTF-8';
-	protected $headers = [];
-	protected $cookies = [];
+	protected bool $terminate_after_response = true;
+	protected int $response_code = 200;
+	protected string $char_set = 'UTF-8';
+	protected array $headers = [];
+	protected array $cookies = [];
 
-	public function set_char_set($set)
+	public function __construct(bool $terminate_after_response = true)
+	{
+		$this->set_terminate_after_response($terminate_after_response);
+	}
+
+	public function set_terminate_after_response(bool $terminate_after_response): void
+	{
+		$this->terminate_after_response = $terminate_after_response;
+	}
+
+	public function set_char_set(string $set): void
 	{
 		$this->char_set = $set;
 	}
 
-	public function set_response_code($code)
+	public function set_response_code(int $code): void
 	{
 		$this->response_code = $code;
 	}
 
-	public function set_header($key, $value)
+	public function set_header(string $key, string $value): void
 	{
 		$this->headers[$key] = $value;
 	}
 
-	public function unset_header($key)
+	public function unset_header(string $key): void
 	{
 		unset($this->headers[$key]);
 	}
 
-	public function set_cookie($key, $value)
+	public function set_cookie(
+		string $name,
+		string $value = '',
+		int $expires = 0,
+		string $path = '',
+		string $domain = '',
+		bool $secure = false,
+		bool $httponly = false,
+    ): void
 	{
-		$this->cookies[$key] = $value;
+		$this->cookies[$name] = [
+			'value' => $value,
+			'expires' => $expires,
+			'path' =>  $path,
+			'domain' => $domain,
+			'secure' => $secure,
+			'httponly' => $httponly,
+		];
 	}
 
-	public function unset_cookie($key)
+	public function unset_cookie(string $key): void
 	{
 		unset($this->cookies[$key]);
 	}
 
-	public function html(string $html)
+	public function html(string $html): void
 	{
 		$this->set_header('Content-Type', sprintf('text/html; charset=%s', $this->char_set));
 		$this->respond($html);
 	}
 
-	public function text(string $string)
+	public function text(string $text): void
 	{
 		$this->set_header('Content-Type', sprintf('text/plain; charset=%s', $this->char_set));
-		$this->respond($string);
+		$this->respond($text);
 	}
 
-	public function json(string $json)
+	public function json(string $json): void
 	{
 		$this->set_header('Content-Type', sprintf('text/javascript; charset=%s', $this->char_set));
 		$this->respond($json);
 	}
 
-	public function file(string $file, $unlink_file = true)
+	public function file(string $file, bool $unlink_file = true): void
 	{
 		$this->set_header('Content-Type', sprintf('%s; charset=%s', mime_content_type($file), $this->char_set));
 		$this->set_header('Content-Disposition', sprintf('attachment;filename=%s', basename($file)));
@@ -65,7 +91,14 @@ class Response implements ResponseInterface
 		$this->respond($file, true, $unlink_file);
 	}
 
-	public function respond($content = '', $read_file = false, $unlink_file = false, $remove_headers = true)
+	public function redirect(string $to, $code = 303): void
+	{
+		$this->set_response_code($code);
+		$this->set_header('Location', $to);
+		$this->respond(null);
+	}
+
+	public function respond(?string $content = '', bool $read_file = false, bool $unlink_file = false, bool $remove_headers = true): void
 	{
 		http_response_code($this->response_code);
 
@@ -77,19 +110,28 @@ class Response implements ResponseInterface
 			header($key . ': ' . $value);
 		}
 
-		foreach ($this->cookies as $cookie) {
-			//@todo: setcookie(name, value, expire, path, domain, secure, httponly);
+		foreach ($this->cookies as $name => $params) {
+			setcookie($name, $params['value'], $params['expires'], $params['path'], $params['domain'], $params['secure'], $params['httponly']);
 		}
 
-		if (!$read_file) {
-			echo $content;
-		} else {
-			readfile($content);
-			if ($unlink_file) {
-				unlink($content);
+		if (!is_null($content)) {
+			if (!$read_file) {
+				echo $content;
+			} else {
+				readfile($content);
+				if ($unlink_file) {
+					unlink($content);
+				}
 			}
 		}
 
-		exit;
+		$this->terminate();
+	}
+
+	protected function terminate(): void
+	{
+		if ($this->terminate_after_response) {
+			exit;// @codeCoverageIgnore
+		}
 	}
 }

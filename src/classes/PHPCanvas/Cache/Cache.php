@@ -2,9 +2,10 @@
 
 namespace PHPCanvas\Cache;
 
-use RecursiveIteratorIterator;
-use RecursiveDirectoryIterator;
+use Exception;
 use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 class Cache implements CacheInterface
 {
@@ -48,7 +49,7 @@ class Cache implements CacheInterface
 			if (!file_exists($this->dir . DIRECTORY_SEPARATOR . $dir)) {
 				mkdir($this->dir . DIRECTORY_SEPARATOR . $dir, $this->prm, true);
 			} elseif (!is_dir($this->dir . DIRECTORY_SEPARATOR . $dir)) {
-				trigger_error('CACHE_FILE_EXISTS; Trying to write cache directory where file exists', E_USER_ERROR);
+				throw new Exception(message: 'Trying to write cache directory where file exists');
 			}
 		}
 

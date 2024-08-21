@@ -2,13 +2,15 @@
 
 namespace PHPCanvas\Session;
 
-class SessionHandler implements \SessionHandlerInterface
+use SessionHandlerInterface;
+
+class SessionHandler implements SessionHandlerInterface
 {
 	protected array $_SESSION;
 	private string $dir;
 	private string $ref;
 
-	public function init(array $s = null)
+	public function init(array $s = null): void
 	{
 		if (is_null($s)) {
 			$this->_SESSION =& $_SESSION;
@@ -64,7 +66,7 @@ class SessionHandler implements \SessionHandlerInterface
 		}
 	}
 
-	public function drop()
+	public function drop(): void
 	{
 		$this->_SESSION = [];
 	}
@@ -96,10 +98,10 @@ class SessionHandler implements \SessionHandlerInterface
 		return @unlink($this->dir . /*'/' . $id[0] .*/ '/' . $id);
 	}
 
-	public function gc(int $t): int|false
+	public function gc(int $max_lifetime): int|false
 	{
 		foreach ((array)glob($this->dir . /*'/**/ '/*') as $f) {
-			if ((filemtime($f) + $t) < time()) {
+			if ((filemtime($f) + $max_lifetime) < time()) {
 				unlink($f);
 			}
 		}

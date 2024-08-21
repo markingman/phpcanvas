@@ -1,13 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Run from: vendor/phpunit/phpunit/phpunit -->
-<phpunit bootstrap="tests/bootstrap.php">
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	bootstrap="tests/bootstrap.php"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.2/phpunit.xsd"
+	displayDetailsOnTestsThatTriggerDeprecations="true"
+	displayDetailsOnTestsThatTriggerWarnings="true">
+	<coverage includeUncoveredFiles="true" pathCoverage="false">
+		<report>
+			<html outputDirectory="phpunit-coverage" lowUpperBound="50" highLowerBound="90"/>
+		</report>
+	</coverage>
 	<testsuites>
 		<testsuite name="PHPCanvas Test Suite">
-		  <file>tests/PHPCanvas/Cache/CacheTest.php</file>
-		  <file>tests/PHPCanvas/ConfigTest.php</file>
-		  <file>tests/PHPCanvas/FinderTest.php</file>
-		  <file>tests/PHPCanvas/ContainerTest.php</file>
-		  <file>tests/PHPCanvas/Routing/RouterTest.php</file>
+			<file>tests/PHPCanvas/Cache/CacheTest.php</file>
+			<file>tests/PHPCanvas/ConfigTest.php</file>
+			<file>tests/PHPCanvas/ContainerTest.php</file>
+			<file>tests/PHPCanvas/Controller/ControllerTest.php</file
+			<file>tests/PHPCanvas/Errors/ErrorHandlerTest.php</file>
+			<file>tests/PHPCanvas/FinderTest.php</file>
+			<file>tests/PHPCanvas/Http/RequestTest.php</file>
+			<file>tests/PHPCanvas/Http/ResponseTest.php</file>
+			<file>tests/PHPCanvas/Routing/LinksTest.php</file>
+			<file>tests/PHPCanvas/Routing/RouterTest.php</file>
 		</testsuite>
 	</testsuites>
+	<source>
+		<include>
+			<directory>src</directory>
+		</include>
+	</source>
 </phpunit>

@@ -11,7 +11,7 @@ class WriteStdOut implements LogWriteInterface
 		$this->fp = defined('STDOUT') ? STDOUT : fopen('php://stdout', 'w');
 	}
 
-	public function write(string $log, string $type = '')
+	public function write(string $log, string $type = ''): void
 	{
 		fwrite($this->fp, ($type ? "$type:\t" : '') . $log . PHP_EOL);
 	}

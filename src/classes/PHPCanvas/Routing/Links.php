@@ -3,14 +3,14 @@
 namespace PHPCanvas\Routing;
 
 use Exception;
-use PHPCanvas\Routing\RouterInterface;
 
 class Links implements LinksInterface
 {
-	protected $Router;
-	protected $site_url;
-	protected $site_path;
-	protected $secure = false;
+	protected RouterInterface $Router;
+	protected string $site_url;// e.g: example.com | example.com:80
+	protected string $site_path = '';// e.g: /path
+
+// 	protected bool $secure = false;
 
 	function __construct(
 		RouterInterface $Router,
@@ -19,36 +19,44 @@ class Links implements LinksInterface
 	) {
 		$this->Router = $Router;
 		$this->site_url = trim($site_url, '/');
-		$this->site_path = trim($site_path, '/');
+		if ($site_path = trim($site_path, '/')) {
+			$this->site_path = '/' . $site_path;
+		}
 	}
 
-	function get_link($name, array $vars = [], $relative = true, $pcol = null)
+	public function get_link(string $name, array $vars = [], bool $relative = true, string $pcol = null): string
 	{
-		if (!$link = $this->Router->get_rewrite($name, $vars)) {
-			throw new Exception("No link found for {$controller_action}");
+		try {
+			$link = $this->Router->get_rewrite($name, $vars);
+		} catch (Exception $e) {
+			
+// 		if (!$link = $this->Router->get_rewrite($name, $vars)) {
+// prx(str_starts_with($e->getMessage());
+			throw new Exception(message: "NOT_FOUND; No link found for \"$name\"", previous: $e);
 		}
 
 		if ($relative) {
 			return $this->site_path . $link;
 		} else {
-			return ($pcol ?: '//') . $this->site_url . $link;
+			return ($pcol ? $pcol . '://' : '//') . $this->site_url . $this->site_path . $link;
 		}
 	}
 
 	//@todo: this would be called from repsonse->redirect($to, true, $code)//manually make the full headers with 301/302 etc.
-	function go_to($name, array $vars = [], $secure = false, $code = 301)
-	{
-		if (strpos($name, '://') !== false) {
-			$to = $name;
-		} else {
-			$to = $this->get_link($name, $vars, $secure);
-		}
-
-		while (ob_get_length() !== false) {
-			ob_end_clean();
-		}
-
-		header('Location: ' . $to, true, $code);
-		exit;
-	}
+// 	public function go_to(string $name, array $vars = [], $secure = false, $code = 301): array
+// 	{
+// 		if (strpos($name, '://') !== false) {
+// 			$to = $name;
+// 		} else {
+// 			$to = $this->get_link($name, $vars, $secure);
+// 		}
+// 
+// 		return [$code, $to];
+// // 		while (ob_get_length() !== false) {
+// // 			ob_end_clean();
+// // 		}
+// // 
+// // 		header('Location: ' . $to, true, $code);
+// // 		exit;
+// 	}
 }

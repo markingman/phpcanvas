@@ -1,9 +1,13 @@
 <?php
 
+namespace PHPCanvas\Routing;
+
+use Exception;
 use PHPCanvas\Routing\Router;
 use PHPCanvas\Routing\RouterInterface;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(Router::class)]
 class RouterTest extends TestCase
 {
 	protected Router $Router;
@@ -16,6 +20,22 @@ class RouterTest extends TestCase
 	public function testCreate(): void
 	{
 		$this->assertInstanceOf(RouterInterface::class, $this->Router);
+	}
+
+	public function testAddRouteNoPathFailure(): void
+	{
+		$this->expectException(Exception::class);
+		$this->expectExceptionMessage('ROUTER_NO_PATH; No path set for route');
+
+		$this->Router->add_route('', []);
+	}
+
+	public function testAddRouteNoControllerFailure(): void
+	{
+		$this->expectException(Exception::class);
+		$this->expectExceptionMessage('ROUTER_NO_CONTROLLER; No controller set for route');
+
+		$this->Router->add_route('', ['path' => '/']);
 	}
 
 	public function testGetActionDefault(): void
@@ -56,7 +76,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('/', $res, 'Should get expected rewrite from link name');
 	}
 
-	public function testRouteSimpleRoute()
+	public function testRouteSimpleRoute(): void
 	{
 		$route = [
 			'path' => '/simple',
@@ -86,6 +106,132 @@ class RouterTest extends TestCase
 
 		$res = $this->Router->get_rewrite('test');
 		$this->assertEquals('/simple', $res, 'Should get expected rewrite from link name');
+	}
+
+	public function testRouteWithScopeResolutionOperatorSyntax(): void
+	{
+		$route = [
+			'path' => '/simple',
+			'controller' => 'App\\Controller\\Simple::method_name'
+		];
+
+		$exp = [
+			'App\\Controller\\Simple',
+			'method_name',
+			[]
+		];
+
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$res = $this->Router->get_route('GET', '/simple');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+	}
+
+	public function testRouteWithAnyWildcardSyntax(): void
+	{
+		$route = [
+			'path' => '/simple/path**',
+			'controller' => 'App\\Controller\\Simple'
+		];
+
+		$res = $this->Router->add_route('test', $route);
+		$this->assertTrue($res, 'Should add route');
+
+		$exp = [
+			'App\\Controller\\Simple',
+			'default',
+			[]
+		];
+
+		$res = $this->Router->get_route('GET', '/simple/path');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+
+		$res = $this->Router->get_route('GET', '/simple/path123');
+		$this->assertEquals($exp, $res, 'Should get expected route from path');
+	}
+
+	public function testRouteWithSetIndex(): void
+	{
+// 		$route = [
+// 			'path' => '/simple/path/example/{var}',
+// 			'controller' => 'App\\Controller\\Simple',
+// // 			'index' => 'simple',
+// 		];
+// 
+// 		$this->Router->add_route('test', $route);
+// 		$res = $this->Router->dump();
+// 		
+// 		$exp = array(
+//   'iname' => 
+//   array (
+//     'test' => 0,
+//   ),
+//   'routes' => 
+//   array (
+//     0 => 
+//     array (
+//       0 => 'App\\Controller\\Simple',
+//       1 => 
+//       array (
+//         'var' => '',
+//       ),
+//       2 => 'default',
+//       4 => 0,
+//       7 => 'simple/path/example/%s',
+//       8 => 'test',
+//       5 => '~^simple/path/example/([^/]+)$~',
+//     ),
+//   ),
+//   'index' => 
+//   array (
+//     'simple' => 
+//     array (
+//       0 => 0,
+//     ),
+//   ));
+// 		$this->assertEquals($exp, $res, 'Should set default index');
+// 		$this->Router->delete_route('test');
+
+
+		$route = [
+			'path' => '/simple/path/example/{var}',
+			'controller' => 'App\\Controller\\Simple',
+			'index' => 'simple/path/example',
+		];
+
+		$this->Router->add_route('test', $route);
+		$res = $this->Router->dump();
+		
+		$exp = array(
+  'iname' => 
+  array (
+    'test' => 0,
+  ),
+  'routes' => 
+  array (
+    0 => 
+    array (
+      0 => 'App\\Controller\\Simple',
+      1 => 
+      array (
+        'var' => '',
+      ),
+      2 => 'default',
+      4 => 0,
+      7 => 'simple/path/example/%s',
+      8 => 'test',
+      5 => '~^simple/path/example/([^/]+)$~',
+    ),
+  ),
+  'index' => 
+  array (
+    'simple/path/example' => 
+    array (
+      0 => 0,
+    ),
+  ));
+		$this->assertEquals($exp, $res, 'Should set specified index');
 	}
 
 	public function testRouteSimpleVarRoute()

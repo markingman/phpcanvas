@@ -1,13 +1,17 @@
-<?php // $Id: HtmlTest.php 742 2018-03-02 21:22:58Z dev $
+<?php
 
+namespace PHPCanvas\View;
+
+use PHPCanvas\TestHelpersTrait;
 use PHPCanvas\View\Html;
 use PHPCanvas\View\HtmlInterface;
+use PHPUnit\Framework\TestCase;
 
-class HtmlTest extends PHPUnit_Framework_TestCase
+class HtmlTest extends TestCase
 {
 	protected $Html;
 
-	public function setUp()
+	public function setUp(): void
 	{
 		$this->Html = new Html();
 	}

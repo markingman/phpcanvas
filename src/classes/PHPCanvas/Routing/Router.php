@@ -38,6 +38,9 @@ class Router implements RouterInterface
 		$this->action_default = $action_default;
 	}
 
+	/**
+	 * @throws Exception
+	 */
 	public function add_route(string $name, array $params): bool
 	{
 		if (!isset($params['path'])) {
@@ -56,12 +59,11 @@ class Router implements RouterInterface
 			[
 				'action' => $this->action_default,
 				'method' => 0,
-				'name' => '',
 			],
 			$params
 		);
 
-		// can set action like 'path' => 'MyController::action'
+		// can set action like 'name' => ['controller' => 'MyController::action']
 
 		if (str_contains($params['controller'], '::')) {
 			$parts = explode('::', $params['controller'], 2);
@@ -77,13 +79,16 @@ class Router implements RouterInterface
 			$any = true;
 		}
 
+		// normalise path
+
+		$params['path'] = ltrim($params['path'], '/');
+
 		// get index (any override value or, if present, the first path fragment)
 
 		$index = '';
 		if (isset($params['index'])) {
 			$index = $params['index'];
 		} else {
-			$params['path'] = ltrim($params['path'], '/');
 			preg_match('~^([^/{]+/)~', $params['path'], $m);
 
 			if (count($m) === 2 and strlen($m[1])) {
@@ -287,6 +292,9 @@ class Router implements RouterInterface
 		return [$controller, $action, $vars];
 	}
 
+	/**
+	 * @throws Exception
+	 */
 	public function get_rewrite($name, $vars = []): string
 	{
 		if (isset($this->iname[$name])) {

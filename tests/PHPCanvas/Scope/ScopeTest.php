@@ -1,22 +1,24 @@
-<?php // $Id: ScopeTest.php 772 2018-05-17 09:12:20Z dev $
+<?php
 
-use PHPCanvas\Scope\Scope;
+namespace PHPCanvas\Scope;
 
-class ScopeTest extends PHPUnit_Framework_TestCase
+use PHPUnit\Framework\TestCase;
+
+class ScopeTest extends TestCase
 {
 	public function testSingleton()
 	{
-		$scope = Scope::instance();
+		$scope = new Scope;
 		$scope->foo = 'bar';
 
-		$scope2 = Scope::instance();
-		$scope->bar = 'foo';
+		$scope2 = $scope;
+		$scope2->bar = 'foo';
 
 		$this->assertEquals($scope, $scope2);
 		$this->assertTrue(isset($scope->bar));
 		$this->assertTrue(isset($scope2->foo));
-		$this->assertEquals($scope->bar, $scope2->bar);
-		$this->assertEquals($scope->foo, $scope2->foo);
+		$this->assertEquals('bar', $scope2->bar);
+		$this->assertEquals('foo', $scope2->foo);
 	}
 
 	public function testScope()

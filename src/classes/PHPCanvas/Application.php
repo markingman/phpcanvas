@@ -3,15 +3,14 @@
 namespace PHPCanvas;
 
 use Exception;
-use PHPCanvas\ConfigInterface;
-use PHPCanvas\ContainerInterface;
 use PHPCanvas\Http\RequestInterface;
 use PHPCanvas\Http\ResponseInterface;
 use PHPCanvas\Routing\DispatchInterface;
 
 class Application
 {
-	const PHPCANVAS_VERSION = 2.0;
+	const PHPCANVAS_VERSION = 3.0;
+
 	public ConfigInterface $Config;
 	public ContainerInterface $Container;
 	public RequestInterface $Request;
@@ -40,7 +39,7 @@ class Application
 				$path ?: $this->Request->get_path()
 			);
 		} catch (Exception $e) {
-			throw $e;
+			throw new Exception(message: 'Could not call controller', previous: $e);
 		}
 	}
 }

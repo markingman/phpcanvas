@@ -20,7 +20,9 @@ class Config implements ConfigInterface
 			$paths[] = $config;
 		}
 
-		$this->config = call_user_func_array('array_replace_recursive', $paths);
+		if ($paths) {
+			$this->config = call_user_func_array('array_replace_recursive', $paths);
+		}
 	}
 
 	public function __get(string $k): string|bool|array|int|null

@@ -1,6 +1,6 @@
 <?php
 
-return function ($e, $m = null) {
+return function (Throwable $e, $m = null) {
 	echo vsprintf(
 		PHP_EOL .
 		"\033[3;101m  %1\$s  \033[0m" . PHP_EOL .

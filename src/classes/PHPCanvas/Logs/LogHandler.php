@@ -4,8 +4,8 @@ namespace PHPCanvas\Logs;
 
 class LogHandler implements LogHandlerInterface
 {
-	protected $Out;
-	protected $type;
+	protected LogWriteInterface $Out;
+	protected string $type;
 
 	public function __construct(LogWriteInterface $out, string $type = '')
 	{
@@ -13,42 +13,42 @@ class LogHandler implements LogHandlerInterface
 		$this->type = $type;
 	}
 
-	public function emerg(string $log)
+	public function emerg(string $log): void
 	{
 		$this->log($log, LOG_EMERG);
 	}
 
-	public function alert(string $log)
+	public function alert(string $log): void
 	{
 		$this->log($log, LOG_ALERT);
 	}
 
-	public function crit(string $log)
+	public function crit(string $log): void
 	{
 		$this->log($log, LOG_CRIT);
 	}
 
-	public function err(string $log)
+	public function err(string $log): void
 	{
 		$this->log($log, LOG_ERR);
 	}
 
-	public function waring(string $log)
+	public function waring(string $log): void
 	{
 		$this->log($log, LOG_WARNING);
 	}
 
-	public function notice(string $log)
+	public function notice(string $log): void
 	{
 		$this->log($log, LOG_NOTICE);
 	}
 
-	public function debug(string $log)
+	public function debug(string $log): void
 	{
 		$this->log($log, LOG_DEBUG);
 	}
 
-	public function log(string $log, int $type = 0)
+	public function log(string $log, int $type = 0): void
 	{
 		switch ($type) {
 			case LOG_EMERG:

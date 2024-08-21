@@ -3,11 +3,11 @@
 namespace PHPCanvas;
 
 use PHPUnit\Framework\TestCase;
-use PHPCanvasTestHelpersTrait;
 
+#[CoversClass(Config::class)]
 class ConfigTest extends TestCase
 {
-	use PHPCanvasTestHelpersTrait;
+	use TestHelpersTrait;
 
 	protected ConfigInterface $Config;
 	public static string $config1;
@@ -16,35 +16,34 @@ class ConfigTest extends TestCase
 
 	public static function setUpBeforeClass(): void
 	{
-		static::tmpdir_make(self::class);
+		static::tmpdir_make();
 
-//		$config1 = [
-//			'a' => 'A',
-//			'b' => 'B',
-//			'c' => 'C',
-//			'd' => 'D',
-//		];
-//
-//		$config2 = [
-//			'E' => 'E',
-//			'd' => 'D-NEW',
-//		];
+		$configs = [
+			'config1' => [
+				'a' => 'A',
+				'b' => 'B',
+				'c' => 'C',
+				'd' => 'D',
+			],
+			'config2' => [
+				'E' => 'E',
+				'd' => 'D-NEW',
+			]
+		];
 
-		foreach (['config1' => 100, 'config2' => 30] as $config_name => $n) {
-			$a = $$config_name;
+		foreach (['config1' => 100, 'config2' => 30] as $name => $n) {
 			foreach (range(1, $n) as $i) {
-				$a['a_b_c_' . $i] = md5($i);
-			}
-			if ($config_name === 'config1') {
-				$a['aaa'] = 'AAA';
-			}
-			if ($config_name === 'config2') {
-				$a['BBB'] = 'bbb';
+				$configs[$name]['a_b_c_' . $i] = md5($i);
 			}
 
-			self::$$config_name = static::$tmpdir . '/' . $config_name . '.php';
-			file_put_contents(self::$$config_name, '<?php return ' . var_export($a, true) . ';');
+			self::$$name = static::$tmpdir . '/' . $name . '.php';
+			file_put_contents(self::$$name, '<?php return ' . var_export($configs[$name], true) . ';');
 		}
+	}
+
+	public static function tearDownAfterClass(): void
+	{
+		static::tmpdir_remove();
 	}
 
 	public function setUp(): void
@@ -66,8 +65,8 @@ class ConfigTest extends TestCase
 
 	public function testGet()
 	{
-		$this->assertEquals('AAA', $this->Config->aaa);
-		$this->assertEquals('bbb', $this->Config->BBB);
+		$this->assertEquals('A', $this->Config->a);
+		$this->assertEquals('B', $this->Config->b);
 	}
 
 	public function testSet()
@@ -86,13 +85,11 @@ class ConfigTest extends TestCase
 	{
 		$config = $this->Config->list();
 		$this->assertIsArray($config);
-		$this->assertCount(102, $config);
+		$this->assertCount(105, $config);
 	}
 
 	public function testSerializable()
 	{
-		// Config is typically cached via Container class
-
 		$serialized = serialize($this->Config);
 		$this->assertNotFalse($serialized);
 	}
@@ -104,10 +101,5 @@ class ConfigTest extends TestCase
 		$Config2 = unserialize($serialized);
 		$this->assertInstanceOf(ConfigInterface::class, $Config2);
 		$this->assertTrue($Config2->a === $value);
-	}
-
-	public static function tearDownAfterClass(): void
-	{
-		static::tmpdir_remove();
 	}
 }

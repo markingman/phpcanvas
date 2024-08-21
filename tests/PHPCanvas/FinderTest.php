@@ -1,28 +1,28 @@
 <?php
 
-use PHPCanvas\Finder;
-use PHPCanvas\FinderInterface;
+namespace PHPCanvas;
+
 use PHPUnit\Framework\TestCase;
 
 class FinderTest extends TestCase
 {
-	use PHPCanvasTestHelpersTrait;
+	use TestHelpersTrait;
 
-	protected $Finder;
+	protected Finder $Finder;
 // 	public static $dir1 = '/sample/dir1';
 // 	public static $dir1_name = 'test/dir1';
 // 	public static $dir2 = '/sample/dir2';
 // 	public static $dir2_name = 'test/dir2';
 // 	public static $dir3 = '/dir3';
 // 	public static $dir3_name =  = 'dir3';
-	public static $dirs;
-	public static $serialized;
+	public static array $dirs;
+//	public static $serialized;
 
 	public static function setUpBeforeClass(): void
 	{
 // 		static::tmpdir_remove();
 
-		static::tmpdir_make(md5(self::class));//md5() as OSX didn't like "FinderTest"??
+		static::tmpdir_make();//md5() as OSX didn't like "FinderTest"??
 
 		static::$dirs = [];
 
@@ -41,6 +41,11 @@ class FinderTest extends TestCase
 		}
 	}
 
+	public static function tearDownAfterClass(): void
+	{
+		static::tmpdir_remove();
+	}
+
 	public function setUp(): void
 	{
 		$this->Finder = new Finder(static::$dirs);
@@ -54,6 +59,13 @@ class FinderTest extends TestCase
 	public function testSetDirs()
 	{
 		$result = $this->Finder->set_dirs(static::$dirs);
+		$this->assertTrue($result);
+
+		$dirs = [
+			'[ invalid ]/< key >' => '/foo/bar1',
+			'missing/file' => '/foo/bar2',
+		];
+		$result = $this->Finder->set_dirs($dirs);
 		$this->assertTrue($result);
 	}
 
@@ -76,7 +88,7 @@ class FinderTest extends TestCase
 		$this->assertIsReadable($res);
 
 		$res2 = file_get_contents($res);
-		$this->assertEquals($res2, 'test');
+		$this->assertEquals('test', $res2);
 	}
 
 	public function testGetNotFound()
@@ -87,12 +99,12 @@ class FinderTest extends TestCase
 
 	public function testGetCache()
 	{
-		foreach (range(1, 3) as $i) {
+		for ($i = 1; $i < 4; $i++) {
 			$res = $this->Finder->get('test', null, true);
 			$this->assertIsReadable($res);
 
 			$res2 = file_get_contents($res);
-			$this->assertEquals($res2, 'test');
+			$this->assertEquals('test', $res2);
 		}
 	}
 
@@ -103,17 +115,17 @@ class FinderTest extends TestCase
 		$this->assertIsReadable($res);
 
 		$res2 = file_get_contents($res);
-		$this->assertEquals($res2, 'xyz');
+		$this->assertEquals('xyz', $res2);
 	}
 
 	public function testGetNameDirCache()
 	{
-		foreach (range(1, 3) as $i) {
+		for ($i = 1; $i < 4; $i++) {
 			$res = $this->Finder->get('test', 'xyz/dir3', true);
 			$this->assertIsReadable($res);
 
 			$res2 = file_get_contents($res);
-			$this->assertEquals($res2, 'xyz');
+			$this->assertEquals('xyz', $res2);
 		}
 	}
 
@@ -147,10 +159,8 @@ class FinderTest extends TestCase
 
 	public function testSerializable()
 	{
-		// Finder is typically cached via Container class
-
 		$serialized = serialize($this->Finder);
-		$this->assertTrue($serialized !== false);
+		$this->assertTrue($serialized !== '');
 	}
 
 	public function testUnSerializable()
@@ -161,10 +171,5 @@ class FinderTest extends TestCase
 		$Finder2 = unserialize($serialized);
 		$this->assertInstanceOf(FinderInterface::class, $Finder2);
 		$this->assertTrue($Finder2->get_dir($dir) === $result);
-	}
-
-	public static function tearDownAfterClass(): void
-	{
-		static::tmpdir_remove();
 	}
 }

@@ -2,9 +2,10 @@
 
 namespace PHPCanvas;
 
+use function preg_match;
 class Finder implements FinderInterface
 {
-	protected $dirs = [];//serialize class and save this
+	protected array $dirs = [];//serialize class and save this
 
 	public function __construct(array $dirs = [])
 	{
@@ -37,7 +38,7 @@ class Finder implements FinderInterface
 		return @$this->dirs[$dir] ?: null;
 	}
 
-	public function get_dirs()
+	public function get_dirs(): array
 	{
 		return $this->dirs;
 	}
@@ -47,33 +48,29 @@ class Finder implements FinderInterface
 		static $paths = [];
 
 		if ($cache) {
-			$cachep = ($dir ? $dir . ':' : '') . $path;
-			if (isset($paths[$cachep])) {
-				return $paths[$cachep];
+			$cache_path = ($dir ? $dir . ':' : '') . $path;
+			if (isset($paths[$cache_path])) {
+				return $paths[$cache_path];
 			}
 		}
 
 		$file = null;
 
 		if ($dir) {
-
 			if (isset($this->dirs[$dir]) and file_exists($this->dirs[$dir] . '/' . $path)) {
 				$file = $this->dirs[$dir] . '/' . $path;
 			}
-
 		} else {
-
 			foreach ($this->dirs as $dir) {
 				if (file_exists($dir . '/' . $path)) {
 					$file = $dir . '/' . $path;
 					break;
 				}
 			}
-
 		}
 
 		if ($cache) {
-			$paths[$cachep] = $file;
+			$paths[$cache_path] = $file;
 		}
 
 		return $file;

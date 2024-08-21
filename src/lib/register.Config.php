@@ -5,7 +5,7 @@ $config = $config ?? [];
 
 return function (PHPCanvas\ContainerInterface $c) use ($config_paths, $config) {
 	$Config = new PHPCanvas\Config($config_paths, $config);
-	$c->cache('Config', $Config);
+	$c->cache_put('Config', $Config);
 
 	return $Config;
 };

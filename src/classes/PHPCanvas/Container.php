@@ -6,17 +6,20 @@ use ArrayAccess;
 use Closure;
 use Exception;
 use ReflectionClass;
+use ReflectionUnionType;
+use Throwable;
 
 class Container implements ContainerInterface, ArrayAccess
 {
-	protected string $store_path = '';
-	protected string $locate_path = '';
-	protected array $registry = [];
-	protected array $locations = [];
-	protected array $instances = [];
-	protected array $reflections = [];
+	protected string $store_path = '';// serialized classes cache dir
+	protected string $locate_path = '';// default registrations dir
+	protected array $locations = [];// list of file paths to closures
+	protected array $registry = [];// list of closures
+	protected array $reflections = [];// cache of reflections
+	protected array $instances = [];// list of instantiated objects
+	protected array $aliases = [];// list of name aliases
 
-	public function set_store($path): void
+	public function set_store(string $path): void
 	{
 		$this->store_path = $path;
 	}
@@ -26,9 +29,9 @@ class Container implements ContainerInterface, ArrayAccess
 		return $this->store_path;
 	}
 
-	public function set_locate_path($path): void
+	public function set_locate_path(string $path): void
 	{
-		$this->locate_path = $path;
+		$this->locate_path = realpath($path) ?: '';
 	}
 
 	public function get_locate_path(): string
@@ -36,120 +39,54 @@ class Container implements ContainerInterface, ArrayAccess
 		return $this->locate_path;
 	}
 
+	public function set_alias(string $alias_name, ?string $target_name): void
+	{
+		$this->aliases[$alias_name] = $target_name;
+	}
+
+	public function get_alias(string $alias_name): ?string
+	{
+		return $this->aliases[$alias_name] ?? null;
+	}
+
+	protected function get_class_name_from_type(string $name): string
+	{
+		if (str_ends_with($name, 'Interface') and ($len = strlen($name)) > 9) { // strlen('Interface') === 9
+			$name = substr($name, 0, $len - 9);
+		}
+
+		return $name;
+	}
+
+	public function locate(string $name, string $path, ?array $args = null): void
+	{
+		$this->locations[$name] = $args ? [$path, $args] : [$path];
+	}
+
 	public function register(string $name, Closure $closure): void
 	{
 		$this->registry[$name] = $closure;
 	}
 
-	public function register_if_not_exists(string $name, Closure $closure): void
-	{
-		if (!$this->exists($name)) {
-			$this->registry[$name] = $closure;
-		}
-	}
-
-	public function locate(string $name, string $path, $args = null): void
-	{
-		$this->locations[$name] = $args ? [$path, $args] : $path;
-	}
-
-	public function locate_if_not_exists(string $name, string $path, $args = null): void
-	{
-		if (!$this->exists($name)) {
-			$this->locations[$name] = $args ? [$path, $args] : $path;
-		}
-	}
-
-	public function locates(array $locations): void
-	{
-		foreach ($locations as $location) {
-			if (isset($location[3])) {
-				if ($this->get_cache($location[0])) {
-					continue;
-				}
-			}
-
-			$this->locate($location[0], $location[1], isset($location[2]) ? $location[2] : null);
-		}
-	}
-
-	public function locates_if_not_exists(array $locations): void
-	{
-		foreach ($locations as $location) {
-			if (!$this->exists($location[0])) {
-				$this->locate($location[0], $location[1], isset($location[2]) ? $location[2] : null);
-			}
-		}
-	}
-
-	public function instanciate(string $class_name, ?string $name = null, array $args = [], bool $store_reflection = false): mixed
-	{
-		if (!is_null($name)) {
-			if (isset($this->registry[$name]) or isset($this->locations[$name])) {
-				return $this->get($name);
-			}
-		}
-
-		$reflection = new ReflectionClass($class_name);
-		$constructor = $reflection->getConstructor();
-
-		if (!is_null($constructor)) {
-			$params = $constructor->getParameters();
-			$params = $this->set_params($params, $args);
-			$class = $reflection->newInstanceArgs($params);
-		} else {
-			$class = $reflection->newInstanceArgs();
-		}
-
-		if (!is_null($name)) {
-			$this->instances[$name] = $class;
-		}
-
-		if ($store_reflection) {
-			$this->reflections[$class_name] = $reflection;
-		}
-
-		return $class;
-	}
-
-	public function call($class, $method_name, $args = [], $force_new = false): mixed
-	{
-		$class_name = get_class($class);
-
-		if (!isset($this->reflections[$class_name])) {
-			$this->reflections[$class_name] = new ReflectionClass($class_name);
-		}
-
-		$method = $this->reflections[$class_name]->getMethod($method_name);
-		$params = $method->getParameters();
-		$params = $this->set_params($params, $args, $force_new);
-
-		return call_user_func_array([$class, $method_name], $params);
-	}
-
+	/**
+	 * @throws Exception
+	 */
 	public function create(string $name, bool $store = false): mixed
 	{
 		if (!isset($this->registry[$name])) {
 			if (!isset($this->locations[$name])) {
 				if ($this->locate_path) {
-					if (realpath($this->locate_path . '/register.' . $name . '.php')) {
-						$this->locate($name, $this->locate_path . '/register.' . $name . '.php');
-					}
-				}
-
-				if (!isset($this->locations[$name])) {
-					try {
-						return $this->instanciate($name);
-					} catch (Exception $e) {
-						throw new Exception("Class $name not in Container (" . $e->getMessage() . ')');
+					$locate_path = realpath($this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $name . '.php');
+					if ($locate_path and str_starts_with($locate_path, $this->locate_path)) {
+						$this->locate($name, $this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $name . '.php');
 					}
 				}
 			}
 
 			if (isset($this->locations[$name])) {
-				if (is_array($this->locations[$name])) {
-					$path = $this->locations[$name][0];
-					$args = $this->locations[$name][1];
+				$path = $this->locations[$name][0];
+				$args = count($this->locations[$name]) > 1 ? $this->locations[$name][1] : [];
+				try {
 					$closure = call_user_func(
 						function () use ($path, $args) {
 							extract($args);
@@ -157,99 +94,171 @@ class Container implements ContainerInterface, ArrayAccess
 							return include $path;
 						}
 					);
-				} else {
-					$path = $this->locations[$name];
-					$closure = call_user_func(
-						function () use ($path) {
-							return include $path;
-						}
-					);
+				} catch (Throwable $e) {
+					throw new Exception("CONTAINER_LOAD_FAILURE; Could not create $name, " . $e->getMessage(), previous: $e);
 				}
 
-				if ($closure instanceof Closure) {
-					$this->register($name, $closure);
+				if (!($closure instanceof Closure)) {
+					throw new Exception("CONTAINER_TYPE_FAILURE; Could not create $name, expected Closure not found");
 				}
+//TODO: Clocsure return type
+				$this->register($name, $closure);
 			}
 		}
 
 		if (isset($this->registry[$name])) {
-			$class = $this->registry[$name];
-			$instance = $class($this);
+			try {
+				$instance = $this->registry[$name]($this);
+			} catch (Exception $e) {
+				throw new Exception("CONTAINER_CREATE_ERR; could not create '$name', {$e->getMessage()}");
+			}
+
+			if (!is_object($instance)) {
+				throw new Exception("CONTAINER_OBJECT_ERR; object not created for '$name'");
+			}
+
 			if ($store) {
 				$this->instances[$name] = $instance;
 			}
 
 			return $instance;
 		} else {
-			throw new Exception("Class $name could not be created (not in registry)");
+			try {
+				return $this->instantiate($name, $name, $store);
+			} catch (Exception $e) {
+				throw new Exception("CONTAINER_INSTANTIATE_ERR; {$e->getMessage()}");
+			}
 		}
 	}
 
-	protected function set_params(array $params, array $args = [], bool $force_new = false): mixed
+	public function call(object $class, string $method_name, ?array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed
+	{
+		$class_name = get_class($class);
+
+		$reflection = $this->reflections[$class_name] ?? new ReflectionClass($class_name);
+
+		try {
+			$method = $reflection->getMethod($method_name);
+			$params = $this->set_params($method->getParameters(), $args, $store, $force_new);
+		} catch (Exception $e) {
+			throw new Exception("CONTAINER_CALL_ERR; Could not call $class_name::$method_name, {$e->getMessage()}");
+		}
+
+		if ($store_reflection) {
+			$this->reflections[$class_name] = $reflection;
+		}
+
+		return call_user_func_array([$class, $method_name], $params);
+	}
+
+	protected function set_params(array $params, array $args = [], bool $store = false, bool $force_new = false): array
 	{
 		foreach ($params as $i => $param) {
 			if (isset($args[$i])) {
 				$params[$i] = $args[$i];
 				continue;
-// 			} elseif (isset($args[$param_name])) {
-// 				$params[$i] = $args[$param_name];
-// 				continue;
 			}
 
-			$param_name = $param->getName();
-			$param_optional = $param->isOptional();
-			$param_type = $param->getType();
+			$p_name = $param->getName();
+			$p_opt = $param->isOptional();
+			$p_null = $param->allowsNull();
 
-			// @todo if is not !int !array etc, assume object
-			if (!is_null($param_type)) {
-				if (!$force_new and isset($this->instances[$param_name])) {
-					$params[$i] = $this->instances[$param_name];
-					continue;
-				} elseif (!$param_optional) {
-					$params[$i] = $this->instanciate($param_type->getName(), $param_name);
-					continue;
-				}
-			}
-
-			if ($param_optional) {
+			if ($p_opt) {
 				$params[$i] = $param->getDefaultValue();
-			} else {
-				$params[$i] = null;
+				continue;
 			}
+
+			if ($p_null) {
+				$params[$i] = null;
+				continue;
+			}
+
+			$p_type = $param->getType();
+
+			if ($p_type instanceof ReflectionUnionType) {
+				throw new Exception("cannot resolve paramter $p_name");
+			}
+
+			$p_type_name = $p_type->getName();
+// if (str_ends_with($p_type_name, 'Interface'))prx($p_type_name);
+			if (
+				$p_type_name !== 'int'
+				and $p_type_name !== 'string'
+				and $p_type_name !== 'array'
+				and $p_type_name !== 'bool'
+				and $p_type_name !== 'float'
+				and $p_type_name !== 'callable'
+				and $p_type_name !== 'iterable'
+			) {
+				if (!$force_new and isset($this->instances[$p_name])) {
+					$params[$i] = $this->instances[$p_name];
+				} else {
+					$name = $this->aliases[$p_name] ?? $p_name;
+					if (isset($this->registry[$name]) or isset($this->locations[$name])) {
+						$params[$i] = $this->create($name, $store);
+					} else {
+						$class_name = $this->get_class_name_from_type($p_type_name);
+						$params[$i] = $this->instantiate($class_name, $p_name, $store);
+					}
+				}
+				continue;
+			}
+
+			throw new Exception("cannot resolve paramter $p_name");
 		}
 
 		return $params;
 	}
 
-	public function get(string $name): mixed
+	protected function instantiate(string $class_name, ?string $name = null, bool $store = false): mixed
 	{
-		if (isset($this->instances[$name])) {
-			return $this->instances[$name];
-		} else {
-			return $this->create($name, true);
+		try {
+			$reflection = new ReflectionClass($class_name);
+		} catch (Exception $e) {
+			throw new Exception("could not reflect $class_name, {$e->getMessage()}");
 		}
+
+		$constructor = $reflection->getConstructor();
+
+		try {
+			if (!is_null($constructor)) {
+				$class = $reflection->newInstanceArgs(
+					$this->set_params($constructor->getParameters())
+				);
+			} else {
+				$class = $reflection->newInstanceArgs();
+			}
+		} catch (Exception $e) {
+			throw new Exception("could not instantiate '$class_name', {$e->getMessage()}");
+		}
+
+		if (!is_null($store)) {
+			$this->instances[$name ?: $class_name] = $class;
+		}
+
+		return $class;
 	}
 
-	public function exists(string $name): bool
+	public function cache_get(string $name): bool
 	{
-		return isset($this->instances[$name]) or isset($this->locations[$name]) or isset($this->registry[$name]);
-	}
-
-	public function get_cache(string $name): bool
-	{
-		if (
-			!$this->store_path
-			or ($this->store_path and (!$class = @file_get_contents($this->store_path . '/' . $this->get_class_cache_name($name)) or !$class = @unserialize($class)))
-		) {
+		if (!$this->store_path) {
 			return false;
-		} else {
-			$this->instances[$name] = $class;
-
-			return true;
 		}
+
+		if (!$cache = @file_get_contents($this->store_path . DIRECTORY_SEPARATOR . $this->cache_name($name))) {
+			return false;
+		}
+
+		if (!$class = @unserialize($cache)) {
+			return false;
+		}
+
+		$this->instances[$name] = $class;
+
+		return true;
 	}
 
-	public function cache(string $name, mixed $instance = null): bool
+	public function cache_put(string $name, mixed $instance = null): bool
 	{
 		if ($this->store_path) {
 			if (!$instance and isset($this->instances[$name])) {
@@ -257,16 +266,30 @@ class Container implements ContainerInterface, ArrayAccess
 			}
 
 			if ($instance) {
-				return (bool)@file_put_contents($this->store_path . '/' . $this->get_class_cache_name($name), serialize($instance));
+				return (bool)@file_put_contents($this->store_path . DIRECTORY_SEPARATOR . $this->cache_name($name), serialize($instance));
 			}
 		}
 
 		return false;
 	}
 
-	protected function get_class_cache_name(string $name): string
+	public function cache_name(string $name): string
 	{
 		return md5($name);
+	}
+
+	public function get(string $name, $store_created = true): mixed
+	{
+		$name = $this->aliases[$name] ?? $name;
+
+		return $this->instances[$name] ?? $this->create($name, $store_created);
+	}
+
+	public function exists(string $name): bool
+	{
+		$name = $this->aliases[$name] ?? $name;
+
+		return isset($this->instances[$name]) or isset($this->locations[$name]) or isset($this->registry[$name]);
 	}
 
 	public function offsetSet(mixed $offset, mixed $value): void
@@ -278,23 +301,23 @@ class Container implements ContainerInterface, ArrayAccess
 				$this->instances[$offset] = $value;
 			}
 		} else {
-			throw new Exception("Container can only register closures or set object instances");
+			throw new Exception("Could not set $offset", 100012);
 		}
 	}
 
-	public function offsetExists($name): bool
+	public function offsetExists(mixed $offset): bool
 	{
-		return isset($this->instances[$name]);
+		return isset($this->instances[$offset]);
 	}
 
-	public function offsetUnset($name): void
+	public function offsetUnset(mixed $offset): void
 	{
-		unset($this->instances[$name]);
+		unset($this->instances[$offset]);
 	}
 
-	public function offsetGet($name): mixed
+	public function offsetGet(mixed $offset): mixed
 	{
-		return $this->get($name);
+		return $this->get($offset);
 	}
 
 	public function list_locations(): array
@@ -305,5 +328,10 @@ class Container implements ContainerInterface, ArrayAccess
 	public function list_registry(): array
 	{
 		return $this->registry;
+	}
+
+	public function list_instances(): array
+	{
+		return $this->instances;
 	}
 }
