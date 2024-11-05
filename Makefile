@@ -29,6 +29,9 @@ stop: ## Stop current container (if running)
 test: ## Run tests inside the container
 	@docker exec -it $(NAME) vendor/bin/phpunit --display-deprecations --display-warnings
 
+analyse: ## Start container to run analyse
+	@docker exec -it $(NAME) vendor/bin/phpstan analyse -c phpstan.neon
+
 ssh: ## SSH into container
 	@docker exec -it $(NAME) sh
 

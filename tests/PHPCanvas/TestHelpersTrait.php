@@ -2,6 +2,11 @@
 
 namespace PHPCanvas;
 
+use Exception;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+
 trait TestHelpersTrait
 {
 	protected static ?string $tmpdir = null;

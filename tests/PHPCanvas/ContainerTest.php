@@ -4,6 +4,7 @@ namespace PHPCanvas;
 
 use PHPUnit\Framework\TestCase;
 use Exception;
+use Closure;
 
 class ContainerTest extends TestCase
 {
@@ -699,21 +700,20 @@ class ContainerTest extends TestCase
 		$res = $this->Container->offsetExists($class);
 		$this->assertTrue($res);
 
-		$null = $this->Container->offsetUnset($class);
-		$this->assertNull($null);
+//		$null =
+			$this->Container->offsetUnset($class);
+//		$this->assertNull($null);
 
 		$res = $this->Container->offsetExists($class);
 		$this->assertFalse($res);
 
 // 		$closure = $this->Container->register(
 // 			$class.'2', );
-		$this->Container->offsetSet($class.'2', function() use($class): \Closure {
-			new $class;
+		$this->Container->offsetSet($class.'2', function() use($class): Closure {
+			return new $class;
 		});
 
 		$this->assertTrue(isset($this->Container->list_registry()['TestClassUnset2']));
-
-
 	}
 
 	public function testOffsetException()

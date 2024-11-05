@@ -39,7 +39,11 @@ class Application
 				$path ?: $this->Request->get_path()
 			);
 		} catch (Exception $e) {
-			throw new Exception(message: 'Could not call controller', previous: $e);
+			throw new Exception(
+				'APPLICATION_CALL_ERR; Could not call controller. ' .
+				$e->getMessage(),
+				$e->getCode() ?: 500, $e
+			);
 		}
 	}
 }

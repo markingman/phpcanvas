@@ -5,6 +5,7 @@ namespace PHPCanvas\Errors;
 use Throwable;
 use ErrorException;
 use Closure;
+use PHPCanvas\Logs\LogHandler;
 
 /*
 Example:
@@ -34,7 +35,7 @@ class ErrorHandler
 	protected ?Closure $view = null;
 	protected ?Closure $log = null;
 
-	public function set_terminate(bool $exit)
+	public function set_terminate(bool $exit): void
 	{
 		$this->terminate = $exit;
 	}	
@@ -108,9 +109,9 @@ try {
 			return false;
 		}
 
-		if (error_reporting() & $e->getCode()) {// if code is at reporting level
-			return true;
-		}
+// 		if (error_reporting() & $e->getCode()) {// if code is at reporting level
+// 			return true;
+// 		}
 
 // 		if (error_reporting() & $e->getCode()) {// if code is at reporting level
 // 			return false;
@@ -118,7 +119,7 @@ try {
 
 // CriticalException or ErrorException
 		$this->handle_exception(// change error messages into ErrorException
-			//not this is not `throw new ...`
+			//note this is not `throw new ...`
 			new ErrorException($errstr, 0, $errno, $errfile, $errline)
 		);
 
@@ -146,9 +147,9 @@ function customExceptionHandler($exception) {
 			call_user_func($this->log, $e);
 		}
 
-		$exit = 0;
+		//$exit = 0;
 		if ($this->view) {// callback can ignore or view
-			$exit = call_user_func($this->view, $e);
+			/*$exit = */call_user_func($this->view, $e);
 			// TODO: view can set exit
 		}
 
@@ -167,33 +168,47 @@ function customExceptionHandler($exception) {
 		}
 	}
 
-	public static function log(Throwable $e, ?LogHandler $LogHandler = null): string
+	public static function log(Throwable $e, ?LogHandler $LogHandler = null): void
 	{
 		// basic placeholder, override with custom function
 
-		$sev = is_callable([$e, 'getSeverity']) ? $e->getSeverity() : error_get_last()['type'];
+// 		$sev = is_callable([$e, 'getSeverity']) ? $e->getSeverity() : error_get_last()['type'];
+
+		$stack = '';
+		if ($p = $e->getPrevious()) {
+			$stack =  $p->getTraceAsString() . PHP_EOL;
+// 			$stack =  var_export($p->getTrace(), true) . PHP_EOL;
+			while ($p = $p->getPrevious()) {
+				$stack = $p->getTraceAsString() . PHP_EOL;
+// 				$stack = var_export($p->getTrace(), true) . PHP_EOL;
+			}
+		}
+		$stack = $e->getTraceAsString() . PHP_EOL . $stack;
+// 		$stack = var_export($e->getTrace(), true) . PHP_EOL . $stack;
+
+		$sev = E_ERROR;
 		$log = sprintf(
-			"%s\t%s\t%s\t%s",
-			$sev, $e->getCode(), $e->getMessage(), $e->getFile() . ':' . $e->getLine()
+			"%s\t%s\t%s\t%s\n%s",
+			$sev, $e->getCode(), trim($e->getMessage()), $e->getFile() . ':' . $e->getLine(), $stack
 		);
 		$lev = match($sev) {
 			E_ERROR => LOG_ERR,
-			E_WARNING => LOG_WARNING,
-			E_PARSE => LOG_ALERT,
-			E_NOTICE => LOG_NOTICE,
-			E_CORE_ERROR => LOG_ERR,
-			E_CORE_WARNING => LOG_WARNING,
-			E_COMPILE_ERROR => LOG_ERR,
-			E_COMPILE_WARNING => LOG_ALERT,
-			E_USER_ERROR => LOG_ERR,
-			E_USER_WARNING => LOG_WARNING,
-			E_USER_NOTICE => LOG_NOTICE,
-			E_STRICT => LOG_NOTICE,
-			E_RECOVERABLE_ERROR => LOG_ERR,
-			E_DEPRECATED => LOG_NOTICE,
-			E_USER_DEPRECATED => LOG_NOTICE,
-			E_ALL => LOG_NOTICE,
-			default => LOG_CRIT,
+//			E_WARNING => LOG_WARNING,
+//			E_PARSE => LOG_ALERT,
+//			E_NOTICE => LOG_NOTICE,
+//			E_CORE_ERROR => LOG_ERR,
+//			E_CORE_WARNING => LOG_WARNING,
+//			E_COMPILE_ERROR => LOG_ERR,
+//			E_COMPILE_WARNING => LOG_ALERT,
+//			E_USER_ERROR => LOG_ERR,
+//			E_USER_WARNING => LOG_WARNING,
+//			E_USER_NOTICE => LOG_NOTICE,
+//			E_STRICT => LOG_NOTICE,
+//			E_RECOVERABLE_ERROR => LOG_ERR,
+//			E_DEPRECATED => LOG_NOTICE,
+//			E_USER_DEPRECATED => LOG_NOTICE,
+//			E_ALL => LOG_NOTICE,
+//			default => LOG_CRIT,
 		};
 		if ($LogHandler) {
 			$LogHandler->log($log, $lev);
@@ -202,7 +217,7 @@ function customExceptionHandler($exception) {
 		}
 	}
 
-	public static function view(Throwable $e, $m = null): string
+	public static function view(Throwable $e, mixed $m = null): string
 	{
 		// basic placeholder, override with custom function
 
@@ -221,29 +236,29 @@ function customExceptionHandler($exception) {
 				]
 			);
 		} else { 
+
+			$msg = match($e->getPrevious()?->getCode()) {
+				404 => '404 File not found',
+				401 => '401 No pemission',
+				403 => '403 Authorissed',
+				default => '500 System error',
+			};
+		
 			$html = <<<__
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
 	<title>%1\$s</title>
-	<style>*{line-height:1.6}</style>
+	<style>*{color:#111;background:#ddd;line-height:1.6}body{font-size:16px;}</style>
 </head>
 <body>
-	<pre><b>%1\$s</b>
-%2\$s
-%3\$s:%4\$s</pre>
+	<pre><b>%1\$s</b></pre>
 </body>
 </html>
 __;
 			return vsprintf(
-				$html,
-				[
-					1 => get_class($e),
-					2 => $e->getMessage(),
-					3 => $e->getFile(),
-					4 => $e->getLine(),
-				]
+				$html, [$msg]
 			);
 		}
 	}

@@ -27,8 +27,10 @@ class Router implements RouterInterface
 		'PATCH' => 512,
 	];
 
+	/** @var array<string, int> $iname */
 	protected array $iname = [];
 	protected array $routes = [];
+	/** @var array<string, int[]> $index */
 	protected array $index = [];
 	protected int $i = 0;
 	protected string $action_default = 'default';
@@ -86,12 +88,12 @@ class Router implements RouterInterface
 		// get index (any override value or, if present, the first path fragment)
 
 		$index = '';
-		if (isset($params['index'])) {
+		if (isset($params['index']) and is_string($params['index'])) {
 			$index = $params['index'];
 		} else {
 			preg_match('~^([^/{]+/)~', $params['path'], $m);
 
-			if (count($m) === 2 and strlen($m[1])) {
+			if (count($m) === 2) {
 				$index = substr($m[1], 0, -1);
 			}
 		}
@@ -114,6 +116,9 @@ class Router implements RouterInterface
 
 		$esc = '~';
 		$route_esc = preg_replace('~\{[^}]+}~', PHP_EOL, $params['path']);//make {markers} into EOL placeholder chars for preg_quote()
+		if (!is_string($route_esc)) {
+			throw new Exception('ROUTER_ADD_ROUTE; Cannot add route path');
+		}
 		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
 		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholder chars back to reqx
 		if ($any) {
@@ -163,25 +168,33 @@ class Router implements RouterInterface
 
 		// routes can be indexed (first path fragment) 
 
-		if ($index) {
-			if (!isset($this->index[$index])) {
-				$this->index[$index] = [];
-			}
-
-			$this->index[$index][] = $i;
+// 		if ($index) {
+		if (!isset($this->index[$index])) {
+			$this->index[$index] = [];
 		}
+
+		$this->index[$index][] = $i;
+
+// 		}
 
 		return true;
 	}
 
-	public function delete_route($name): bool
+	public function delete_route(string $name): bool
 	{
 		if (!isset($this->iname[$name])) {
 			return false;
 		}
 
 		$i = $this->iname[$name];
-		unset($this->routes[$i], $this->index[$i], $this->iname[$name]);
+		unset($this->routes[$i], $this->iname[$name]);
+		foreach ($this->index as $index) {
+			foreach ($index as $k => $v) {
+				if ($v === $i) {
+					unset($this->index[$name][$k]);
+				}
+			}
+		}
 
 		return true;
 	}

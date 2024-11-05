@@ -14,8 +14,8 @@ class Links implements LinksInterface
 
 	function __construct(
 		RouterInterface $Router,
-		$site_url,
-		$site_path = ''
+		string $site_url,
+		string $site_path = ''
 	) {
 		$this->Router = $Router;
 		$this->site_url = trim($site_url, '/');
@@ -24,14 +24,12 @@ class Links implements LinksInterface
 		}
 	}
 
+	/** @param array<string, string> $vars */
 	public function get_link(string $name, array $vars = [], bool $relative = true, string $pcol = null): string
 	{
 		try {
 			$link = $this->Router->get_rewrite($name, $vars);
 		} catch (Exception $e) {
-			
-// 		if (!$link = $this->Router->get_rewrite($name, $vars)) {
-// prx(str_starts_with($e->getMessage());
 			throw new Exception(message: "NOT_FOUND; No link found for \"$name\"", previous: $e);
 		}
 

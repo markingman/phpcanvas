@@ -1,8 +1,8 @@
 .DS_Store
-.phpunit*
 /.idea
+/.phpunit*
+/*.bbprojectd
 /composer.lock
 /composer.phar
-/phpunit-coverage*
-/tmp
+/phpunit-coverage
 /vendor

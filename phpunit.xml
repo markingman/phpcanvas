@@ -16,7 +16,7 @@
 			<file>tests/PHPCanvas/Cache/CacheTest.php</file>
 			<file>tests/PHPCanvas/ConfigTest.php</file>
 			<file>tests/PHPCanvas/ContainerTest.php</file>
-			<file>tests/PHPCanvas/Controller/ControllerTest.php</file
+			<file>tests/PHPCanvas/Controller/ControllerTest.php</file>
 			<file>tests/PHPCanvas/Errors/ErrorHandlerTest.php</file>
 			<file>tests/PHPCanvas/FinderTest.php</file>
 			<file>tests/PHPCanvas/Http/RequestTest.php</file>

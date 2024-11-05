@@ -2,17 +2,21 @@
 
 namespace PHPCanvas\Session;
 
+use Exception;
 use SessionHandlerInterface;
 
 class SessionHandler implements SessionHandlerInterface
 {
-	protected array $_SESSION;
+	protected array $_SESSION = [];
 	private string $dir;
 	private string $ref;
 
-	public function init(array $s = null): void
+	public function init(?array $s = null): void
 	{
 		if (is_null($s)) {
+			if (session_status() !== PHP_SESSION_ACTIVE) {
+				throw new Exception('Cannot reference inactive session');
+			}
 			$this->_SESSION =& $_SESSION;
 			$this->ref = true;
 		} else {
@@ -50,18 +54,18 @@ class SessionHandler implements SessionHandlerInterface
 
 	public function __get($k)
 	{
-		return @$this->_SESSION[$k];
+		return $this->_SESSION[$k] ?? null;
 	}
 
 	public function __isset($k)
 	{
-		return (null !== @$this->_SESSION[$k]);
+		return isset($this->_SESSION[$k]);
 	}
 
 	public function __unset($k)
 	{
 		unset($this->_SESSION[$k]);
-		if ($this->ref) {
+		if ($this->ref and isset($_SESSION[$k])) {
 			unset($_SESSION[$k]);
 		}
 	}
@@ -83,14 +87,14 @@ class SessionHandler implements SessionHandlerInterface
 		return true;
 	}
 
-	public function read(string $id): string
+	public function read(string $id): string|false
 	{
-		return (string)@file_get_contents($this->dir . /*'/' . $id[0] .*/ '/' . $id);
+		return file_get_contents($this->dir . /*'/' . $id[0] .*/ '/' . $id);
 	}
 
 	public function write(string $id, string $data): bool
 	{
-		return (false !== @file_put_contents($this->dir . /*'/' . $id[0] .*/ '/' . $id, $data));
+		return (false !== file_put_contents($this->dir . /*'/' . $id[0] .*/ '/' . $id, $data));
 	}
 
 	public function destroy(string $id): bool

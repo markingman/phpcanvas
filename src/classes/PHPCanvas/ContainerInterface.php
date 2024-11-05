@@ -30,7 +30,7 @@ interface ContainerInterface
 
 	public function cache_name(string $name): string;
 
-	public function get(string $name, $store_created = true): mixed;
+	public function get(string $name, bool $store_created = true): mixed;
 
 	public function exists(string $name): bool;
 

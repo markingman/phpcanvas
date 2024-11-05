@@ -1,12 +1,4 @@
 <?php
-/**
- * This file is part of PHPCanvas
- *
- * $Id: ResponseInterface.php 520 2016-02-02 10:12:22Z dev $
- *
- * @copyright   Copyright (C) 2016 Mark Ingman, Valhalla Software
- * @license     http://phpcanvas.org/liecnse
- */
 
 namespace PHPCanvas\Http;
 
@@ -31,4 +23,5 @@ interface ResponseInterface
 	function json($vars = '')
 
 	function respond($content = '');*/
+	public function redirect(string $to, int $code = 303): void;
 }

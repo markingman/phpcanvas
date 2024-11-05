@@ -7,7 +7,9 @@ class Response implements ResponseInterface
 	protected bool $terminate_after_response = true;
 	protected int $response_code = 200;
 	protected string $char_set = 'UTF-8';
+	/** @var array<string> $headers */
 	protected array $headers = [];
+	/** @var array<string, Cookie> $cookies */
 	protected array $cookies = [];
 
 	public function __construct(bool $terminate_after_response = true)
@@ -50,14 +52,14 @@ class Response implements ResponseInterface
 		bool $httponly = false,
     ): void
 	{
-		$this->cookies[$name] = [
-			'value' => $value,
-			'expires' => $expires,
-			'path' =>  $path,
-			'domain' => $domain,
-			'secure' => $secure,
-			'httponly' => $httponly,
-		];
+		$this->cookies[$name] = new Cookie(
+			value: $value,
+			expires: $expires,
+			path:  $path,
+			domain: $domain,
+			secure: $secure,
+			httponly: $httponly,
+		);
 	}
 
 	public function unset_cookie(string $key): void
@@ -91,7 +93,7 @@ class Response implements ResponseInterface
 		$this->respond($file, true, $unlink_file);
 	}
 
-	public function redirect(string $to, $code = 303): void
+	public function redirect(string $to, int $code = 303): void
 	{
 		$this->set_response_code($code);
 		$this->set_header('Location', $to);
@@ -110,8 +112,8 @@ class Response implements ResponseInterface
 			header($key . ': ' . $value);
 		}
 
-		foreach ($this->cookies as $name => $params) {
-			setcookie($name, $params['value'], $params['expires'], $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+		foreach ($this->cookies as $name => $cookie) {
+			setcookie($name, $cookie->value, $cookie->expires, $cookie->path, $cookie->domain, $cookie->secure, $cookie->httponly);
 		}
 
 		if (!is_null($content)) {

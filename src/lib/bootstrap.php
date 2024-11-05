@@ -3,8 +3,16 @@
 // Generic bootstrap
 
 $Container = require __DIR__ . '/load_container.php';
+// if (file_exists(store_path / container)) {
+// try {
+//  $Container = file_exists(store_path / container ? unserialize(file_get_contents(store_path / container)) : $Container = new PHPCanvas\Container(store, locate path);
+// catch(Exceptin e)
+// } else {
+//  unlink(store_path / container )
+// exit(Error)
+// }
 
-if (!$Container->get_cache('Config')) {
+if (!$Container->cache_get('Config')) {
 	$config_paths = $config_paths ?? [__DIR__ . '/../config/config.php', __DIR__ . '/../../../../../app/config/config.php'];
 	$config = $config ?? [];
 	$Container->locate('Config', __DIR__ . '/register.Config.php', ['config_paths' => $config_paths, 'config' => $config]);
@@ -26,7 +34,7 @@ foreach ([
 			 ['View', __DIR__ . '/register.View.php', false],
 			 ['App', __DIR__ . '/register.App.php', false],
 		 ] as $it) {
-	if ($it[2] and !$Container->get_cache($it[0])) {
+	if ($it[2] and !$Container->cache_get($it[0])) {
 		$Container->locate($it[0], $it[1]);
 	} else {
 		$Container->locate($it[0], $it[1]);

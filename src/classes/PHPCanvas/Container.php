@@ -19,6 +19,12 @@ class Container implements ContainerInterface, ArrayAccess
 	protected array $instances = [];// list of instantiated objects
 	protected array $aliases = [];// list of name aliases
 
+// 	public function __construct(?string $store = null, ?string $locate = null)
+// 	{
+// 		if ($store) $this->set_store($store);
+// 		if ($locate) $this->set_locate_path($locate);
+// 	}
+
 	public function set_store(string $path): void
 	{
 		$this->store_path = $path;
@@ -101,7 +107,7 @@ class Container implements ContainerInterface, ArrayAccess
 				if (!($closure instanceof Closure)) {
 					throw new Exception("CONTAINER_TYPE_FAILURE; Could not create $name, expected Closure not found");
 				}
-//TODO: Clocsure return type
+//TODO: Closure return type
 				$this->register($name, $closure);
 			}
 		}
@@ -110,7 +116,7 @@ class Container implements ContainerInterface, ArrayAccess
 			try {
 				$instance = $this->registry[$name]($this);
 			} catch (Exception $e) {
-				throw new Exception("CONTAINER_CREATE_ERR; could not create '$name', {$e->getMessage()}");
+				throw new Exception(message: "CONTAINER_CREATE_ERR; could not create '$name', {$e->getMessage()}", previous: $e);
 			}
 
 			if (!is_object($instance)) {
@@ -126,7 +132,7 @@ class Container implements ContainerInterface, ArrayAccess
 			try {
 				return $this->instantiate($name, $name, $store);
 			} catch (Exception $e) {
-				throw new Exception("CONTAINER_INSTANTIATE_ERR; {$e->getMessage()}");
+				throw new Exception(message: "CONTAINER_INSTANTIATE_ERR; {$e->getMessage()}", previous: $e);
 			}
 		}
 	}
@@ -139,9 +145,9 @@ class Container implements ContainerInterface, ArrayAccess
 
 		try {
 			$method = $reflection->getMethod($method_name);
-			$params = $this->set_params($method->getParameters(), $args, $store, $force_new);
+			$params = !is_null($args) ? $this->set_params($method->getParameters(), $args, $store, $force_new) : [];
 		} catch (Exception $e) {
-			throw new Exception("CONTAINER_CALL_ERR; Could not call $class_name::$method_name, {$e->getMessage()}");
+			throw new Exception(message: "CONTAINER_CALL_ERR; Could not call $class_name::$method_name, {$e->getMessage()}", previous: $e);
 		}
 
 		if ($store_reflection) {
@@ -176,7 +182,7 @@ class Container implements ContainerInterface, ArrayAccess
 			$p_type = $param->getType();
 
 			if ($p_type instanceof ReflectionUnionType) {
-				throw new Exception("cannot resolve paramter $p_name");
+				throw new Exception("cannot resolve parameter $p_name");
 			}
 
 			$p_type_name = $p_type->getName();
@@ -194,7 +200,12 @@ class Container implements ContainerInterface, ArrayAccess
 					$params[$i] = $this->instances[$p_name];
 				} else {
 					$name = $this->aliases[$p_name] ?? $p_name;
-					if (isset($this->registry[$name]) or isset($this->locations[$name])) {
+// 					$class_name = $this->get_class_name_from_type($p_type_name);
+					if (
+						isset($this->registry[$name]) 
+						or isset($this->locations[$name])
+						or ($this->locate_path and realpath($this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $name . '.php'))
+					) {
 						$params[$i] = $this->create($name, $store);
 					} else {
 						$class_name = $this->get_class_name_from_type($p_type_name);
@@ -204,7 +215,7 @@ class Container implements ContainerInterface, ArrayAccess
 				continue;
 			}
 
-			throw new Exception("cannot resolve paramter $p_name");
+			throw new Exception("cannot resolve parameter $p_name");
 		}
 
 		return $params;
@@ -215,7 +226,7 @@ class Container implements ContainerInterface, ArrayAccess
 		try {
 			$reflection = new ReflectionClass($class_name);
 		} catch (Exception $e) {
-			throw new Exception("could not reflect $class_name, {$e->getMessage()}");
+			throw new Exception(message: "could not reflect $class_name, {$e->getMessage()}", previous: $e);
 		}
 
 		$constructor = $reflection->getConstructor();
@@ -229,7 +240,7 @@ class Container implements ContainerInterface, ArrayAccess
 				$class = $reflection->newInstanceArgs();
 			}
 		} catch (Exception $e) {
-			throw new Exception("could not instantiate '$class_name', {$e->getMessage()}");
+			throw new Exception(message: "could not instantiate '$class_name', {$e->getMessage()}", previous: $e);
 		}
 
 		if (!is_null($store)) {

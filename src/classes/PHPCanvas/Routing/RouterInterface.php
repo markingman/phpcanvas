@@ -6,15 +6,16 @@ interface RouterInterface
 {
 	public function add_route(string $name, array $params): bool;
 
-	public function delete_route($name): bool;
+	public function delete_route(string $name): bool;
 
 	public function get_routes(): array;
 
 	public function dump(): array;
 
-	public function get_route($method, $url): false|array;
+	public function get_route(string $method, string $url): false|array;
 
-	public function get_rewrite($name, $vars = []): string;
+	/** @param array<string, string> $vars */
+	public function get_rewrite(string $name, array $vars = []): string;
 
 	public function get_action_default(): string;
 
