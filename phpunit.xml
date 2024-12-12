@@ -18,7 +18,6 @@
 			<file>tests/PHPCanvas/ContainerTest.php</file>
 			<file>tests/PHPCanvas/Controller/ControllerTest.php</file>
 			<file>tests/PHPCanvas/Errors/ErrorHandlerTest.php</file>
-			<file>tests/PHPCanvas/FinderTest.php</file>
 			<file>tests/PHPCanvas/Http/RequestTest.php</file>
 			<file>tests/PHPCanvas/Http/ResponseTest.php</file>
 			<file>tests/PHPCanvas/Routing/LinksTest.php</file>

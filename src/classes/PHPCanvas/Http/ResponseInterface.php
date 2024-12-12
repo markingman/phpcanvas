@@ -8,8 +8,6 @@ interface ResponseInterface
 
 	function set_view(\PHPCanvas\View\ViewInterface $View);
 
-	function set_scope(\PHPCanvas\Scope\ScopeInterface $Scope);
-
 	function set_header($key, $value);
 
 	function unset_header($key);

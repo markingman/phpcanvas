@@ -40,9 +40,10 @@ class Dispatch implements DispatchInterface
 	public function call_controller(?string $method = null, ?string $url = null): void
 	{
 		if (!$route = $this->Router->get_route((string)$method, (string)$url)) {
+			// TODO response types, e.g. method not implemented
 			throw new Exception(sprintf('DISPATCH_NO_ROUTE; No route found for URL "%s"', $url), 404);
 		} else {
-			[$controller, $action, $vars/*, $name*/] = $route;
+			[$controller, $action, $vars/*, $name*/] = $route;//TODO: route is class
 		}
 
 		if (str_starts_with($controller, 'http') and str_contains($controller, '://')) { //Router can make http redirect
@@ -54,7 +55,8 @@ class Dispatch implements DispatchInterface
 		foreach ($vars as $k => $v) {
 			$this->Request->set_get_value($k, $v);
 		}
-		$name = !empty($route['name']) ? $route['name'] : null;//@todo: setable controller name in route
+
+// 		$name = !empty($route['name']) ? $route['name'] : null;//@todo: setable controller name in route
 		// this->Reponse = $code
 
 		if (!class_exists($this->controller)) {
@@ -62,13 +64,13 @@ class Dispatch implements DispatchInterface
 		}
 
 		try {
-			$Controller = $this->instanciate($this->controller, $name, true);
+			$Controller = $this->instanciate($this->controller, /*$name,*/ /*true*/);
 		} catch (Exception $e) {
 			throw new Exception(sprintf('DISPATCH_FAILED_INSTANCIATE; Could not instanciate controller "%s"', $this->controller), 500, $e);
 		}
 
 		if (!is_object($Controller)) {
-			throw new Exception(sprintf('DISPATCH_FAILED_INSTANCIATE; Could not instanciate controller "%s"', $this->controller), 500);
+			throw new Exception(sprintf('DISPATCH_FAILED_INSTANCIATE; Unexpectant controller format "%s"', $this->controller), 500);
 		}
 
 		if (!is_callable([$Controller, $this->action])) {
@@ -125,7 +127,7 @@ class Dispatch implements DispatchInterface
 // 		return $this->Router->get_rewrites();
 // 	}
 
-	public function instanciate(string $class, string $name, bool $store = false): mixed
+	public function instanciate(string $class, /*string $name,*/ bool $store = false): mixed
 	{
 		return $this->Container->create($class, $store);
 	}

@@ -3,6 +3,7 @@
 // Generic bootstrap
 
 $Container = require __DIR__ . '/load_container.php';
+
 // if (file_exists(store_path / container)) {
 // try {
 //  $Container = file_exists(store_path / container ? unserialize(file_get_contents(store_path / container)) : $Container = new PHPCanvas\Container(store, locate path);
@@ -19,20 +20,14 @@ if (!$Container->cache_get('Config')) {
 }
 
 foreach ([
-			 ['Finder', __DIR__ . '/register.Finder.php', true],
-			 ['Router', __DIR__ . '/register.Router.php', true],
-			 ['Request', __DIR__ . '/register.Request.php', false],
-			 ['Log', __DIR__ . '/register.Log.php', false],
-			 ['Cache', __DIR__ . '/register.Cache.php', false],
-			 ['Scope', __DIR__ . '/register.Scope.php', false],
-			 ['Response', __DIR__ . '/register.Response.php', false],
-			 ['Mail', __DIR__ . '/register.Mail.php', false],
+			 ['App', __DIR__ . '/register.App.php', false],
+			 ['Dispatch', __DIR__ . '/register.Dispatch.php', false],
 			 ['Errors', __DIR__ . '/register.Errors.php', false],
 			 ['Links', __DIR__ . '/register.Links.php', false],
-			 ['Dispatch', __DIR__ . '/register.Dispatch.php', false],
-			 ['ViewFinder', __DIR__ . '/register.ViewFinder.php', true],
-			 ['View', __DIR__ . '/register.View.php', false],
-			 ['App', __DIR__ . '/register.App.php', false],
+			 ['Log', __DIR__ . '/register.Log.php', false],
+			 ['Request', __DIR__ . '/register.Request.php', false],
+			 ['Response', __DIR__ . '/register.Response.php', false],
+			 ['Router', __DIR__ . '/register.Router.php', true],
 		 ] as $it) {
 	if ($it[2] and !$Container->cache_get($it[0])) {
 		$Container->locate($it[0], $it[1]);
