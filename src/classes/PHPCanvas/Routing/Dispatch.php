@@ -137,4 +137,9 @@ class Dispatch implements DispatchInterface
 	{
 		return $this->Container->call($class, $method, $params);
 	}
+
+	public function store(string $name, object $object)
+	{
+		return $this->Container->offsetSet($name, $object);
+	}
 }

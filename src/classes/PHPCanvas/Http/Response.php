@@ -90,7 +90,14 @@ class Response implements ResponseInterface
 		$this->set_header('Content-Type', sprintf('%s; charset=%s', mime_content_type($file), $this->char_set));
 		$this->set_header('Content-Disposition', sprintf('attachment;filename=%s', basename($file)));
 		$this->set_header('Content-Length', strval(filesize($file)));//careful of gzip here
-		$this->respond($file, true, $unlink_file);
+		$this->respond(
+			function() use ($file, $unlink_file) {
+				readfile($file);
+				if ($unlink_file) {
+					unlink($content);
+				}
+			}
+		);
 	}
 
 	public function redirect(string $to, int $code = 303): void
@@ -100,12 +107,12 @@ class Response implements ResponseInterface
 		$this->respond(null);
 	}
 
-	public function respond(?string $content = '', bool $read_file = false, bool $unlink_file = false, bool $remove_headers = true): void
+	public function respond(string|callable|null $content = '', bool $remove_headers = false): void
 	{
 		http_response_code($this->response_code);
 
 		if ($remove_headers) {
-			header_remove();
+			header_remove();// CAUTION this will remove Set-Cookie and Cache-Control
 		}
 
 		foreach ($this->headers as $key => $value) {
@@ -116,15 +123,10 @@ class Response implements ResponseInterface
 			setcookie($name, $cookie->value, $cookie->expires, $cookie->path, $cookie->domain, $cookie->secure, $cookie->httponly);
 		}
 
-		if (!is_null($content)) {
-			if (!$read_file) {
-				echo $content;
-			} else {
-				readfile($content);
-				if ($unlink_file) {
-					unlink($content);
-				}
-			}
+		if (is_string($content)) {
+			echo $content;
+		} elseif (is_callable($content)) {
+			$content();
 		}
 
 		$this->terminate();

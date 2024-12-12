@@ -3,11 +3,13 @@
 return function (PHPCanvas\ContainerInterface $c) {
 	$Router = new PHPCanvas\Routing\Router($c['Config']->ACTION_DEFAULT);
 
-	$routes = $c['Finder']->glob($c['Config']->ROUTES_GLOB, @$c['Config']->ROUTES_DIRS ?: null);
+	$routes = include($c['Config']->ROUTES);
 
-	foreach ($routes as $route) {
-		foreach (include $route as $name => $params) {
-			$Router->add_route($name, $params);
+	if (is_array($routes)) {
+		foreach ($routes as $name => $route) {
+			if (is_string($name) and is_array($route)) {
+				$Router->add_route($name, $route);
+			}
 		}
 	}
 
@@ -15,3 +17,4 @@ return function (PHPCanvas\ContainerInterface $c) {
 
 	return $Router;
 };
+	

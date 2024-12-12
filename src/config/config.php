@@ -16,7 +16,7 @@ $config['APP_NAME'] = 'Sample App';
 /**
  * The site operates differently depending on it's mode
  */
-$config['SITE_MODE'] = 'prod';
+$config['ENV'] = 'prod';
 
 /**
  * Domain name or IP address of the site (no http:// or trailing slash)
@@ -32,31 +32,6 @@ $config['SITE_PATH'] = '';
  * URI of the site (no protocol, include all sub paths)
  */
 $config['SITE_URL'] = $config['SITE_DOMAIN'] . $config['SITE_PATH'] . '/';
-
-/**
- * Email address of the site's system administrator
- */
-$config['MAIL_ADMIN'] = 'root';
-
-/**
- * Email address of the default mail sender
- */
-$config['MAIL_SENDER'] = 'www';
-
-/**
- * Email on/off control
- */
-$config['MAIL_ON'] = ($config['SITE_MODE'] === 'prod');
-
-/**
- * Default locale
- */
-$config['LOCALE'] = function_exists('locale_get_default') ? locale_get_default() : 'en-GB';
-
-/**
- * Default locale options (space delimited list)
- */
-$config['LOCALE_OPTIONS'] = $config['LOCALE'];
 
 /**
  * Controller action auto prefix (added to all URL actions)
@@ -199,31 +174,9 @@ $config['CHAR_TYPE_DB'] = 'utf8';
 $config['URL_ARG'] = 'arg';
 
 /**
- * Generic setting for 'use cache' or not
- */
-$config['CACHE_USE'] = ($config['SITE_MODE'] === 'prod');
-
-/**
- * Default cache time
- */
-$config['CACHE_TIME'] = 900;
-
-/**
  * Regular expression to scan for routes in short paths
  */
-$config['ROUTES_GLOB'] = 'config/routes.php';
 
-/**
- * Default finder paths
- */
-$config['DIRS_FINDER'] = [
-	'phpcanvas/phpcanvas' => realpath(__DIR__ . '/..'),//first
-	'app/app' => $config['DIR_ROOT'] . '/app',
-];
-
-$config['DIRS_VIEW'] = [
-	'phpcanvas/phpcanvas' => realpath(__DIR__ . '/../views'),//first
-	'app/app' => $config['DIR_ROOT'] . '/app/views',
-];
+$config['ROUTES'] = $config['DIR_APP'] . '/config/routes.php';
 
 return $config;

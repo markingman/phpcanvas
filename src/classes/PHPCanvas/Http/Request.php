@@ -377,7 +377,7 @@ class Request implements RequestInterface
 	{
 		if (is_null($this->ref)) {
 			//TODO: if proxy
-			if (is_string($this->_SERVER['HTTP_REFERER'])) {
+			if (!empty($this->_SERVER['HTTP_REFERER']) and is_string($this->_SERVER['HTTP_REFERER'])) {
 				$this->set_ref($this->_SERVER['HTTP_REFERER']);
 			}
 		}
