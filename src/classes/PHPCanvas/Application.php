@@ -9,7 +9,7 @@ use PHPCanvas\Routing\DispatchInterface;
 
 class Application
 {
-	const PHPCANVAS_VERSION = 3.0;
+	const PHPCANVAS_VERSION = 4.0;
 
 	public ConfigInterface $Config;
 	public ContainerInterface $Container;
@@ -31,6 +31,7 @@ class Application
 		$this->Dispatch = $Dispatch;
 	}
 
+	/** @throws Exception */
 	public function run(?string $method = null, ?string $path = null): void
 	{
 		try {

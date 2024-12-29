@@ -2,10 +2,10 @@
 
 namespace PHPCanvas\Errors;
 
-use Throwable;
-use ErrorException;
 use Closure;
+use ErrorException;
 use PHPCanvas\Logs\LogHandler;
+use Throwable;
 
 /*
 Example:
@@ -38,7 +38,7 @@ class ErrorHandler
 	public function set_terminate(bool $exit): void
 	{
 		$this->terminate = $exit;
-	}	
+	}
 
 	public function set_view(Closure $view): void
 	{
@@ -49,61 +49,62 @@ class ErrorHandler
 	{
 		$this->log = $log;
 	}
-/*
-// Custom error handler
-function customErrorHandler($errno, $errstr, $errfile, $errline) {
-    // Determine the severity of the error
-    switch ($errno) {
-        case E_ERROR:
-        case E_CORE_ERROR:
-        case E_COMPILE_ERROR:
-        case E_USER_ERROR:
-            // Log the error and exit
-            error_log("Fatal Error [$errno]: $errstr in $errfile on line $errline");
-            exit(1);
-            break;
 
-        case E_WARNING:
-        case E_USER_WARNING:
-            // Log the warning and continue
-            error_log("Warning [$errno]: $errstr in $errfile on line $errline");
-            break;
+	/*
+	// Custom error handler
+	function customErrorHandler($errno, $errstr, $errfile, $errline) {
+		// Determine the severity of the error
+		switch ($errno) {
+			case E_ERROR:
+			case E_CORE_ERROR:
+			case E_COMPILE_ERROR:
+			case E_USER_ERROR:
+				// Log the error and exit
+				error_log("Fatal Error [$errno]: $errstr in $errfile on line $errline");
+				exit(1);
+				break;
 
-        case E_NOTICE:
-        case E_USER_NOTICE:
-            // Log the notice and continue
-            error_log("Notice [$errno]: $errstr in $errfile on line $errline");
-            break;
+			case E_WARNING:
+			case E_USER_WARNING:
+				// Log the warning and continue
+				error_log("Warning [$errno]: $errstr in $errfile on line $errline");
+				break;
 
-        default:
-            // Handle unknown error types
-            error_log("Unknown error type: [$errno]: $errstr in $errfile on line $errline");
-            break;
-    }
+			case E_NOTICE:
+			case E_USER_NOTICE:
+				// Log the notice and continue
+				error_log("Notice [$errno]: $errstr in $errfile on line $errline");
+				break;
 
-    // Don't execute PHP's internal error handler
-    return true;
-}
+			default:
+				// Handle unknown error types
+				error_log("Unknown error type: [$errno]: $errstr in $errfile on line $errline");
+				break;
+		}
 
-// Custom exception handler
+		// Don't execute PHP's internal error handler
+		return true;
+	}
 
-// Set custom error and exception handlers
-set_error_handler("customErrorHandler");
-set_exception_handler("customExceptionHandler");
+	// Custom exception handler
 
-// Example custom exception class for critical exceptions
-class CriticalException extends Exception {}
+	// Set custom error and exception handlers
+	set_error_handler("customErrorHandler");
+	set_exception_handler("customExceptionHandler");
 
-// Example usage
-try {
-    // Some code that might throw exceptions
-    throw new CriticalException("Critical failure");
-} catch (Exception $e) {
-    customExceptionHandler($e);
-}
+	// Example custom exception class for critical exceptions
+	class CriticalException extends Exception {}
 
-*/
-	public function handle_error(int $errno,  string $errstr,  ?string $errfile = null,  ?int $errline = null): bool
+	// Example usage
+	try {
+		// Some code that might throw exceptions
+		throw new CriticalException("Critical failure");
+	} catch (Exception $e) {
+		customExceptionHandler($e);
+	}
+
+	*/
+	public function handle_error(int $errno, string $errstr, ?string $errfile = null, ?int $errline = null): bool
 	{
 		if ($errno < 1) {//TODO when is this case
 			return false;
@@ -119,28 +120,28 @@ try {
 
 // CriticalException or ErrorException
 		$this->handle_exception(// change error messages into ErrorException
-			//note this is not `throw new ...`
+		//note this is not `throw new ...`
 			new ErrorException($errstr, 0, $errno, $errfile, $errline)
 		);
 
 		return true;
 	}
 
-/*
-function customExceptionHandler($exception) {
-    // Log the exception
-    error_log("Uncaught Exception: " . $exception->getMessage());
+	/*
+	function customExceptionHandler($exception) {
+		// Log the exception
+		error_log("Uncaught Exception: " . $exception->getMessage());
 
-    // Determine if the exception is fatal
-    if ($exception instanceof CriticalException) {
-        exit(1);
-    } else {
-        // Optionally, display a user-friendly error message
-        echo "An error occurred, please try again later.";
-    }
-}
+		// Determine if the exception is fatal
+		if ($exception instanceof CriticalException) {
+			exit(1);
+		} else {
+			// Optionally, display a user-friendly error message
+			echo "An error occurred, please try again later.";
+		}
+	}
 
-*/
+	*/
 	public function handle_exception(Throwable $e): void
 	{
 		if ($this->log) {// callback can ignore or log
@@ -149,7 +150,8 @@ function customExceptionHandler($exception) {
 
 		//$exit = 0;
 		if ($this->view) {// callback can ignore or view
-			/*$exit = */call_user_func($this->view, $e);
+			/*$exit = */
+			call_user_func($this->view, $e);
 			// TODO: view can set exit
 		}
 
@@ -176,7 +178,7 @@ function customExceptionHandler($exception) {
 
 		$stack = '';
 		if ($p = $e->getPrevious()) {
-			$stack =  $p->getTraceAsString() . PHP_EOL;
+			$stack = $p->getTraceAsString() . PHP_EOL;
 // 			$stack =  var_export($p->getTrace(), true) . PHP_EOL;
 			while ($p = $p->getPrevious()) {
 				$stack = $p->getTraceAsString() . PHP_EOL;
@@ -191,7 +193,7 @@ function customExceptionHandler($exception) {
 			"%s\t%s\t%s\t%s\n%s",
 			$sev, $e->getCode(), trim($e->getMessage()), $e->getFile() . ':' . $e->getLine(), $stack
 		);
-		$lev = match($sev) {
+		$lev = match ($sev) {
 			E_ERROR => LOG_ERR,
 //			E_WARNING => LOG_WARNING,
 //			E_PARSE => LOG_ALERT,
@@ -235,15 +237,15 @@ function customExceptionHandler($exception) {
 					4 => $e->getLine(),
 				]
 			);
-		} else { 
+		} else {
 
-			$msg = match($e->getPrevious()?->getCode()) {
+			$msg = match ($e->getPrevious()?->getCode()) {
 				404 => '404 File not found',
 				401 => '401 No pemission',
 				403 => '403 Authorissed',
 				default => '500 System error',
 			};
-		
+
 			$html = <<<__
 <!DOCTYPE html>
 <html lang="en">
@@ -257,6 +259,7 @@ function customExceptionHandler($exception) {
 </body>
 </html>
 __;
+
 			return vsprintf(
 				$html, [$msg]
 			);

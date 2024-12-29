@@ -22,4 +22,6 @@ interface ResponseInterface
 
 	function respond($content = '');*/
 	public function redirect(string $to, int $code = 303): void;
+
+	public function respond(string|callable|null $content = '', bool $remove_headers = false): void;
 }

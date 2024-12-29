@@ -1,33 +1,32 @@
 <?php
 
-// Generic bootstrap
+// Generic bootstrap (copy and create new as required)
 
-$Container = require __DIR__ . '/load_container.php';
+$dir = (string)($dir ?? __DIR__);
+$container_store = (string)($container_store ?? '');
+$locate_path = (string)($locate_path ?? '');
+$config_paths = (array)($config_paths ?? [$dir . '/../config/config.php', $dir . '/../../../../../app/config/config.php']);
+$config = (array)($config ?? []);
 
-// if (file_exists(store_path / container)) {
-// try {
-//  $Container = file_exists(store_path / container ? unserialize(file_get_contents(store_path / container)) : $Container = new PHPCanvas\Container(store, locate path);
-// catch(Exceptin e)
-// } else {
-//  unlink(store_path / container )
-// exit(Error)
-// }
+try {
+	$Container = new PHPCanvas\Container($container_store, $locate_path);
+} catch (Exception $e) {
+	throw new Exception('Could not load Container');
+}
 
 if (!$Container->cache_get('Config')) {
-	$config_paths = $config_paths ?? [__DIR__ . '/../config/config.php', __DIR__ . '/../../../../../app/config/config.php'];
-	$config = $config ?? [];
-	$Container->locate('Config', __DIR__ . '/register.Config.php', ['config_paths' => $config_paths, 'config' => $config]);
+	$Container->locate('Config', $dir . '/register.Config.php', ['config_paths' => $config_paths, 'config' => $config]);
 }
 
 foreach ([
-			 ['App', __DIR__ . '/register.App.php', false],
-			 ['Dispatch', __DIR__ . '/register.Dispatch.php', false],
-			 ['Errors', __DIR__ . '/register.Errors.php', false],
-			 ['Links', __DIR__ . '/register.Links.php', false],
-			 ['Log', __DIR__ . '/register.Log.php', false],
-			 ['Request', __DIR__ . '/register.Request.php', false],
-			 ['Response', __DIR__ . '/register.Response.php', false],
-			 ['Router', __DIR__ . '/register.Router.php', true],
+			 ['App', $dir . '/register.App.php', false],
+			 ['Dispatch', $dir . '/register.Dispatch.php', false],
+			 ['Errors', $dir . '/register.Errors.php', false],
+			 ['Links', $dir . '/register.Links.php', false],
+			 ['Log', $dir . '/register.Log.php', false],
+			 ['Request', $dir . '/register.Request.php', false],
+			 ['Response', $dir . '/register.Response.php', false],
+			 ['Router', $dir . '/register.Router.php', true],
 		 ] as $it) {
 	if ($it[2] and !$Container->cache_get($it[0])) {
 		$Container->locate($it[0], $it[1]);
@@ -36,4 +35,8 @@ foreach ([
 	}
 }
 
-return $Container['App'];
+if (!(($App = $Container->get('App')) instanceof PHPCanvas\Application)) {
+	throw new Exception('Could not load App');
+}
+
+return $App;

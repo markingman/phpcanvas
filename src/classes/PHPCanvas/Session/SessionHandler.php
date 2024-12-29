@@ -2,20 +2,23 @@
 
 namespace PHPCanvas\Session;
 
+use DirectoryIterator;
 use Exception;
 use SessionHandlerInterface;
 
 class SessionHandler implements SessionHandlerInterface
 {
+	/** @var array<string, string|bool|int|array<string, string>|null> */
 	protected array $_SESSION = [];
 	private string $dir;
-	private string $ref;
+	private bool $ref;
 
+	/** @param array<string, string|bool|int|array<string, string>|null> $s */
 	public function init(?array $s = null): void
 	{
 		if (is_null($s)) {
 			if (session_status() !== PHP_SESSION_ACTIVE) {
-				throw new Exception('Cannot reference inactive session');
+				throw new Exception('SESSION_HANDLER_REF; Cannot reference inactive session');
 			}
 			$this->_SESSION =& $_SESSION;
 			$this->ref = true;
@@ -25,11 +28,12 @@ class SessionHandler implements SessionHandlerInterface
 		}
 	}
 
+	/** @param array<string, string> $a */
 	public function validate(array $a): bool
 	{
 		// e.g. $a = [REMOTE_ADDR, HTTP_USER_AGENT]
 
-		if (empty($this->_SESSION)) {
+		if (empty($this->_SESSION['@']) or !is_array($this->_SESSION['@'])) {
 			$this->_SESSION['@'] = [];
 			foreach ($a as $k => $v) {
 				$this->_SESSION['@'][$k] = md5($v);
@@ -47,22 +51,24 @@ class SessionHandler implements SessionHandlerInterface
 		return true;
 	}
 
-	public function __set($k, $v)
-	{
-		$this->_SESSION[$k] = $v;
-	}
-
-	public function __get($k)
+	/** @return string|bool|int|array<string, string>|null> */
+	public function __get(string $k): string|bool|int|array|null
 	{
 		return $this->_SESSION[$k] ?? null;
 	}
 
-	public function __isset($k)
+	/** @param string|bool|int|array<string, string>|null $v */
+	public function __set(string $k, string|bool|int|array|null $v): void
+	{
+		$this->_SESSION[$k] = $v;
+	}
+
+	public function __isset(string $k): bool
 	{
 		return isset($this->_SESSION[$k]);
 	}
 
-	public function __unset($k)
+	public function __unset(string $k): void
 	{
 		unset($this->_SESSION[$k]);
 		if ($this->ref and isset($_SESSION[$k])) {
@@ -104,12 +110,22 @@ class SessionHandler implements SessionHandlerInterface
 
 	public function gc(int $max_lifetime): int|false
 	{
-		foreach ((array)glob($this->dir . /*'/**/ '/*') as $f) {
-			if ((filemtime($f) + $max_lifetime) < time()) {
-				unlink($f);
+		$i = 0;
+
+		foreach (new DirectoryIterator($this->dir) as $it) {
+			if ($it->isDot() or $it->isDir()) {
+				continue;
+			}
+
+			if ((filemtime($it->getPathname()) + $max_lifetime) < time()) {
+				if (unlink($it->getPathname())) {
+					$i++;
+				} else {
+					return false;
+				}
 			}
 		}
 
-		return true;
+		return $i;
 	}
 }

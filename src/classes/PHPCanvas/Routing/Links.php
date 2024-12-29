@@ -24,7 +24,9 @@ class Links implements LinksInterface
 		}
 	}
 
-	/** @param array<string, string> $vars */
+	/** @param array<string, string> $vars
+	 * @throws Exception
+	 */
 	public function get_link(string $name, array $vars = [], bool $relative = true, ?string $pcol = null): string
 	{
 		try {

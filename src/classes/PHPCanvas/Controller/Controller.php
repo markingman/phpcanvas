@@ -3,9 +3,9 @@
 namespace PHPCanvas\Controller;
 
 use PHPCanvas\Config;
-use PHPCanvas\Routing\Dispatch;
 use PHPCanvas\Http\Request;
 use PHPCanvas\Http\Response;
+use PHPCanvas\Routing\Dispatch;
 
 class Controller
 {

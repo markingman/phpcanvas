@@ -4,13 +4,18 @@ namespace PHPCanvas;
 
 interface ConfigInterface
 {
+	/** 
+	 * @param array<string> $paths
+	 * @param ?array<string, string> $config
+	 */
 	public function __construct(array $paths = [], ?array $config = null);
 
-	public function __get(string $k): string|bool|array|int|null;
+	public function __get(string $k): ?string;
 
-	public function __set(string $k, string|bool|array|int $v): void;
+	public function __set(string $k, string $v): void;
 
 	public function __unset(string $k): void;
 
+	/** @return array<string, string> */
 	public function list(): array;
 }

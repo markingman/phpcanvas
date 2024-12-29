@@ -4,7 +4,7 @@ namespace PHPCanvas\Logs;
 
 class WriteStdOut implements LogWriteInterface
 {
-	private $fp;
+	private mixed $fp;
 
 	public function __construct()
 	{
@@ -13,6 +13,8 @@ class WriteStdOut implements LogWriteInterface
 
 	public function write(string $log, string $type = ''): void
 	{
-		fwrite($this->fp, ($type ? "$type:\t" : '') . $log . PHP_EOL);
+		if (is_resource($this->fp)) {
+			fwrite($this->fp, ($type ? "$type:\t" : '') . $log . PHP_EOL);
+		}
 	}
 }

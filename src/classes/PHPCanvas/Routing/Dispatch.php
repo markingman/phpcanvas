@@ -2,6 +2,7 @@
 
 namespace PHPCanvas\Routing;
 
+use Closure;
 use Exception;
 use PHPCanvas\ContainerInterface;
 use PHPCanvas\Http\RequestInterface;
@@ -43,7 +44,10 @@ class Dispatch implements DispatchInterface
 			// TODO response types, e.g. method not implemented
 			throw new Exception(sprintf('DISPATCH_NO_ROUTE; No route found for URL "%s"', $url), 404);
 		} else {
-			[$controller, $action, $vars/*, $name*/] = $route;//TODO: route is class
+			//[$controller, $action, $vars/*, $name*/] = $route;//TODO: route is class
+			$controller = $route['controller'];
+			$action = $route['action'];
+			$vars = $route['vars'];
 		}
 
 		if (str_starts_with($controller, 'http') and str_contains($controller, '://')) { //Router can make http redirect
@@ -53,7 +57,7 @@ class Dispatch implements DispatchInterface
 		$this->controller = $controller;
 		$this->action = $this->action_prefix . $action . $this->action_suffix;
 		foreach ($vars as $k => $v) {
-			$this->Request->set_get_value($k, $v);
+			$this->Request->set_get_value((string)$k, $v);
 		}
 
 // 		$name = !empty($route['name']) ? $route['name'] : null;//@todo: setable controller name in route
@@ -64,7 +68,7 @@ class Dispatch implements DispatchInterface
 		}
 
 		try {
-			$Controller = $this->instanciate($this->controller, /*$name,*/ /*true*/);
+			$Controller = $this->instanciate($this->controller /*$name,*/ /*true*/);
 		} catch (Exception $e) {
 			throw new Exception(sprintf('DISPATCH_FAILED_INSTANCIATE; Could not instanciate controller "%s"', $this->controller), 500, $e);
 		}
@@ -117,6 +121,16 @@ class Dispatch implements DispatchInterface
 		exit;
 	}
 
+	/**
+	 * @return array<string, array{
+	 *     path : string,
+	 *     controller ?: string,
+	 *     action ?: string,
+	 *     method ?: array<string>,
+	 *     vars ?: array<string, string>,
+	 *     callback ?: Closure
+	 * }>
+	 */
 	public function get_routes(): array
 	{
 		return $this->Router->get_routes();
@@ -138,8 +152,8 @@ class Dispatch implements DispatchInterface
 		return $this->Container->call($class, $method, $params);
 	}
 
-	public function store(string $name, object $object)
+	public function store(string $name, object $object): void
 	{
-		return $this->Container->offsetSet($name, $object);
+		$this->Container->set($name, $object);
 	}
 }

@@ -4,8 +4,13 @@ namespace PHPCanvas;
 
 class Config implements ConfigInterface
 {
+	/** @var array<string, string> @config */
 	protected array $config = [];
 
+	/** 
+	 * @param array<string> $paths
+	 * @param ?array<string, string> $config
+	 */
 	public function __construct(array $paths = [], ?array $config = null)
 	{
 		foreach ($paths as $n => $path) {
@@ -21,16 +26,22 @@ class Config implements ConfigInterface
 		}
 
 		if ($paths) {
-			$this->config = call_user_func_array('array_replace_recursive', $paths);
+			if (is_array($config = call_user_func_array('array_replace_recursive', $paths))) {
+				foreach ($config as $k => $v) {
+					if (is_string($k) and is_string($v)) {
+						$this->config[$k] = $v;
+					}
+				}
+			}
 		}
 	}
 
-	public function __get(string $k): string|bool|array|int|null
+	public function __get(string $k): ?string
 	{
 		return $this->config[$k] ?? null;
 	}
 
-	public function __set(string $k, string|bool|array|int $v): void
+	public function __set(string $k, string $v): void
 	{
 		$this->config[$k] = $v;
 	}
@@ -40,6 +51,7 @@ class Config implements ConfigInterface
 		unset($this->config[$k]);
 	}
 
+	/** @return array<string, string> */
 	public function list(): array
 	{
 		return $this->config;

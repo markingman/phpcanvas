@@ -11,7 +11,7 @@ build: ## Build a Docker image for local development
 	@docker build -t $(NAME) .
 
 run: ## Run the Docker image
-	@docker run -d -v `pwd`:/var/www/html --name $(NAME) $(NAME)
+	@docker run -d --rm -v `pwd`:/var/www/html --name $(NAME) $(NAME)
 
 setup: ## Set up environment in container
 	@docker exec -it $(NAME) curl https://raw.githubusercontent.com/composer/getcomposer.org/76a7060ccb93902cd7576b67264ad91c8a2700e2/web/installer | php -- --quiet
@@ -20,17 +20,17 @@ setup: ## Set up environment in container
 update: ## Update existing environment in container
 	@docker exec -it $(NAME) php composer.phar update
 
-start: ## Start container to run tests (if container built and stopped)
-	@docker container start $(NAME)
-
-stop: ## Stop current container (if running)
-	@docker stop $(NAME)
+# start: ## Start container to run tests (if container built and stopped)
+# 	@docker container start $(NAME)
+# 
+# stop: ## Stop current container (if running)
+# 	@docker stop $(NAME)
 
 test: ## Run tests inside the container
 	@docker exec -it $(NAME) vendor/bin/phpunit --display-deprecations --display-warnings
 
 analyse: ## Start container to run analyse
-	@docker exec -it $(NAME) vendor/bin/phpstan analyse -c phpstan.neon
+	@docker exec -it $(NAME) vendor/bin/phpstan analyse -c phpstan.neon --memory-limit 256M
 
 ssh: ## SSH into container
 	@docker exec -it $(NAME) sh

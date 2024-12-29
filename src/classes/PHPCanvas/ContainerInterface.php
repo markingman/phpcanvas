@@ -14,7 +14,7 @@ interface ContainerInterface
 
 	public function get_locate_path(): string;
 
-	public function set_alias(string $alias_name, ?string $target_name): void;
+	public function set_alias(string $alias_name, string $target_name): void;
 
 	public function get_alias(string $alias_name): ?string;
 
@@ -22,7 +22,8 @@ interface ContainerInterface
 
 	public function create(string $name, bool $store = false): mixed;
 
-	public function call(object $class, string $method_name, ?array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed;
+	/** @param array<mixed> $args */
+	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed;
 
 	public function cache_get(string $name): bool;
 
@@ -32,19 +33,18 @@ interface ContainerInterface
 
 	public function get(string $name, bool $store_created = true): mixed;
 
+	public function set(string $name, object $value): void;
+
 	public function exists(string $name): bool;
 
-	public function offsetSet(mixed $offset, mixed $value): void;
+ 	public function unset(string $name): void;
 
-	public function offsetExists(mixed $offset): bool;
-
-	public function offsetUnset(mixed $offset): void;
-
-	public function offsetGet(mixed $offset): mixed;
-
+	/** @return array<string, array{0: string, 1?: array<mixed>}> */
 	public function list_locations(): array;
 
+	/** @return array<string, Closure> */
 	public function list_registry(): array;
 
+	/** @return array<string, object> */
 	public function list_instances(): array;
 }

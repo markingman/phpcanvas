@@ -4,5 +4,5 @@ namespace PHPCanvas\Logs;
 
 interface LogWriteInterface
 {
-	public function write(string $log, string $type = '');
+	public function write(string $log, string $type = ''): void;
 }

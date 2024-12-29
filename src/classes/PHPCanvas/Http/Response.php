@@ -50,12 +50,11 @@ class Response implements ResponseInterface
 		string $domain = '',
 		bool $secure = false,
 		bool $httponly = false,
-    ): void
-	{
+	): void {
 		$this->cookies[$name] = new Cookie(
 			value: $value,
 			expires: $expires,
-			path:  $path,
+			path: $path,
 			domain: $domain,
 			secure: $secure,
 			httponly: $httponly,
@@ -91,10 +90,10 @@ class Response implements ResponseInterface
 		$this->set_header('Content-Disposition', sprintf('attachment;filename=%s', basename($file)));
 		$this->set_header('Content-Length', strval(filesize($file)));//careful of gzip here
 		$this->respond(
-			function() use ($file, $unlink_file) {
+			function () use ($file, $unlink_file) {
 				readfile($file);
 				if ($unlink_file) {
-					unlink($content);
+					unlink($file);
 				}
 			}
 		);

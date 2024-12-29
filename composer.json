@@ -13,9 +13,6 @@
         },
 	    "files": ["src/phpcanvas.php"]
     },
-    "autoload-dev": {
-	    "files": ["src/lib/developer.php"]
-    },
 	"require-dev": {
 		"phpunit/phpunit": "~11.4.2",
 		"phpstan/phpstan": "~1.12"
