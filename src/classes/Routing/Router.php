@@ -83,7 +83,7 @@ class Router implements RouterInterface
 			throw new Exception('ROUTER_NO_PATH; No path set for route');
 		}
 
-		if (empty($controller) and !is_null($callback)) {
+		if (empty($controller) and is_null($callback)) {
 			throw new Exception('ROUTER_NO_CONTROLLER; No controller set for route');
 		}
 
@@ -121,14 +121,19 @@ class Router implements RouterInterface
 		// get vars (all the {var} items and any explicitly set values)
 
 		preg_match_all('~{([^}]+)}~', $path, $m);
-		$vars = [];
+		$inline_vars = [];
 		if (count($m) === 2) {
-			$vars = array_fill_keys($m[1], '');
+			$inline_vars = array_fill_keys($m[1], '');
 		}
 
-		foreach ($vars as $k => $v) {
-			unset($vars[$k]);
-			$vars[(string)$k] = (string)$v;
+		if (is_null($vars)) {
+			$vars = [];
+		}
+
+		foreach ($inline_vars as $k => $v) {
+			if (!isset($vars[$k])) {
+				$vars[(string)$k] = (string)$v;
+			}
 		}
 
 		// create URL regx (convert foo/{bar} notation to regx)
@@ -186,14 +191,13 @@ class Router implements RouterInterface
 
 		// routes can be indexed (first path fragment)
 
-// 		if ($index) {
-		if (!isset($this->index[$index])) {
-			$this->index[$index] = [];
+		if (strlen($index)) {
+			if (!isset($this->index[$index])) {
+				$this->index[$index] = [];
+			}
+	
+			$this->index[$index][] = $i;
 		}
-
-		$this->index[$index][] = $i;
-
-// 		}
 
 		return true;
 	}

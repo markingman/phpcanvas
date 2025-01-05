@@ -34,10 +34,11 @@ class LinksTest extends TestCase
 
 	public function testGetLink(): void
 	{
-		$this->Router->add_route('test', [
-			'path' => '/simple',
-			'controller' => 'App\\Controller\\Simple'
-		]);
+		$this->Router->add_route(
+			name: 'test',
+			path: '/simple',
+			controller: 'App\\Controller\\Simple'
+		);
 
 		$res = $this->Links->get_link('test');
 		$this->assertEquals('/simple', $res);

@@ -9,7 +9,7 @@
     },
     "autoload": {
         "psr-4": {
-            "PHPCanvas\\": ["src/classes/PHPCanvas", "tests/PHPCanvas"]
+            "PHPCanvas\\": ["src/classes", "tests"]
         },
 	    "files": ["src/phpcanvas.php"]
     },

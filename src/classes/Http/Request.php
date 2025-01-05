@@ -5,16 +5,19 @@ namespace PHPCanvas\Http;
 class Request implements RequestInterface
 {
 	const REGX_VAR = '~^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$~i';
+
+	// _GET, _POST etc presume COW
+
 	/** @var array<string|mixed> $_GET */
-	public array $_GET = [];
+	public /*TODO: readonly*/ array $_GET = [];
 	/** @var array<string|mixed> $_POST */
-	public array $_POST = [];
+	public /*TODO: readonly*/ array $_POST = [];
 	/** @var array<string|mixed> $_FILES */
-	public array $_FILES = [];
+	public /*TODO: readonly*/ array $_FILES = [];
 	/** @var array<string|mixed> $_SERVER */
-	public array $_SERVER = [];
+	public /*TODO: readonly*/ array $_SERVER = [];
 	/** @var array<string|string> $_COOKIE */
-	public array $_COOKIE = [];
+	public /*TODO: readonly*/ array $_COOKIE = [];
 	protected ?string $method = null;
 	protected ?string $path = null;
 	protected ?string $ua = null;
@@ -314,9 +317,6 @@ class Request implements RequestInterface
 		}
 	}
 
-
-
-
 // 	public function get_int_array_from_get(string $var, array $default = []): array
 // 	{
 // 		return $this->get_int_array('_GET', $var, $default);
@@ -470,7 +470,7 @@ class Request implements RequestInterface
 	/**
 	 * @param string[] $default
 	 * @return string[]
-	 * */
+	 */
 	protected function get_single_level_array(string $where, string|int $var, array $default): array
 	{
 		if (isset($this->$where[$var])) {

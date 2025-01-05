@@ -138,7 +138,8 @@ class Container implements ContainerInterface
 		}
 	}
 
-	/** @param array<mixed> $args
+	/** 
+	 * @param array<mixed> $args
 	 * @throws Exception
 	 */
 	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed

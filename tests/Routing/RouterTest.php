@@ -3,11 +3,8 @@
 namespace PHPCanvas\Routing;
 
 use Exception;
-use PHPCanvas\Routing\Router;
-use PHPCanvas\Routing\RouterInterface;
 use PHPUnit\Framework\TestCase;
 
-#[CoversClass(Router::class)]
 class RouterTest extends TestCase
 {
 	protected Router $Router;
@@ -27,7 +24,7 @@ class RouterTest extends TestCase
 		$this->expectException(Exception::class);
 		$this->expectExceptionMessage('ROUTER_NO_PATH; No path set for route');
 
-		$this->Router->add_route('', []);
+		$this->Router->add_route(name: 'test', path: '');
 	}
 
 	public function testAddRouteNoControllerFailure(): void
@@ -35,7 +32,7 @@ class RouterTest extends TestCase
 		$this->expectException(Exception::class);
 		$this->expectExceptionMessage('ROUTER_NO_CONTROLLER; No controller set for route');
 
-		$this->Router->add_route('', ['path' => '/']);
+		$this->Router->add_route(name: 'test', path: '/');
 	}
 
 	public function testGetActionDefault(): void
@@ -44,7 +41,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('default', $res);
 	}
 
-	public function testRouteEmptyRoute()
+	public function testRouteEmptyRoute(): void
 	{
 		$route = [
 			'path' => '/',
@@ -52,12 +49,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Test',
-			'default',
-			[]
+			'controller' => 'App\\Controller\\Test',
+			'action' => 'default',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/');
@@ -84,12 +81,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Simple',
-			'default',
-			[]
+			'controller' => 'App\\Controller\\Simple',
+			'action' => 'default',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/simple');
@@ -116,12 +113,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Simple',
-			'method_name',
-			[]
+			'controller' => 'App\\Controller\\Simple',
+			'action' => 'method_name',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/simple');
@@ -135,13 +132,13 @@ class RouterTest extends TestCase
 			'controller' => 'App\\Controller\\Simple'
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$exp = [
-			'App\\Controller\\Simple',
-			'default',
-			[]
+			'controller' => 'App\\Controller\\Simple',
+			'action' => 'default',
+			'vars' => []
 		];
 
 		$res = $this->Router->get_route('GET', '/simple/path');
@@ -200,41 +197,45 @@ class RouterTest extends TestCase
 			'index' => 'simple/path/example',
 		];
 
-		$this->Router->add_route('test', $route);
+		$this->Router->add_route(
+			name: 'test', path: $route['path'], controller: $route['controller'],
+			index: $route['index'],
+		);
 		$res = $this->Router->dump();
-		
-		$exp = array(
-  'iname' => 
-  array (
-    'test' => 0,
-  ),
-  'routes' => 
-  array (
-    0 => 
-    array (
-      0 => 'App\\Controller\\Simple',
-      1 => 
-      array (
-        'var' => '',
-      ),
-      2 => 'default',
-      4 => 0,
-      7 => 'simple/path/example/%s',
-      8 => 'test',
-      5 => '~^simple/path/example/([^/]+)$~',
-    ),
-  ),
-  'index' => 
-  array (
-    'simple/path/example' => 
-    array (
-      0 => 0,
-    ),
-  ));
+
+		$exp = [
+			'iname' =>
+				[
+					'test' => 0,
+				],
+			'routes' =>
+				[
+					0 => new Route(
+						controller: 'App\\Controller\\Simple',
+						vars: [
+							'var' => '',
+						],
+						action: 'default',
+						method: 0,
+						sprintf: 'simple/path/example/%s',
+						name: 'test',
+						regx: '~^simple/path/example/([^/]+)$~',
+						callback: null,
+					),
+				],
+			'index' =>
+				[
+					'simple/path/example' =>
+						[
+							0 => 0,
+						],
+				]
+		];
+
 		$this->assertEquals($exp, $res, 'Should set specified index');
 	}
 
-	public function testRouteSimpleVarRoute()
+	public function testRouteSimpleVarRoute(): void
 	{
 		$route = [
 			'path' => 'test/{id}',
@@ -242,12 +243,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Test',
-			'default',
-			['id' => '123']
+			'controller' => 'App\\Controller\\Test',
+			'action' => 'default',
+			'vars' => ['id' => '123']
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/test/123');
@@ -263,7 +264,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('/test/abc', $res);
 	}
 
-	public function testRouteMultiVarRoute()
+	public function testRouteMultiVarRoute(): void
 	{
 		$route = [
 			'path' => 'test/{var1}/test/{var2}/{var3}',
@@ -271,12 +272,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\MultiVar',
-			'default',
-			['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']
+			'controller' => 'App\\Controller\\MultiVar',
+			'action' => 'default',
+			'vars' => ['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/test/123/test/abc/xyz');
@@ -289,7 +290,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('/test/aaa/test/999/---', $res);
 	}
 
-	public function testRouteSimpleMethodRoute()
+	public function testRouteSimpleMethodRoute(): void
 	{
 		$route = [
 			'path' => '/test',
@@ -298,12 +299,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Test',
-			'default',
-			[]
+			'controller' => 'App\\Controller\\Test',
+			'action' => 'default',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], method: $route['method']);
 		$this->assertTrue($res, 'Should add route');
 
 		foreach (array_keys(Router::METHODS) as $test) {
@@ -321,7 +322,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('/test', $res);
 	}
 
-	public function testRouteMultiMethodRoute()
+	public function testRouteMultiMethodRoute(): void
 	{
 		$path = '/method';
 		$route = [
@@ -330,7 +331,7 @@ class RouterTest extends TestCase
 			'method' => ['POST', 'PUT', 'PATCH']
 		];
 
-		$res = $this->Router->add_route('method', $route);
+		$res = $this->Router->add_route(name: 'method', path: $route['path'], controller: $route['controller'], method: $route['method']);
 		$this->assertTrue($res, 'Should add route');
 
 		foreach (array_keys(Router::METHODS) as $test) {
@@ -342,9 +343,9 @@ class RouterTest extends TestCase
 		}
 
 		$exp = [
-			'App\\Controller\\Test',
-			'default',
-			[]
+			'controller' => 'App\\Controller\\Test',
+			'action' => 'default',
+			'vars' => []
 		];
 
 		$res = $this->Router->get_route('PATCH', $path);
@@ -360,7 +361,7 @@ class RouterTest extends TestCase
 		$this->assertEquals($res, $path);
 	}
 
-	public function testRouteSimpleAction()
+	public function testRouteSimpleAction(): void
 	{
 		$route = [
 			'path' => '/simple/action',
@@ -369,12 +370,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Simple',
-			'simple_action',
-			[]
+			'controller' => 'App\\Controller\\Simple',
+			'action' => 'simple_action',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('simple', $route);
+		$res = $this->Router->add_route(name: 'simple', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/simple/action');
@@ -384,7 +385,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('/simple/action', $res);
 	}
 
-	public function testRouteRewriteWithQueryVars()
+	public function testRouteRewriteWithQueryVars(): void
 	{
 		$route = [
 			'path' => '/with/queries',
@@ -393,12 +394,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\TestClass',
-			'test_action',
-			[]
+			'controller' => 'App\\Controller\\TestClass',
+			'action' => 'test_action',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/with/queries');
@@ -408,7 +409,7 @@ class RouterTest extends TestCase
 		$this->assertEquals('/with/queries?var1=1&var2=2', $res, 'Should write expected link');
 	}
 
-	public function testRouteRewriteWithPathVarsAndQueryVars()
+	public function testRouteRewriteWithPathVarsAndQueryVars(): void
 	{
 		$route = [
 			'path' => '/with/{var1}/{var2}/queries',
@@ -417,12 +418,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\TestClass',
-			'test_action',
-			['var1' => 'a', 'var2' => 'b']
+			'controller' => 'App\\Controller\\TestClass',
+			'action' => 'test_action',
+			'vars' => ['var1' => 'a', 'var2' => 'b']
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/with/a/b/queries');
@@ -435,14 +436,18 @@ class RouterTest extends TestCase
 		$this->assertEquals('/with/1/2/queries?var3=3&var4=4', $res, 'Should write expected link');
 	}
 
-	public function testRouteCallback()
+	public function testRouteCallback(): void
 	{
 		$route = [
 			'path' => '/callback',
-			'callback' => RouterTest::class . '::__test_callback_function'
+			'callback' => function (string $method, Route $route, array $m, string $url) {
+				$class = RouterTest::class;
+
+				return $class::__test_callback_function($method, $route, $m, $url);
+			}
 		];
 
-		$res = $this->Router->add_route('callback', $route);
+		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/callback');
@@ -452,20 +457,24 @@ class RouterTest extends TestCase
 		$this->assertEquals('/callback', $res);
 	}
 
-	public function testRouteCallbackRoute()
+	public function testRouteCallbackRoute(): void
 	{
 		$route = [
 			'path' => '/callback',
-			'callback' => RouterTest::class . '::__test_callback_route_function'
+			'callback' => function (string $method, Route $route, array $m, string $url) {
+				$class = RouterTest::class;
+
+				return $class::__test_callback_route_function($method, $route, $m, $url);
+			}
 		];
 
 		$exp = [
-			'App\\Controller\\Callback',
-			'callback_action',
-			['var1' => 'ONE', 'var2' => 'TWO']
+			'controller' => 'App\\Controller\\Callback',
+			'action' => 'callback_action',
+			'vars' => ['var1' => 'ONE', 'var2' => 'TWO']
 		];
 
-		$res = $this->Router->add_route('callback', $route);
+		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/callback');
@@ -478,21 +487,25 @@ class RouterTest extends TestCase
 		$this->assertEquals('/callback', $res);
 	}
 
-	public function testRouteCallbackWithMethod()
+	public function testRouteCallbackWithMethod(): void
 	{
 		$route = [
 			'path' => '/callback',
 			'method' => ['POST', 'PUT'],
-			'callback' => RouterTest::class . '::__test_callback_method_function'
+			'callback' => function (string $method, Route $route, array $m, string $url) {
+				$class = RouterTest::class;
+
+				return $class::__test_callback_method_function($method, $route, $m, $url);
+			}
 		];
 
 		$exp = [
-			'App\\Controller\\Callback',
-			'callback_action',
-			[]
+			'controller' => 'App\\Controller\\Callback',
+			'action' => 'callback_action',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('callback', $route);
+		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback'], method: $route['method']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/callback');
@@ -513,12 +526,12 @@ class RouterTest extends TestCase
 		];
 
 		$exp = [
-			'App\\Controller\\Test',
-			'default',
-			[]
+			'controller' => 'App\\Controller\\Test',
+			'action' => 'default',
+			'vars' => []
 		];
 
-		$res = $this->Router->add_route('test', $route);
+		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
 		$res = $this->Router->get_route('GET', '/test');
@@ -534,7 +547,7 @@ class RouterTest extends TestCase
 		$this->assertFalse($res);
 	}
 
-	public function testGetRoutes()
+	public function testGetRoutes(): void
 	{
 		$routes = [
 			'test1' => [
@@ -560,7 +573,18 @@ class RouterTest extends TestCase
 		];
 
 		foreach ($routes as $name => $route) {
-			$this->Router->add_route($name, $route);
+			$callback = $route['callback'] ?? null;
+			$this->Router->add_route(
+				name: $name,
+				path: $route['path'],
+				controller: $route['controller'] ?? '',
+				action: $route['action'] ?? null,
+				callback: $callback ? function (string $method, Route $route, array $m, string $url) use ($callback) {
+					return $callback($method, $route, $m, $url);
+				} : null,
+				vars: $route['vars'] ?? null,
+				method: $route['method'] ?? null,
+			);
 		}
 
 		$exp = [
@@ -586,9 +610,11 @@ class RouterTest extends TestCase
 			],
 			'test4' => [
 				'path' => '~^callback$~',
+				'controller' => '',
 				'action' => 'default',
 				'method' => ['POST', 'PUT'],
-				'callback' => RouterTest::class . '::__test_callback_method_function',
+				'callback' => function (string $method, Route $route, array $m, string $url) {
+				},
 			]
 		];
 
@@ -707,33 +733,33 @@ class RouterTest extends TestCase
 				'test3' => 2,
 			],
 			'routes' => [
-				0 => [
-					Router::CONTROLLER => 'App\Controller\Test',
-					Router::VARS => [],
-					Router::ACTION => 'default',
-					Router::METHOD => 0,
-					Router::SPRNTF => 'test',
-					Router::NAME => 'test',
-					Router::REGX => '~^test$~',
-				],
-				1 => [
-					Router::CONTROLLER => 'App\Controller\Test2',
-					Router::VARS => [],
-					Router::ACTION => 'foo',
-					Router::METHOD => 0,
-					Router::SPRNTF => 'test2/foo',
-					Router::NAME => 'test2',
-					Router::REGX => '~^test2/foo$~',
-				],
-				2 => [
-					Router::CONTROLLER => 'App\Controller\Test3',
-					Router::VARS => ['var1' => ''],
-					Router::ACTION => 'default',
-					Router::METHOD => Router::METHODS['GET'] + Router::METHODS['POST'],
-					Router::SPRNTF => 'test3/foo/%s',
-					Router::NAME => 'test3',
-					Router::REGX => '~^test3/foo/([^/]+)$~',
-				],
+				0 => new Route(
+					controller: 'App\Controller\Test',
+					vars: [],
+					action: 'default',
+					method: 0,
+					sprintf: 'test',
+					name: 'test',
+					regx: '~^test$~',
+				),
+				1 => new Route(
+					controller: 'App\Controller\Test2',
+					vars: [],
+					action: 'foo',
+					method: 0,
+					sprintf: 'test2/foo',
+					name: 'test2',
+					regx: '~^test2/foo$~',
+				),
+				2 => new Route(
+					controller: 'App\Controller\Test3',
+					vars: ['var1'=> ''],
+					action: 'default',
+					method: Router::METHODS['GET'] + Router::METHODS['POST'],
+					sprintf: 'test3/foo/%s',
+					name: 'test3',
+					regx: '~^test3/foo/([^/]+)$~',
+				),
 			],
 			'index' => [
 				'test2' => [1],
@@ -742,19 +768,37 @@ class RouterTest extends TestCase
 		];
 
 		foreach ($routes as $name => $route) {
-			$this->Router->add_route($name, $route);
+			$this->Router->add_route(
+				name: $name,
+				path: $route['path'],
+				controller: $route['controller'],
+				action: $route['action'] ?? null,
+				method: $route['method'] ?? null,
+			);
 		}
 
 		$res = $this->Router->dump();
 		$this->assertEquals($exp, $res);
 	}
 
-	public static function __test_callback_function(string $method, array $route, array $m, string $url): array|false
+	// TODO: move these to fixtures
+
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 * @throws Exception
+	 */
+	public static function __test_callback_function(string $method, Route $route, array $m, string $url): array|false
 	{
 		return false;
 	}
 
-	public static function __test_callback_route_function(string $method, array $route, array $m, string $url): array|false
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 * @throws Exception
+	 */
+	public static function __test_callback_route_function(string $method, Route $route, array $m, string $url): array|false
 	{
 		if ($method !== 'POST') {
 			return false;
@@ -767,9 +811,14 @@ class RouterTest extends TestCase
 		return [$controller, $action, $vars];
 	}
 
-	public static function __test_callback_method_function(string $method, array $route, array $m, string $url): false|array
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 * @throws Exception
+	 */
+	public static function __test_callback_method_function(string $method, Route $route, array $m, string $url): false|array
 	{
-		if (!Router::is_route_method($method, $route[Router::METHOD])) {
+		if (!Router::is_route_method($method, $route->method)) {
 			return false;
 		}
 

@@ -27,7 +27,7 @@ update: ## Update existing environment in container
 # 	@docker stop $(NAME)
 
 test: ## Run tests inside the container
-	@docker exec -it $(NAME) vendor/bin/phpunit --display-deprecations --display-warnings
+	@docker exec -it $(NAME) vendor/bin/phpunit
 
 analyse: ## Start container to run analyse
 	@docker exec -it $(NAME) vendor/bin/phpstan analyse -c phpstan.neon --memory-limit 256M

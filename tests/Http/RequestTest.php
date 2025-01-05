@@ -18,6 +18,13 @@ class RequestTest extends TestCase
 
 	public function setUp(): void
 	{
+		$this->headers = [];
+		$this->get = [];
+		$this->post = [];
+		$this->files = [];
+		$this->server = [];
+		$this->cookie = [];
+
 		$this->Request = new Request(
 			$this->headers,
 			$this->get,
@@ -68,6 +75,20 @@ class RequestTest extends TestCase
 
 		$res = $this->Request->get_get('foo');
 		$this->assertEquals('bar', $res);
+	}
+
+	public function testSetGetValue(): void
+	{
+		$_GET = ['foo' => 'bar1'];
+		$this->Request->set_get();
+
+		$res = $this->Request->get_get('a');
+		$this->assertEquals('', $res);
+
+		$this->Request->set_get_value('a', 'B');
+
+		$res = $this->Request->get_get('a');
+		$this->assertEquals('B', $res);
 	}
 
 	public function testSetGetPost(): void
@@ -147,7 +168,7 @@ class RequestTest extends TestCase
 		$res = $this->Request->get_method();
 		$this->assertEquals('PATCH', $res);
 
-		$get = ['A' => 'a'];
+		//$get = ['A' => 'a'];
 
 		$this->Request->set_method('POST');
 

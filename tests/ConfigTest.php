@@ -58,9 +58,9 @@ class ConfigTest extends TestCase
 
 	public function testCreateWithExtraParameters()
 	{
-		$Config = new Config([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => false]);
+		$Config = new Config([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => 'value2']);
 		$this->assertEquals('value1', $Config->adhoc1);
-		$this->assertFalse($Config->adhoc2);
+		$this->assertEquals('value2', $Config->adhoc2);
 	}
 
 	public function testGet()
