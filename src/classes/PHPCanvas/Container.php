@@ -269,7 +269,7 @@ class Container implements ContainerInterface, ArrayAccess
 		return true;
 	}
 
-	public function cache_put(string $name, ?mixed $instance = null): bool
+	public function cache_put(string $name, mixed $instance = null): bool
 	{
 		if ($this->store_path) {
 			if (!$instance and isset($this->instances[$name])) {

@@ -26,7 +26,7 @@ interface ContainerInterface
 
 	public function cache_get(string $name): bool;
 
-	public function cache_put(string $name, ?mixed $instance = null): bool;
+	public function cache_put(string $name, mixed $instance = null): bool;
 
 	public function cache_name(string $name): string;
 
