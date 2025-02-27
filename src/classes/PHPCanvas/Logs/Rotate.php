@@ -8,13 +8,13 @@ class Rotate
 	protected int $count;
 	protected string $dir;
 
-	public function __construct(int $size = null, int $count = null)
+	public function __construct(?int $size = null, ?int $count = null)
 	{
 		$this->size = $size ?: 10 * 1024 * 1024;
 		$this->count = $count ?: 10;
 	}
 
-	public function rotate(string $file, int $size = null, int $count = null): void
+	public function rotate(string $file, ?int $size = null, ?int $count = null): void
 	{
 		$size = $size ?: $this->size;
 		$count = $count ?: $this->count;

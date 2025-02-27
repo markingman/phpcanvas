@@ -217,7 +217,7 @@ function customExceptionHandler($exception) {
 		}
 	}
 
-	public static function view(Throwable $e, mixed $m = null): string
+	public static function view(Throwable $e, ?mixed $m = null): string
 	{
 		// basic placeholder, override with custom function
 

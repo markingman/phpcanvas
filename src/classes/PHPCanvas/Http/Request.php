@@ -91,7 +91,7 @@ class Request implements RequestInterface
 		}
 	}
 
-	public function set_method(string $method = null): void
+	public function set_method(?string $method = null): void
 	{
 		$this->method = strtoupper((string)filter_var($method, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
 	}
