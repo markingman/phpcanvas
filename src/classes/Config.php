@@ -1,36 +1,33 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas;
 
-class Config implements ConfigInterface
+use UnexpectedValueException;
+
+final class Config implements ConfigInterface
 {
 	/** @var array<string, string> @config */
 	protected array $config = [];
 
 	/**
-	 * @param array<string> $paths
-	 * @param ?array<string, string> $config
+	 * @param array<int, string> $paths
+	 * @param ?array<string, string> $values
 	 */
-	public function __construct(array $paths = [], ?array $config = null)
+	public function __construct(array $paths = [], ?array $values = null)
 	{
-		foreach ($paths as $n => $path) {
-			$paths[$n] = call_user_func(
-				function () use ($path) {
-					return require $path;
-				}
-			);
+		$config = [];
+		foreach ($paths as $path) {
+			$config[] = require $path;
+		}
+
+		if ($values) {
+			$config[] = $values;
 		}
 
 		if ($config) {
-			$paths[] = $config;
-		}
-
-		if ($paths) {
-			if (is_array($config = call_user_func_array('array_replace_recursive', $paths))) {
-				foreach ($config as $k => $v) {
-					if (is_string($k) and is_string($v)) {
-						$this->config[$k] = $v;
-					}
+			foreach (array_replace_recursive(...$config) as $k => $v) {
+				if (is_string($k) and is_string($v)) {
+					$this->config[$k] = $v;
 				}
 			}
 		}
@@ -46,6 +43,11 @@ class Config implements ConfigInterface
 		$this->config[$k] = $v;
 	}
 
+	public function __isset(string $k): bool
+	{
+		return isset($this->config[$k]);
+	}
+
 	public function __unset(string $k): void
 	{
 		unset($this->config[$k]);
@@ -55,5 +57,30 @@ class Config implements ConfigInterface
 	public function list(): array
 	{
 		return $this->config;
+	}
+
+	public function __serialize(): array
+	{
+		return ['config' => $this->config];
+	}
+
+	/** @param array<string, mixed> $data */
+	public function __unserialize(array $data): void
+	{
+		if (!isset($data['config']) || !is_array($data['config'])) {
+			throw new UnexpectedValueException('Config requires a "config" array');
+		}
+
+		foreach ($data['config'] as $k => $v) {
+			if (!is_string($k)) {
+				throw new UnexpectedValueException('Tried to load non-string Config key');
+			}
+
+			if (!is_string($v)) {
+				throw new UnexpectedValueException("Tried to load non-string Config value for key '$k'");
+			}
+		}
+
+		$this->config = $data['config'];
 	}
 }

@@ -1,11 +1,11 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas;
 
 interface ConfigInterface
 {
 	/**
-	 * @param array<string> $paths
+	 * @param array<int, string> $paths
 	 * @param ?array<string, string> $config
 	 */
 	public function __construct(array $paths = [], ?array $config = null);

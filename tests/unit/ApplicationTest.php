@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas;
 
@@ -17,19 +17,6 @@ class ApplicationTest extends TestCase
 	private $Request;
 	private $Response;
 	private $Dispatch;
-
-	protected function setUp(): void
-	{
-		try {
-			$this->Config = $this->createMock(ConfigInterface::class);
-			$this->Container = $this->createMock(ContainerInterface::class);
-			$this->Request = $this->createMock(RequestInterface::class);
-			$this->Response = $this->createMock(ResponseInterface::class);
-			$this->Dispatch = $this->createMock(DispatchInterface::class);
-		} catch (Throwable $e) {
-			throw new RuntimeException('Could not set up test; ' . $e->getMessage());
-		}
-	}
 
 	public function testRunCallsDispatcherWithProvidedMethodAndPath(): void
 	{
@@ -92,5 +79,44 @@ class ApplicationTest extends TestCase
 		$this->expectExceptionCode(400);
 
 		$app->run();
+	}
+
+	public function testRunWrapsDispatchExceptionsLongMessage(): void
+	{
+		$this->Request->method('get_method')->willReturn('PUT');
+		$this->Request->method('get_path')->willReturn('fail');
+
+		$this->Dispatch
+			->method('call_controller')
+			->willThrowException(new RuntimeException(
+				'Original dispatch error which is very long and will truncate at specific length'
+				, 400));
+
+		$app = new Application(
+			$this->Config,
+			$this->Container,
+			$this->Request,
+			$this->Response,
+			$this->Dispatch
+		);
+
+		$this->expectException(ApplicationException::class);
+		$this->expectExceptionMessage('APPLICATION_CALL_ERR; Could not call controller; Original dispatch error');
+		$this->expectExceptionCode(400);
+
+		$app->run();
+	}
+
+	protected function setUp(): void
+	{
+		try {
+			$this->Config = $this->createMock(ConfigInterface::class);
+			$this->Container = $this->createMock(ContainerInterface::class);
+			$this->Request = $this->createMock(RequestInterface::class);
+			$this->Response = $this->createMock(ResponseInterface::class);
+			$this->Dispatch = $this->createMock(DispatchInterface::class);
+		} catch (Throwable $e) {
+			throw new RuntimeException('Could not set up test; ' . $e->getMessage());
+		}
 	}
 }

@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas;
 
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
-#[CoversClass(Config::class)]
 class ConfigTest extends TestCase
 {
 	use TestHelpersTrait;
@@ -33,11 +33,13 @@ class ConfigTest extends TestCase
 
 		foreach (['config1' => 100, 'config2' => 30] as $name => $n) {
 			foreach (range(1, $n) as $i) {
-				$configs[$name]['a_b_c_' . $i] = md5($i);
+				$configs[$name]['a_b_c_' . $i] = md5((string)$i);
 			}
 
 			self::$$name = static::$tmpdir . '/' . $name . '.php';
-			file_put_contents(self::$$name, '<?php return ' . var_export($configs[$name], true) . ';');
+			if (!file_put_contents(self::$$name, '<?php return ' . var_export($configs[$name], true) . ';')) {
+				throw new RuntimeException("Could not write ConfigTest fixture file '$name'");
+			}
 		}
 	}
 
@@ -59,20 +61,20 @@ class ConfigTest extends TestCase
 	public function testCreateWithExtraParameters()
 	{
 		$Config = new Config([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => 'value2']);
-		$this->assertEquals('value1', $Config->adhoc1);
-		$this->assertEquals('value2', $Config->adhoc2);
+		$this->assertSame('value1', $Config->adhoc1);
+		$this->assertSame('value2', $Config->adhoc2);
 	}
 
 	public function testGet()
 	{
-		$this->assertEquals('A', $this->Config->a);
-		$this->assertEquals('B', $this->Config->b);
+		$this->assertSame('A', $this->Config->a);
+		$this->assertSame('B', $this->Config->b);
 	}
 
 	public function testSet()
 	{
 		$this->Config->b = 'B2';
-		$this->assertEquals('B2', $this->Config->b);
+		$this->assertSame('B2', $this->Config->b);
 	}
 
 	public function testUnset()
@@ -94,12 +96,60 @@ class ConfigTest extends TestCase
 		$this->assertNotFalse($serialized);
 	}
 
-	public function testUnSerializable()
+	public function testUnserializable()
 	{
 		$value = $this->Config->a;
 		$serialized = serialize($this->Config);
 		$Config2 = unserialize($serialized);
 		$this->assertInstanceOf(ConfigInterface::class, $Config2);
-		$this->assertTrue($Config2->a === $value);
+		$this->assertSame($Config2->a, $value);
+	}
+
+	public function testUnserializeEmpty()
+	{
+		$this->expectException(UnexpectedValueException::class);
+		$this->expectExceptionMessage('Config requires a "config" array');
+
+		$config = new Config();
+
+		$config->__unserialize([]);
+	}
+
+	public function testUnserializeNotArray()
+	{
+		$this->expectException(UnexpectedValueException::class);
+		$this->expectExceptionMessage('Config requires a "config" array');
+
+		$config = new Config();
+
+		$config->__unserialize(['config' => 'string']);
+	}
+
+	public function testUnserializeKeyNotString()
+	{
+		$this->expectException(UnexpectedValueException::class);
+		$this->expectExceptionMessage('Tried to load non-string Config key');
+
+		$config = new Config();
+
+		$config->__unserialize([
+			'config' => [
+				0 => 'value',
+			]
+		]);
+	}
+
+	public function testUnserializeValueNotString()
+	{
+		$this->expectException(UnexpectedValueException::class);
+		$this->expectExceptionMessage('Tried to load non-string Config value for key \'key\'');
+
+		$config = new Config();
+
+		$config->__unserialize([
+			'config' => [
+				'key' => 100,
+			]
+		]);
 	}
 }

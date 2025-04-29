@@ -21,7 +21,7 @@ class ApplicationException extends RuntimeException
 				strlen($previous->getMessage()) > 64
 					? substr($previous->getMessage(), 0, 64) . '...'
 					: $previous->getMessage()
-			);
+				);
 
 		}
 		parent::__construct($error->value . '; ' . $message, $code, $previous);
