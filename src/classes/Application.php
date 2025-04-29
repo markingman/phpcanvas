@@ -2,36 +2,26 @@
 
 namespace PHPCanvas;
 
-use Exception;
+use PHPCanvas\Exception\ApplicationError;
+use PHPCanvas\Exception\ApplicationException;
 use PHPCanvas\Http\RequestInterface;
 use PHPCanvas\Http\ResponseInterface;
 use PHPCanvas\Routing\DispatchInterface;
+use Throwable;
 
 class Application
 {
 	const PHPCANVAS_VERSION = 4.0;
 
-	public ConfigInterface $Config;
-	public ContainerInterface $Container;
-	public RequestInterface $Request;
-	public ResponseInterface $Response;
-	public DispatchInterface $Dispatch;
-
 	public function __construct(
-		ConfigInterface $Config,
-		ContainerInterface $Container,
-		RequestInterface $Request,
-		ResponseInterface $Response,
-		DispatchInterface $Dispatch
+		public readonly ConfigInterface $Config,
+		public ContainerInterface $Container,
+		public RequestInterface $Request,
+		public ResponseInterface $Response,
+		public DispatchInterface $Dispatch
 	) {
-		$this->Config = $Config;
-		$this->Container = $Container;
-		$this->Request = $Request;
-		$this->Response = $Response;
-		$this->Dispatch = $Dispatch;
 	}
 
-	/** @throws Exception */
 	public function run(?string $method = null, ?string $path = null): void
 	{
 		try {
@@ -39,11 +29,12 @@ class Application
 				$method ?: $this->Request->get_method(),
 				$path ?: $this->Request->get_path()
 			);
-		} catch (Exception $e) {
-			throw new Exception(
-				'APPLICATION_CALL_ERR; Could not call controller. ' .
-				$e->getMessage(),
-				$e->getCode() ?: 500, $e
+		} catch (Throwable $e) {
+			throw new ApplicationException(
+				'Could not call controller',
+				ApplicationError::CALL_ERR,
+				$e->getCode() ?: 500,
+				$e
 			);
 		}
 	}

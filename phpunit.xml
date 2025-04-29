@@ -15,17 +15,17 @@
   <testsuites>
     <testsuite name="Unit Tests">
       <!--<directory suffix="Test.php">tests</directory>-->
-      <!--<file>tests/ApplicationTest.php</file>-->
-      <file>tests/unit/ConfigTest.php</file>
-      <file>tests/unit/ContainerTest.php</file>
-      <file>tests/unit/Controller/ControllerTest.php</file>
+      <file>tests/unit/ApplicationTest.php</file>
+      <!--<file>tests/unit/ConfigTest.php</file>-->
+      <!--<file>tests/unit/ContainerTest.php</file>-->
+      <!--<file>tests/unit/Controller/ControllerTest.php</file>-->
       <!--<file>tests/Errors/ErrorHandlerTest.php</file>-->
-      <file>tests/unit/Http/RequestTest.php</file>
+      <!--<file>tests/unit/Http/RequestTest.php</file>-->
       <!--<file>tests/Http/ResponseTest.php</file>-->
       <!--<file>tests/Logs/LogHandlerTest.php</file>-->
-      <file>tests/unit/Routing/DispatchTest.php</file>
-      <file>tests/unit/Routing/LinksTest.php</file>
-      <file>tests/unit/Routing/RouterTest.php</file>
+      <!--<file>tests/unit/Routing/DispatchTest.php</file>-->
+      <!--<file>tests/unit/Routing/LinksTest.php</file>-->
+      <!--<file>tests/unit/Routing/RouterTest.php</file>-->
     </testsuite>
   </testsuites>
   <source>
