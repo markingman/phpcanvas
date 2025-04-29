@@ -10,7 +10,7 @@ class TestInvokeController extends Controller
 
 	public function __invoke()
 	{
-		$this->var = true;	
+		$this->var = true;
 	}
 
 	public function testHandler(): bool

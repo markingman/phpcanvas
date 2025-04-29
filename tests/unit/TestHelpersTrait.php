@@ -29,7 +29,7 @@ trait TestHelpersTrait
 		}
 
 		$it = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator(static::$tmpdir, FilesystemIterator::SKIP_DOTS), 
+			new RecursiveDirectoryIterator(static::$tmpdir, FilesystemIterator::SKIP_DOTS),
 			RecursiveIteratorIterator::CHILD_FIRST
 		);
 

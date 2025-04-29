@@ -9,15 +9,20 @@ class Request implements RequestInterface
 	// _GET, _POST etc presume COW
 
 	/** @var array<string|mixed> $_GET */
-	public /*TODO: readonly*/ array $_GET = [];
+	public /*TODO: readonly*/
+	array $_GET = [];
 	/** @var array<string|mixed> $_POST */
-	public /*TODO: readonly*/ array $_POST = [];
+	public /*TODO: readonly*/
+	array $_POST = [];
 	/** @var array<string|mixed> $_FILES */
-	public /*TODO: readonly*/ array $_FILES = [];
+	public /*TODO: readonly*/
+	array $_FILES = [];
 	/** @var array<string|mixed> $_SERVER */
-	public /*TODO: readonly*/ array $_SERVER = [];
+	public /*TODO: readonly*/
+	array $_SERVER = [];
 	/** @var array<string|string> $_COOKIE */
-	public /*TODO: readonly*/ array $_COOKIE = [];
+	public /*TODO: readonly*/
+	array $_COOKIE = [];
 	protected ?string $method = null;
 	protected ?string $path = null;
 	protected ?string $ua = null;

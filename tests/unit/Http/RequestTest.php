@@ -2,8 +2,6 @@
 
 namespace PHPCanvas\Http;
 
-use PHPCanvas\Http\Request;
-use PHPCanvas\Http\RequestInterface;
 use PHPUnit\Framework\TestCase;
 
 class RequestTest extends TestCase
@@ -109,13 +107,13 @@ class RequestTest extends TestCase
 	public function testSetGetFiles(): void
 	{
 		$file = [
-				'name' => 'test.jpg',
-				'type' => 'image/jpeg',
-				'tmp_name' => '/tmp/phpn3FyFr',
-				'error' => 0,
-				'size' => 1024,
-				'full_path' => '/example/test.jpg',
-			];
+			'name' => 'test.jpg',
+			'type' => 'image/jpeg',
+			'tmp_name' => '/tmp/phpn3FyFr',
+			'error' => 0,
+			'size' => 1024,
+			'full_path' => '/example/test.jpg',
+		];
 
 		$_FILES = ['foo' => $file];
 		$this->Request->set_files();
@@ -192,7 +190,7 @@ class RequestTest extends TestCase
 		$res = $this->Request->get_path();
 		$this->assertEquals('/test/path/only', $res);
 	}
-	
+
 	public function testSetGetUA(): void
 	{
 		$_SERVER['HTTP_USER_AGENT'] = 'ua-string-1';
@@ -289,15 +287,6 @@ class RequestTest extends TestCase
 	}
 
 
-
-
-
-
-
-
-
-
-
 	public function testSetGetVarFromGet(): void
 	{
 		$_GET['a'] = 'aA';
@@ -331,11 +320,6 @@ class RequestTest extends TestCase
 	}
 
 
-
-
-
-
-
 	public function testSetGetValFromGet(): void
 	{
 		$_GET['a'] = 'a A';
@@ -367,13 +351,6 @@ class RequestTest extends TestCase
 		$res = $this->Request->get_val_from_post('z', 'z Z');
 		$this->assertEquals('z Z', $res);
 	}
-
-
-
-
-
-
-
 
 
 	public function testSetGetSelFromGet(): void
@@ -413,10 +390,6 @@ class RequestTest extends TestCase
 		$res = $this->Request->get_sel_from_post('z', ['zZ'], 'zZ');
 		$this->assertEquals('zZ', $res);
 	}
-
-
-
-
 
 
 	public function testSetGetArrayFromGet(): void
@@ -475,7 +448,7 @@ class RequestTest extends TestCase
 		$res = $this->Request->get_request();
 		$this->assertIsArray($res);
 		$this->assertEquals(['POST', '/redirect/path'], $res);
-		
+
 		$res = $this->Request->get_request('DELETE');
 		$this->assertIsArray($res);
 		$this->assertEquals(['DELETE', '/redirect/path'], $res);
@@ -496,7 +469,7 @@ class RequestTest extends TestCase
 
 		$res = $this->Request->is_post();
 		$this->assertFalse($res);
-		
+
 		$res = $this->Request->set_method('POST');
 		$res = $this->Request->is_post();
 		$this->assertTrue($res);

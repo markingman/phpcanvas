@@ -9,10 +9,10 @@ class ConfigTest extends TestCase
 {
 	use TestHelpersTrait;
 
-	protected ConfigInterface $Config;
 	public static string $config1;
 	public static string $config2;
 	public static string $serialized;
+	protected ConfigInterface $Config;
 
 	public static function setUpBeforeClass(): void
 	{

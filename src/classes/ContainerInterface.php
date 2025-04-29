@@ -37,7 +37,7 @@ interface ContainerInterface
 
 	public function exists(string $name): bool;
 
- 	public function unset(string $name): void;
+	public function unset(string $name): void;
 
 	/** @return array<string, array{0: string, 1?: array<mixed>}> */
 	public function list_locations(): array;

@@ -2,16 +2,18 @@
 
 namespace PHPCanvas\Controller;
 
-use PHPCanvas\TestHelpersTrait;
-use PHPUnit\Framework\TestCase;
 use PHPCanvas\Config;
-use PHPCanvas\Routing\Dispatch;
-use PHPCanvas\Routing\Router;
-use PHPCanvas\Routing\Links;
+use PHPCanvas\Container;
+use PHPCanvas\fixtures\Controller\TestController;
 use PHPCanvas\Http\Request;
 use PHPCanvas\Http\Response;
+use PHPCanvas\Routing\Dispatch;
+use PHPCanvas\Routing\Links;
+use PHPCanvas\Routing\Router;
+use PHPCanvas\TestHelpersTrait;
+use PHPUnit\Framework\TestCase;
+
 // use PHPCanvas\Scope\Scope;
-use PHPCanvas\Container;
 
 class ControllerTest extends TestCase
 {
@@ -31,7 +33,7 @@ class ControllerTest extends TestCase
 	{
 		$class = str_replace('PHPCanvas\\fixtures\\', '', $class);
 		$class = str_replace('\\', '/', $class);
-		include_once __DIR__ . '/../fixtures/' . $class . '.php';
+		include_once __DIR__ . '/../../fixtures/' . $class . '.php';
 	}
 
 	public function testCreate(): void
@@ -58,7 +60,7 @@ class ControllerTest extends TestCase
 			Request: $Request,
 			Response: $Response,
 		);
-	
+
 		$this->assertInstanceOf(Controller::class, $Controller);
 	}
 
@@ -82,14 +84,14 @@ class ControllerTest extends TestCase
 
 		static::mockAutoload('PHPCanvas\\fixtures\\Controller\\TestController');
 
-		$Controller = new \PHPCanvas\fixtures\Controller\TestController(
+		$Controller = new TestController(
 			Config: $Config,
 			Dispatch: $Dispatch,
 			Request: $Request,
 			Response: $Response,
 		);
-	
-		$this->assertInstanceOf(\PHPCanvas\fixtures\Controller\TestController::class, $Controller);
+
+		$this->assertInstanceOf(TestController::class, $Controller);
 		$this->assertTrue($Controller->testHandler());
 	}
 

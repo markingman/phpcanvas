@@ -4,7 +4,7 @@ namespace PHPCanvas;
 
 interface ConfigInterface
 {
-	/** 
+	/**
 	 * @param array<string> $paths
 	 * @param ?array<string, string> $config
 	 */

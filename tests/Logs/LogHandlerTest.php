@@ -2,7 +2,6 @@
 
 namespace Logs;
 
-use PHPCanvas\Logs\LogHandler;
 use PHPUnit\Framework\TestCase;
 
 class LogHandlerTest extends TestCase

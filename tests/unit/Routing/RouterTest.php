@@ -9,6 +9,52 @@ class RouterTest extends TestCase
 {
 	protected Router $Router;
 
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 * @throws Exception
+	 */
+	public static function __test_callback_function(string $method, Route $route, array $m, string $url): array|false
+	{
+		return false;
+	}
+
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 * @throws Exception
+	 */
+	public static function __test_callback_route_function(string $method, Route $route, array $m, string $url): array|false
+	{
+		if ($method !== 'POST') {
+			return false;
+		}
+
+		$controller = 'App\\Controller\\Callback';
+		$action = 'callback_action';
+		$vars = ['var1' => 'ONE', 'var2' => 'TWO'];
+
+		return [$controller, $action, $vars];
+	}
+
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 * @throws Exception
+	 */
+	public static function __test_callback_method_function(string $method, Route $route, array $m, string $url): false|array
+	{
+		if (!Router::is_route_method($method, $route->method)) {
+			return false;
+		}
+
+		$controller = 'App\\Controller\\Callback';
+		$action = 'callback_action';
+		$vars = [];
+
+		return [$controller, $action, $vars];
+	}
+
 	public function setUp(): void
 	{
 		$this->Router = new Router('default');
@@ -155,21 +201,21 @@ class RouterTest extends TestCase
 // 			'controller' => 'App\\Controller\\Simple',
 // // 			'index' => 'simple',
 // 		];
-// 
+//
 // 		$this->Router->add_route('test', $route);
 // 		$res = $this->Router->dump();
-// 		
+//
 // 		$exp = array(
-//   'iname' => 
+//   'iname' =>
 //   array (
 //     'test' => 0,
 //   ),
-//   'routes' => 
+//   'routes' =>
 //   array (
-//     0 => 
+//     0 =>
 //     array (
 //       0 => 'App\\Controller\\Simple',
-//       1 => 
+//       1 =>
 //       array (
 //         'var' => '',
 //       ),
@@ -180,9 +226,9 @@ class RouterTest extends TestCase
 //       5 => '~^simple/path/example/([^/]+)$~',
 //     ),
 //   ),
-//   'index' => 
+//   'index' =>
 //   array (
-//     'simple' => 
+//     'simple' =>
 //     array (
 //       0 => 0,
 //     ),
@@ -673,6 +719,8 @@ class RouterTest extends TestCase
 		}
 	}
 
+	// TODO: move these to fixtures
+
 	public function getGetRouteMethods(): void
 	{
 		$res = $this->Router->get_route_methods(0);
@@ -753,7 +801,7 @@ class RouterTest extends TestCase
 				),
 				2 => new Route(
 					controller: 'App\Controller\Test3',
-					vars: ['var1'=> ''],
+					vars: ['var1' => ''],
 					action: 'default',
 					method: Router::METHODS['GET'] + Router::METHODS['POST'],
 					sprintf: 'test3/foo/%s',
@@ -779,53 +827,5 @@ class RouterTest extends TestCase
 
 		$res = $this->Router->dump();
 		$this->assertEquals($exp, $res);
-	}
-
-	// TODO: move these to fixtures
-
-	/**
-	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
-	 * @throws Exception
-	 */
-	public static function __test_callback_function(string $method, Route $route, array $m, string $url): array|false
-	{
-		return false;
-	}
-
-	/**
-	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
-	 * @throws Exception
-	 */
-	public static function __test_callback_route_function(string $method, Route $route, array $m, string $url): array|false
-	{
-		if ($method !== 'POST') {
-			return false;
-		}
-
-		$controller = 'App\\Controller\\Callback';
-		$action = 'callback_action';
-		$vars = ['var1' => 'ONE', 'var2' => 'TWO'];
-
-		return [$controller, $action, $vars];
-	}
-
-	/**
-	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
-	 * @throws Exception
-	 */
-	public static function __test_callback_method_function(string $method, Route $route, array $m, string $url): false|array
-	{
-		if (!Router::is_route_method($method, $route->method)) {
-			return false;
-		}
-
-		$controller = 'App\\Controller\\Callback';
-		$action = 'callback_action';
-		$vars = [];
-
-		return [$controller, $action, $vars];
 	}
 }

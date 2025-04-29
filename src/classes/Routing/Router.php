@@ -195,7 +195,7 @@ class Router implements RouterInterface
 			if (!isset($this->index[$index])) {
 				$this->index[$index] = [];
 			}
-	
+
 			$this->index[$index][] = $i;
 		}
 

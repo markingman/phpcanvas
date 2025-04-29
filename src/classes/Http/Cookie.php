@@ -2,7 +2,8 @@
 
 namespace PHPCanvas\Http;
 
-class Cookie {
+class Cookie
+{
 	public function __construct(
 		public string $value = '',
 		public int $expires = 0,
@@ -10,7 +11,6 @@ class Cookie {
 		public string $domain = '',
 		public bool $secure = false,
 		public bool $httponly = false,
-	)
-	{
+	) {
 	}
 }

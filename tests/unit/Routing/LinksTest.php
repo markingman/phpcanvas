@@ -3,9 +3,6 @@
 namespace PHPCanvas\Routing;
 
 use Exception;
-use PHPCanvas\Routing\Links;
-use PHPCanvas\Routing\LinksInterface;
-use PHPCanvas\Routing\Router;
 use PHPUnit\Framework\TestCase;
 
 class LinksTest extends TestCase
@@ -29,7 +26,7 @@ class LinksTest extends TestCase
 		$this->expectException(Exception::class);
 		$this->expectExceptionMessage("NOT_FOUND; No link found for \"not_found\"");
 
-        $this->Links->get_link('not_found');
+		$this->Links->get_link('not_found');
 	}
 
 	public function testGetLink(): void

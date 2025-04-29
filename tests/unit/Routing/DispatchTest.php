@@ -8,13 +8,14 @@ use PHPCanvas\Http\Request;
 use PHPCanvas\Http\RequestInterface;
 use PHPCanvas\Http\Response;
 use PHPCanvas\Http\ResponseInterface;
+use PHPUnit\Framework\TestCase;
+
 // use PHPCanvas\Routing\Dispatch;
 // use PHPCanvas\Routing\DispatchInterface;
 // use PHPCanvas\Routing\Links;
 // use PHPCanvas\Routing\LinksInterface;
 // use PHPCanvas\Routing\Router;
 // use PHPCanvas\Routing\RouterInterface;
-use PHPUnit\Framework\TestCase;
 
 class DispatchTest extends TestCase
 {
@@ -54,15 +55,15 @@ class DispatchTest extends TestCase
 	//call controller 2
 
 	//call controller 3
-	
+
 	// get controller
-	
+
 	// get action
 
 	// get link
 
 	// go_to
-	
+
 	// get routes
 
 	// instanciate

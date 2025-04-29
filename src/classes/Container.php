@@ -2,12 +2,17 @@
 
 namespace PHPCanvas;
 
+use BadMethodCallException;
 use Closure;
 use Exception;
+use InvalidArgumentException;
+use LogicException;
 use ReflectionClass;
 use ReflectionParameter;
 use ReflectionUnionType;
+use RuntimeException;
 use Throwable;
+use UnexpectedValueException;
 
 class Container implements ContainerInterface
 {
@@ -75,16 +80,13 @@ class Container implements ContainerInterface
 		$this->registry[$name] = $closure;
 	}
 
-	/** @throws Exception */
 	public function create(string $name, bool $store = false): object
 	{
 		if (!isset($this->registry[$name])) {
 			if (!isset($this->locations[$name])) {
 				if ($this->locate_path) {
-					// locate
-					$locate_path = realpath($this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $name . '.php');
-					if ($locate_path and str_starts_with($locate_path, $this->locate_path)) {
-						$this->locate($name, $this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $name . '.php');
+					if ($locate_path = $this->get_realpath($name)) {
+						$this->locate($name, $locate_path);
 					}
 				}
 			}
@@ -93,22 +95,20 @@ class Container implements ContainerInterface
 				$path = $this->locations[$name][0];
 				$args = $this->locations[$name][1] ?? [];
 				try {
-					// include with bind
-					$closure = call_user_func(
-						function () use ($path, $args) {
-							extract($args);
+					$closure = Closure::bind(function () use ($path, $args) {
+						extract($args);
 
-							return include $path;
-						}
-					);
+						return include $path;
+					}, null);
+
 				} catch (Throwable $e) {
-					throw new Exception("CONTAINER_LOAD_FAILURE; Could not create $name, " . $e->getMessage(), previous: $e);
+					throw new RuntimeException("CONTAINER_LOAD_FAILURE; Could not create $name, " . $e->getMessage(), previous: $e);
 				}
 
 				if (!($closure instanceof Closure)) {
-					throw new Exception("CONTAINER_TYPE_FAILURE; Could not create $name, expected Closure not found");
+					throw new UnexpectedValueException("CONTAINER_TYPE_FAILURE; Could not create $name, expected Closure not found");
 				}
-//TODO: Closure return type
+
 				$this->register($name, $closure);
 			}
 		}
@@ -117,11 +117,11 @@ class Container implements ContainerInterface
 			try {
 				$instance = $this->registry[$name]($this);
 			} catch (Exception $e) {
-				throw new Exception(message: "CONTAINER_CREATE_ERR; could not create '$name', {$e->getMessage()}", previous: $e);
+				throw new RuntimeException(message: "CONTAINER_CREATE_ERR; could not create '$name', {$e->getMessage()}", previous: $e);
 			}
 
 			if (!is_object($instance)) {
-				throw new Exception("CONTAINER_OBJECT_ERR; object not created for '$name'");
+				throw new RuntimeException("CONTAINER_OBJECT_ERR; object not created for '$name'");
 			}
 
 			if ($store) {
@@ -133,14 +133,13 @@ class Container implements ContainerInterface
 			try {
 				return $this->instantiate($name, $name, $store);
 			} catch (Exception $e) {
-				throw new Exception(message: "CONTAINER_INSTANTIATE_ERR; {$e->getMessage()}", previous: $e);
+				throw new RuntimeException(message: "CONTAINER_INSTANTIATE_ERR; {$e->getMessage()}", previous: $e);
 			}
 		}
 	}
 
-	/** 
+	/**
 	 * @param array<mixed> $args
-	 * @throws Exception
 	 */
 	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed
 	{
@@ -152,7 +151,7 @@ class Container implements ContainerInterface
 			$method = $reflection->getMethod($method_name);
 			$params = $args ? $this->set_params($method->getParameters(), $args, $store, $force_new) : [];
 		} catch (Exception $e) {
-			throw new Exception(message: "CONTAINER_CALL_ERR; Could not call $class_name::$method_name, {$e->getMessage()}", previous: $e);
+			throw new RuntimeException(message: "CONTAINER_CALL_ERR; Could not call $class_name::$method_name, {$e->getMessage()}", previous: $e);
 		}
 
 // 		if (!is_array($params)) {
@@ -165,13 +164,13 @@ class Container implements ContainerInterface
 
 		$callable = [$class, $method_name];
 		if (!is_callable($callable)) {
-			throw new Exception(message: "CONTAINER_CALL_ERR; Not callable $class_name::$method_name");
+			throw new BadMethodCallException(message: "CONTAINER_CALL_ERR; Not callable $class_name::$method_name");
 		}
 
 		return call_user_func_array($callable, $params);
 	}
 
-	public function cache_get(string $name): bool
+	public function cache_get(string $name, ?string $instanceof = null): bool
 	{
 		if (!$this->store_path) {
 			return false;
@@ -186,6 +185,10 @@ class Container implements ContainerInterface
 		}
 
 		if (!is_object($class)) {
+			return false;
+		}
+
+		if ($instanceof and !$class instanceof $instanceof) {
 			return false;
 		}
 
@@ -214,7 +217,6 @@ class Container implements ContainerInterface
 		return md5($name);
 	}
 
-	/** @throws Exception */
 	public function get(string $name, bool $store_created = true): object|null
 	{
 		$name = $this->aliases[$name] ?? $name;
@@ -261,6 +263,18 @@ class Container implements ContainerInterface
 		return $this->instances;
 	}
 
+	protected function get_realpath(string $path): string|false
+	{
+		static $paths = [];
+
+		if (!isset($paths[$path])) {
+			$realpath = realpath($this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $path . '.php');
+			$paths[$path] = ($realpath and str_starts_with($realpath, $this->locate_path)) ? $realpath : false;
+		}
+
+		return $paths[$path];
+	}
+
 	protected function get_class_name_from_type(string $name): string
 	{
 		if (str_ends_with($name, 'Interface') and ($len = strlen($name)) > 9) { // strlen('Interface') === 9
@@ -274,7 +288,6 @@ class Container implements ContainerInterface
 	 * @param array<ReflectionParameter> $params
 	 * @param array<mixed> $args
 	 * @return array<mixed>
-	 * @throws Exception
 	 */
 	protected function set_params(array $params, array $args = [], bool $store = false, bool $force_new = false): array
 	{
@@ -301,11 +314,11 @@ class Container implements ContainerInterface
 			$p_type = $param->getType();
 
 			if (is_null($p_type)) {
-				throw new Exception("cannot resolve parameter $p_name");
+				throw new InvalidArgumentException("cannot resolve parameter $p_name");
 			}
 
 			if ($p_type instanceof ReflectionUnionType) {
-				throw new Exception("cannot handle union type parameter $p_name");
+				throw new LogicException("cannot handle union type parameter $p_name");
 			}
 
 			$p_type_name = (string)$p_type;//->getName();
@@ -326,8 +339,7 @@ class Container implements ContainerInterface
 					if (
 						isset($this->registry[$name])
 						or isset($this->locations[$name])
-						//TODO realpath($this->locate_path . DIRECTORY_SEPARATOR deplicated
-						or ($this->locate_path and realpath($this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $name . '.php'))
+						or ($this->locate_path and $this->get_realpath($name))
 					) {
 						$params[$i] = $this->create($name, $store);
 					} else {
@@ -338,25 +350,19 @@ class Container implements ContainerInterface
 				continue;
 			}
 
-			throw new Exception("cannot resolve parameter $p_name");
+			throw new RuntimeException("cannot resolve parameter $p_name");
 		}
 
 		return $params;
 	}
 
-	/** @throws Exception */
 	protected function instantiate(string $class_name, ?string $name = null, bool $store = false): object
 	{
 		if (!class_exists($class_name)) {
-			throw new Exception(message: "Could not find $class_name");
+			throw new RuntimeException(message: "Could not find $class_name");
 		}
 
-// 		try {
 		$reflection = new ReflectionClass($class_name);
-// 		} catch (Exception $e) {
-// 			throw new Exception(message: "could not reflect $class_name, {$e->getMessage()}", previous: $e);
-// 		}
-
 		$constructor = $reflection->getConstructor();
 
 		try {
@@ -368,7 +374,7 @@ class Container implements ContainerInterface
 				$class = $reflection->newInstanceArgs();
 			}
 		} catch (Exception $e) {
-			throw new Exception(message: "could not instantiate '$class_name', {$e->getMessage()}", previous: $e);
+			throw new RuntimeException(message: "could not instantiate '$class_name', {$e->getMessage()}", previous: $e);
 		}
 
 		if ($store) {

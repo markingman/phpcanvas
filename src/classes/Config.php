@@ -7,7 +7,7 @@ class Config implements ConfigInterface
 	/** @var array<string, string> @config */
 	protected array $config = [];
 
-	/** 
+	/**
 	 * @param array<string> $paths
 	 * @param ?array<string, string> $config
 	 */
