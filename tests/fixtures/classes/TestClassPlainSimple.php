@@ -2,6 +2,7 @@
 
 namespace PHPCanvas\Test;
 
-class TestClassPlainSimple {
+class TestClassPlainSimple
+{
 
 }

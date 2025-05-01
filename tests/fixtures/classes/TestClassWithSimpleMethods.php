@@ -1,17 +1,12 @@
 <?php
 
 namespace PHPCanvas\Test;
- 
+
 class TestClassWithSimpleMethods
 {
 	protected int $i = 0;
 
 	public function test(): bool
-	{
-		return true;
-	}
-
-	protected function test2(): bool
 	{
 		return true;
 	}
@@ -34,5 +29,10 @@ class TestClassWithSimpleMethods
 	public function iface(TestClassWithIfaceInterface $iface): string
 	{
 		return $iface->test();
+	}
+
+	protected function test2(): bool
+	{
+		return true;
 	}
 }

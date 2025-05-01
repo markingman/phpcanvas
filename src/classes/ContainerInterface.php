@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas;
 
@@ -6,17 +6,16 @@ use Closure;
 
 interface ContainerInterface
 {
-	public function set_store(string $path): void;
+	public function set_registrations_path(string $path): void;
 
-	public function get_store(): string;
-
-	public function set_locate_path(string $path): void;
-
-	public function get_locate_path(): string;
+	public function get_registrations_path(): string;
 
 	public function set_alias(string $alias_name, string $target_name): void;
 
 	public function get_alias(string $alias_name): ?string;
+
+	/** @param ?array<mixed> $args */
+	public function register_path(string $name, string $path, ?array $args = null): void;
 
 	public function register(string $name, Closure $closure): void;
 
@@ -24,12 +23,6 @@ interface ContainerInterface
 
 	/** @param array<mixed> $args */
 	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed;
-
-	public function cache_get(string $name): bool;
-
-	public function cache_put(string $name, mixed $instance = null): bool;
-
-	public function cache_name(string $name): string;
 
 	public function get(string $name, bool $store_created = true): mixed;
 
@@ -40,7 +33,7 @@ interface ContainerInterface
 	public function unset(string $name): void;
 
 	/** @return array<string, array{0: string, 1?: array<mixed>}> */
-	public function list_locations(): array;
+	public function list_registrations(): array;
 
 	/** @return array<string, Closure> */
 	public function list_registry(): array;

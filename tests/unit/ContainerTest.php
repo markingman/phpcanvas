@@ -2,26 +2,27 @@
 
 namespace PHPCanvas;
 
-use Closure;
 use PHPCanvas\Exception\ContainerException;
+use PHPCanvas\Test\TestClassPlainSimple;
+use PHPCanvas\Test\TestClassWithArguments;
+use PHPCanvas\Test\TestClassWithException;
+use PHPCanvas\Test\TestClassWithNullableArguments;
+use PHPCanvas\Test\TestClassWithNullableUnionArgs;
+use PHPCanvas\Test\TestClassWithObjectArguments;
+use PHPCanvas\Test\TestClassWithSimpleMethods;
+use PHPCanvas\Test\TestClassWithUnionArgs;
+use PHPCanvas\Test\TestClassWithUnspecifiedArgs;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use BadMethodCallException;
 
 class ContainerTest extends TestCase
 {
 	use TestHelpersTrait;
 
-	private string $dir_store;
-	private string $dir_fixtures;
-	private string $dir_classes;
-	private string $dir_locations;
 	protected ContainerInterface $Container;
-
-	public static function mockAutoload(string $class): void
-	{
-		include_once static::$dir_classes . '/' . $class . '.php';
-	}
+	private string $dir_cache;
+	private string $dir_classes;
+	private string $dir_registrations;
 
 	public static function setUpBeforeClass(): void
 	{
@@ -37,21 +38,22 @@ class ContainerTest extends TestCase
 	{
 		$this->Container = new Container();
 
-		$this->dir_store = static::$tmpdir;
-		if (!is_dir($this->dir_store)) {
-			throw new RuntimeException('Could not find cache dir');
+		if (is_string(static::$tmpdir)) {
+			$this->dir_cache = static::$tmpdir;
+		} else {
+			throw new RuntimeException('Could not set cache dir');
 		}
 
-		if (!$this->dir_fixtures = (string)realpath(__DIR__ . '/../fixtures')) {
+		if (!$dir_fixtures = (string)realpath(__DIR__ . '/../fixtures')) {
 			throw new RuntimeException('Could not find fixtures dir');
 		}
 
-		if (!$this->dir_classes = (string)realpath($this->dir_fixtures . '/classes')) {
+		if (!$this->dir_classes = (string)realpath($dir_fixtures . '/classes')) {
 			throw new RuntimeException('Could not find classes dir');
 		}
 
-		if (!$this->dir_locations = (string)realpath($this->dir_fixtures . '/registry')) {
-			throw new RuntimeException('Could not find locations dir');
+		if (!$this->dir_registrations = (string)realpath($dir_fixtures . '/registry')) {
+			throw new RuntimeException('Could not find registrations dir');
 		}
 	}
 
@@ -60,27 +62,18 @@ class ContainerTest extends TestCase
 		$this->assertInstanceOf(ContainerInterface::class, $this->Container);
 	}
 
-	public function testCreateWithStoreAndLocate(): void
+	public function testCreateWithRegistrationsPath(): void
 	{
-		$Container = new Container($this->dir_store, $this->dir_locations);
-		$this->assertSame($this->dir_store, $Container->get_store(), 'Can set store path on construct');
-		$this->assertSame($this->dir_locations, $Container->get_locate_path(), 'Can locations path on construct');
+		$Container = new Container($this->dir_registrations);
+		$this->assertSame($this->dir_registrations, $Container->get_registrations_path(), 'Can set registrations path on construct');
 	}
 
-	public function testStore(): void
+	public function testRegistrationsPath(): void
 	{
-		$this->assertSame('', $this->Container->get_store(), 'Unset store path is empty');
+		$this->assertSame('', $this->Container->get_registrations_path(), 'Unset registrations path is empty');
 
-		$this->Container->set_store($this->dir_store);
-		$this->assertSame($this->dir_store, $this->Container->get_store(), 'Can set and get the store path');
-	}
-
-	public function testLocatePath(): void
-	{
-		$this->assertSame('', $this->Container->get_locate_path(), 'Unset locate path is empty');
-
-		$this->Container->set_locate_path($this->dir_locations);
-		$this->assertSame($this->dir_locations, $this->Container->get_locate_path(), 'Can set and get the locations path');
+		$this->Container->set_registrations_path($this->dir_registrations);
+		$this->assertSame($this->dir_registrations, $this->Container->get_registrations_path(), 'Can set and get the registrations path');
 	}
 
 	public function testAlias(): void
@@ -91,55 +84,55 @@ class ContainerTest extends TestCase
 		$this->assertSame('Class2', $this->Container->get_alias('Class1'));
 	}
 
-	public function testLocate(): void
+	public function testRegisterPath(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->locate('TestClassPlainSimple', $this->dir_classes . '/TestClassPlainSimple.php');
+		$this->Container->register_path('TestClassPlainSimple', $this->dir_classes . '/TestClassPlainSimple.php');
 
 		$this->assertEquals(
 			['TestClassPlainSimple' => [$this->dir_classes . '/TestClassPlainSimple.php']],
-			$this->Container->list_locations()
+			$this->Container->list_registrations()
 		);
 	}
 
-	public function testLocateWithArguments(): void
+	public function testRegisterPathWithArguments(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->locate(
-			'TestClassPlainSimple', 
+		$this->Container->register_path(
+			'TestClassPlainSimple',
 			$this->dir_classes . '/TestClassPlainSimple.php',
 			['a' => 123, 'b' => 'test']
 		);
 
-		$res = $this->Container->list_locations();
-
 		$this->assertEquals(
-			['TestClassPlainSimple' => 
-				[$this->dir_classes . '/TestClassPlainSimple.php', ['a' => 123, 'b' => 'test']]],
-			$this->Container->list_locations()
+			[
+				'TestClassPlainSimple' =>
+					[$this->dir_classes . '/TestClassPlainSimple.php', ['a' => 123, 'b' => 'test']]
+			],
+			$this->Container->list_registrations()
 		);
 	}
 
 	public function testRegister(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->register('TestClassPlainSimple', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->assertEquals(
 			[
-				'TestClassPlainSimple' => function(): \PHPCanvas\Test\TestClassPlainSimple {
-						return new \PHPCanvas\Test\TestClassPlainSimple();
+				'TestClassPlainSimple' => function (): TestClassPlainSimple {
+					return new TestClassPlainSimple();
 				}
 			],
 			$this->Container->list_registry(),
@@ -149,14 +142,14 @@ class ContainerTest extends TestCase
 
 	public function testCreateFromLocation(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+		$this->Container->register_path('TestClassPlainSimple', $this->dir_registrations . '/TestClassPlainSimple.php');
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class,
+			TestClassPlainSimple::class,
 			$this->Container->create('TestClassPlainSimple'),
 			'Can create class from explicitly set location path'
 		);
@@ -165,14 +158,14 @@ class ContainerTest extends TestCase
 
 	public function testCreateFromAssumedLocation(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class,
+			TestClassPlainSimple::class,
 			$this->Container->create('TestClassPlainSimple'),
 			'Can create class from explicitly set location path'
 		);
@@ -182,15 +175,15 @@ class ContainerTest extends TestCase
 	{
 		// calling closure throws an exception
 
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->set_locate_path(realpath(static::$tmpdir));
+		$this->Container->set_registrations_path($this->dir_cache);
 		if (!file_put_contents(
 			static::$tmpdir . '/ParseFailure.php', '<?php PARSE FAILURE };'
 		)) {
-			throw RuntimeException('Could not create parse failure test file');
+			throw new RuntimeException('Could not create parse failure test file');
 		}
 
 		$this->expectException(ContainerException::class);
@@ -204,11 +197,11 @@ class ContainerTest extends TestCase
 	{
 		// calling closure throws an exception
 
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create \'throw_exception_error\'; Test runtime exception');
@@ -219,11 +212,11 @@ class ContainerTest extends TestCase
 
 	public function testCreateFromLocationWithReturnTypeFailure(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('CONTAINER_TYPE_FAILURE; Location for \'return_true\' must return \\Closure');
@@ -236,11 +229,11 @@ class ContainerTest extends TestCase
 	{
 		// calling closure throws an exception
 
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE; Could not create \'TestClosureWithException\'; Test runtime exception');
@@ -253,11 +246,11 @@ class ContainerTest extends TestCase
 	{
 		// calling closure throws an exception
 
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT; Object not created for \'TestClosureBoolReturn\'');
@@ -266,24 +259,18 @@ class ContainerTest extends TestCase
 		$this->Container->create('TestClosureBoolReturn');
 	}
 
-	// to
-
-	// TODO:
-	// testCreateFromLocationNotLocationNoRegistrationConstructorFailure
-	// testCreateFromLocationNotLocationNoRegistrationSetParamsFailure
-
 	public function testCreateFromRegistry(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->register('TestClassPlainSimple', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class,
+			TestClassPlainSimple::class,
 			$this->Container->create('TestClassPlainSimple'),
 			'Can create class from explicit registration'
 		);
@@ -291,12 +278,12 @@ class ContainerTest extends TestCase
 
 	public function testCreateFromRegistryAndStore(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->register('TestClassPlainSimple', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->Container->create('TestClassPlainSimple');
@@ -308,11 +295,11 @@ class ContainerTest extends TestCase
 
 	public function testCreateFromRegistryWithClosureExceptionFailure(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->register('TestClassWithException', function(): void {
+		$this->Container->register('TestClassWithException', function (): void {
 			throw new RuntimeException('Test runtime exception');
 		});
 
@@ -327,11 +314,11 @@ class ContainerTest extends TestCase
 	{
 		// calling closure throws an exception
 
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
 
-		$this->Container->register('TestClosureBoolReturn', function(): bool {
+		$this->Container->register('TestClosureBoolReturn', function (): bool {
 			return true;
 		});
 
@@ -342,52 +329,38 @@ class ContainerTest extends TestCase
 		$this->Container->create('TestClosureBoolReturn');
 	}
 
-			// 	public function testCreateFromStoredInstantiate()
-			// 	{
-			// 		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			// 			return new \PHPCanvas\Test\TestClassPlainSimple();
-			// 		});
-			// 
-			// 		$this->Container->create('TestClassPlainSimple', true);
-			// 
-			// 		$this->assertInstanceOf(
-			// 			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			// 			$this->Container->create('TestClassPlainSimple')
-			// 		);
-			// 	}
-
-	public function testCreateFromInstantiate()
+	public function testCreateFromInstantiate(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
-		$this->assertSame('', $this->Container->get_locate_path());
+		$this->assertSame('', $this->Container->get_registrations_path());
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			$this->Container->create(\PHPCanvas\Test\TestClassPlainSimple::class)
+			TestClassPlainSimple::class,
+			$this->Container->create(TestClassPlainSimple::class)
 		);
 	}
 
-	public function testCreateFromInstantiateAndStore()
+	public function testCreateFromInstantiateAndStore(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
-		$this->assertSame('', $this->Container->get_locate_path());
+		$this->assertSame('', $this->Container->get_registrations_path());
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			$this->Container->create(\PHPCanvas\Test\TestClassPlainSimple::class, true)
+			TestClassPlainSimple::class,
+			$this->Container->create(TestClassPlainSimple::class, true)
 		);
 	}
 
 	public function testCreateFromInstantiateFailureNotExists(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
-		$this->assertSame('', $this->Container->get_locate_path());
+		$this->assertSame('', $this->Container->get_registrations_path());
 
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('CONTAINER_CLASS_NOT_FOUND; Could not find \'ClassDoesNotExist\'');
@@ -396,66 +369,41 @@ class ContainerTest extends TestCase
 		$this->Container->create('ClassDoesNotExist');
 	}
 
-	public function testCreateFromInstantiateFailureException()
+	public function testCreateFromInstantiateFailureException(): void
 	{
-		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registrations());
 		$this->assertSame([], $this->Container->list_registry());
 		$this->assertSame([], $this->Container->list_instances());
-		$this->assertSame('', $this->Container->get_locate_path());
+		$this->assertSame('', $this->Container->get_registrations_path());
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_FAILURE; Could not instantiate \'' . \PHPCanvas\Test\TestClassWithException::class . '\'');
+		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_FAILURE; Could not instantiate \'' . TestClassWithException::class . '\'');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create(\PHPCanvas\Test\TestClassWithException::class);
+		$this->Container->create(TestClassWithException::class);
 	}
 
-// 	public function testCreateFromInstantiateFailure()
-// 	{
-// 		$class = 'TestClassCreateFromInstantiateFailure';
-// 		$this->createClassPlainSimpleInstantiateFailure($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_ERR; could not instantiate \'TestClassCreateFromInstantiateFailure\', failure');
-// 
-// 		static::mockAutoload($class);
-// 		$res = $this->Container->create($class);
-// 
-// // 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testCreateFromInstantiateUnknownClassException()
-// 	{
-// 		$class = 'TestUnknown';
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_ERR; could not reflect TestUnknown, Class "TestUnknown" does not exist');
-// 
-// 		$this->Container->create($class);
-// 	}
-// 
-	public function testCall()
+	public function testCall(): void
 	{
 		$this->assertTrue($this->Container->call(
-			$this->Container->create(\PHPCanvas\Test\TestClassWithSimpleMethods::class), 'test'
+			$this->get_test_class_with_simple_methods(), 'test'
 		));
 	}
 
-	public function testCallNoMethod()
+	public function testCallNoMethod(): void
 	{
-		$this->expectException(BadMethodCallException::class);
-		$this->expectExceptionMessage('CONTAINER_CALL_ERR; Not callable ' . \PHPCanvas\Test\TestClassWithSimpleMethods::class . '::test2');
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_NOT_CALLABLE; Not callable ' . TestClassWithSimpleMethods::class . '::test2');
 		$this->expectExceptionCode(500);
 
 		$this->assertTrue($this->Container->call(
-			$this->Container->create(\PHPCanvas\Test\TestClassWithSimpleMethods::class), 'test2'
+			$this->get_test_class_with_simple_methods(), 'test2'
 		));
 	}
 
-	public function testCallAndStoreReflection()
+	public function testCallAndStoreReflection(): void
 	{
-		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithSimpleMethods::class);
+		$obj = $this->get_test_class_with_simple_methods();
 
 		$this->assertTrue($this->Container->call($obj, 'test', store_reflection: true));
 
@@ -464,7 +412,11 @@ class ContainerTest extends TestCase
 
 	public function testCallWithArgs(): void
 	{
-		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithArguments::class);
+		$obj = $this->Container->create(TestClassWithArguments::class);
+
+		if (!$obj instanceof TestClassWithArguments) {
+			$this->fail('Test expects TestClassWithArguments object');
+		}
 
 		$this->assertEquals([
 			1,
@@ -488,7 +440,11 @@ class ContainerTest extends TestCase
 
 	public function testCallWithNullableArgs(): void
 	{
-		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithNullableArguments::class);
+		$obj = $this->Container->create(TestClassWithNullableArguments::class);
+
+		if (!$obj instanceof TestClassWithNullableArguments) {
+			$this->fail('Test expects TestClassWithNullableArguments object');
+		}
 
 		$this->assertEquals([null, null, null, null], $this->Container->call($obj, 'test'));
 
@@ -501,22 +457,31 @@ class ContainerTest extends TestCase
 		$this->assertEquals([null, null, null, true], $this->Container->call($obj, 'test', [null, null, null, true]));
 	}
 
-	public function testCallWithObjectArgs()
+	public function testCallWithObjectArgs(): void
 	{
-		$this->Container->locate('TestClassWithObjectArguments', $this->dir_locations . '/TestClassWithObjectArguments.php');
-		$this->Container->locate('TestClassWithSimpleMethods', $this->dir_locations . '/TestClassWithSimpleMethods.php');
+		$this->Container->register_path('TestClassWithObjectArguments', $this->dir_registrations . '/TestClassWithObjectArguments.php');
+		$this->Container->register_path('TestClassWithSimpleMethods', $this->dir_registrations . '/TestClassWithSimpleMethods.php');
+		$obj = $this->Container->create('TestClassWithObjectArguments');
+
+		if (!$obj instanceof TestClassWithObjectArguments) {
+			$this->fail('Test expects TestClassWithObjectArguments object');
+		}
 
 		$this->assertEquals(
 			'abc',
-			$this->Container->call($this->Container->create('TestClassWithObjectArguments'), 'get_string')
+			$this->Container->call($obj, 'get_string')
 		);
 	}
 
-	public function testCallWithObjectArgsStoreForceNew()
+	public function testCallWithObjectArgsStoreForceNew(): void
 	{
-		$this->Container->locate('TestClassWithObjectArguments', $this->dir_locations . '/TestClassWithObjectArguments.php');
-		$this->Container->locate('TestClassWithSimpleMethods', $this->dir_locations . '/TestClassWithSimpleMethods.php');
+		$this->Container->register_path('TestClassWithObjectArguments', $this->dir_registrations . '/TestClassWithObjectArguments.php');
+		$this->Container->register_path('TestClassWithSimpleMethods', $this->dir_registrations . '/TestClassWithSimpleMethods.php');
 		$obj = $this->Container->create('TestClassWithObjectArguments');
+
+		if (!$obj instanceof TestClassWithObjectArguments) {
+			$this->fail('Test expects TestClassWithObjectArguments object');
+		}
 
 		$this->assertEquals(0, $this->Container->call($obj, 'inc'), 'Should create new object');
 
@@ -539,7 +504,7 @@ class ContainerTest extends TestCase
 		$this->assertEquals(0, $this->Container->call($obj, 'inc', force_new: true), 'Should create new object again');
 	}
 
-	public function testCallUnknownMethod()
+	public function testCallUnknownMethod(): void
 	{
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('Could not call stdClass::test');
@@ -547,9 +512,13 @@ class ContainerTest extends TestCase
 		$this->Container->call((object)[], 'test');
 	}
 
-	public function testCallWithObjectNullableUnionArgs()
+	public function testCallWithObjectNullableUnionArgs(): void
 	{
-		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithNullableUnionArgs::class);
+		$obj = $this->Container->create(TestClassWithNullableUnionArgs::class);
+
+		if (!$obj instanceof TestClassWithNullableUnionArgs) {
+			$this->fail('Test expects TestClassWithNullableUnionArgs object');
+		}
 
 		$this->assertNull($this->Container->call($obj, 'test'), 'Should default to NULL');
 
@@ -560,179 +529,136 @@ class ContainerTest extends TestCase
 		$this->assertEquals(100, $this->Container->call($obj, 'test', [100]), 'Should setable as INT');
 	}
 
-	public function testCallWithObjectUnionArgsFailure()
+	public function testCallWithObjectUnspecifiedArgsFailure(): void
 	{
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithUnionArgs::test; cannot handle union type parameter i');
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithUnspecifiedArgs::test; CONTAINER_INVALID_ARGUMENT; cannot resolve parameter \'z\'');
 
-		$res = $this->Container->call($this->Container->create(\PHPCanvas\Test\TestClassWithUnionArgs::class), 'test');
+		$obj = $this->Container->create(TestClassWithUnspecifiedArgs::class);
+		if (!$obj instanceof TestClassWithUnspecifiedArgs) {
+			$this->fail('Test expects TestClassWithUnspecifiedArgs object');
+		}
+
+		$this->Container->call($obj, 'test');
 	}
 
-	public function testCallWithObjectReqArgsFailure()
+	public function testCallWithObjectUnionArgsFailure(): void
 	{
-		$this->Container->locate('TestClassWithSimpleMethods', $this->dir_locations . '/TestClassWithSimpleMethods.php');
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithUnionArgs::test; CONTAINER_UNION_TYPE; cannot handle union type parameter \'i\'');
+
+		$obj = $this->Container->create(TestClassWithUnionArgs::class);
+		if (!$obj instanceof TestClassWithUnionArgs) {
+			$this->fail('Test expects TestClassWithUnionArgs object');
+		}
+
+		$this->Container->call($obj, 'test');
+	}
+
+	public function testCallWithObjectReqArgsFailure(): void
+	{
+		$this->Container->register_path('TestClassWithSimpleMethods', $this->dir_registrations . '/TestClassWithSimpleMethods.php');
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithSimpleMethods::req; cannot resolve parameter i');
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithSimpleMethods::req; CONTAINER_UNRESOLVED_PARAMETER; cannot resolve parameter \'i\'');
 
-		$res = $this->Container->call($this->Container->create('TestClassWithSimpleMethods'), 'req');
+		$obj = $this->Container->create('TestClassWithSimpleMethods');
+		if (!$obj instanceof TestClassWithSimpleMethods) {
+			$this->fail('Test expects TestClassWithSimpleMethods object');
+		}
+
+		$this->Container->call($obj, 'req');
 	}
 
-	public function testCallWithReqObjectArg()
+	public function testCallWithReqObjectArg(): void
 	{
-		$this->Container->register('TestClassWithObjectArguments', function(): \PHPCanvas\Test\TestClassWithObjectArguments {
-			return new \PHPCanvas\Test\TestClassWithObjectArguments();
+		$this->Container->register('TestClassWithObjectArguments', function (): TestClassWithObjectArguments {
+			return new TestClassWithObjectArguments();
 		});
+
 		$obj = $this->Container->create('TestClassWithObjectArguments');
 
-		$this->assertTrue($this->Container->call($obj, 'test'), 'Should create new object using paramater type');
+		if (!$obj instanceof TestClassWithObjectArguments) {
+			$this->fail('Test expects TestClassWithObjectArguments object');
+		}
+
+		$this->assertTrue(
+			$this->Container->call($obj, 'test'),
+			'Should create new object using paramater type');
 	}
 
-	public function testCallWithReqInterfaceArg()
+	public function testCallWithReqInterfaceArg(): void
 	{
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
-		$this->assertSame('iface', 
-			$this->Container->call($this->Container->create('TestClassWithSimpleMethods'), 'iface'),
+		$obj = $this->Container->create('TestClassWithSimpleMethods');
+		if (!$obj instanceof TestClassWithSimpleMethods) {
+			$this->fail('Test expects TestClassWithSimpleMethods object');
+		}
+
+		$this->assertSame('iface',
+			$this->Container->call($obj, 'iface'),
 			'Should create new object using get_class_name_from_type()');
 	}
 
-	public function testCacheName()
+	public function testGet(): void
 	{
-		$res = $this->Container->cache_name('class');
-		$this->assertIsstring($res);
-	}
+		$this->Container->register_path('TestClassPlainSimple', $this->dir_registrations . '/TestClassPlainSimple.php');
 
-	public function testCachePut()
-	{
-		$res = $this->Container->cache_put('class');
-		$this->assertFalse($res, 'Put cache is FALSE if no store_path');
-
-		$this->Container->set_store($this->dir_store);
-
-		$this->assertTrue(
-			$this->Container->cache_put('TestClassCachePutDirect', (object)['test' => true]),
-			'Can put an object to cache'
-		);
-
-		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
-		$this->Container->create('TestClassPlainSimple', true);
-
-		$this->assertTrue(
-			$this->Container->cache_put('TestClassPlainSimple'),
-			'Can put existing indexed instance to cache'
-		);
-	}
-
-	public function testGetCache()
-	{
-		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if no store_path');
-
-		$this->Container->set_store($this->dir_store);
-
-		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if file not readable');
-
-		file_put_contents(
-			$this->dir_store . DIRECTORY_SEPARATOR . $this->Container->cache_name('class'),
-			'test'
-		);
-
-		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if cannot unserialize');
-
-		file_put_contents(
-			$this->dir_store . DIRECTORY_SEPARATOR . $this->Container->cache_name('class'),
-			serialize(['a'])
-		);
-
-		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if not an object');
-
-		$this->Container->cache_put('TestClassCachePutDirect', (object)['test' => true]);
-		$this->assertTrue(
-			$this->Container->cache_get('TestClassCachePutDirect'),
-			'Must be able to unserialize an object'
-		);
-			
-		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
-		$this->Container->create('TestClassPlainSimple', true);
-		$this->Container->cache_put('TestClassPlainSimple');
-
-		$this->assertTrue(
-			$this->Container->cache_get('TestClassPlainSimple'),
-			'Must be able to unserialize an existing indexed instance'
-		);
-
-		$this->assertFalse(
-			$this->Container->cache_get('TestClassPlainSimple', 'ClassNotExists'),
-			'If instanceof is not match, return false'
-		);
-
-		$this->assertTrue(
-			$this->Container->cache_get('TestClassPlainSimple', \PHPCanvas\Test\TestClassPlainSimple::class),
-			'Must be able to unserialize an existing indexed instance and confirm instanceof'
-		);
-
-
-	}
-
-
-	public function testGet()
-	{
-		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
-
-		$this->assertInstanceOf(\PHPCanvas\Test\TestClassPlainSimple::class, $this->Container->get('TestClassPlainSimple'));
+		$this->assertInstanceOf(TestClassPlainSimple::class, $this->Container->get('TestClassPlainSimple'));
 	}
 
 	public function testGetFromSet(): void
 	{
-		$this->Container->set('TestClassPlainSimple1', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->set('TestClassPlainSimple1', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class,
+			TestClassPlainSimple::class,
 			$this->Container->get('TestClassPlainSimple1')
 		);
 	}
 
-	public function testGetFromAssumedLocation()
+	public function testGetFromAssumedLocation(): void
 	{
-		$this->Container->set_locate_path($this->dir_locations);
+		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			$this->Container->get('TestClassPlainSimple'), 
-			'If class not registered or located, should assume register closure in locations path'
+			TestClassPlainSimple::class,
+			$this->Container->get('TestClassPlainSimple'),
+			'If class not registered or has registration path set, should assume register Closure in registrations path'
 		);
 	}
 
-	public function testGetFromRegistry()
+	public function testGetFromRegistry(): void
 	{
-		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->register('TestClassPlainSimple', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			$this->Container->get('TestClassPlainSimple'), 
+			TestClassPlainSimple::class,
+			$this->Container->get('TestClassPlainSimple'),
 		);
 	}
 
-	public function testGetFromAlias()
+	public function testGetFromAlias(): void
 	{
-		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+		$this->Container->register_path('TestClassPlainSimple', $this->dir_registrations . '/TestClassPlainSimple.php');
 
 		$this->Container->set_alias('TestClassAlias', 'TestClassPlainSimple');
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			$this->Container->get('TestClassAlias'), 
+			TestClassPlainSimple::class,
+			$this->Container->get('TestClassAlias'),
 		);
 
 		$this->Container->set_alias('TestClassAlias2', 'TestClassPlainSimple');
 
 		$this->assertInstanceOf(
-			\PHPCanvas\Test\TestClassPlainSimple::class, 
-			$this->Container->get('TestClassAlias2'), 
+			TestClassPlainSimple::class,
+			$this->Container->get('TestClassAlias2'),
 		);
 
 	}
@@ -743,8 +669,8 @@ class ContainerTest extends TestCase
 
 		$this->assertFalse($this->Container->exists('TestClassPlainSimple1'));
 
-		$this->Container->set('TestClassPlainSimple1', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->set('TestClassPlainSimple1', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->assertTrue($this->Container->exists('TestClassPlainSimple1'));
@@ -754,7 +680,7 @@ class ContainerTest extends TestCase
 
 		$this->assertFalse($this->Container->exists('TestClassPlainSimple2'));
 
-		$this->Container->set('TestClassPlainSimple2', new \PHPCanvas\Test\TestClassPlainSimple());
+		$this->Container->set('TestClassPlainSimple2', new TestClassPlainSimple());
 
 		$this->assertTrue($this->Container->exists('TestClassPlainSimple2'));
 		$this->assertArrayHasKey('TestClassPlainSimple2', $this->Container->list_instances());
@@ -766,8 +692,8 @@ class ContainerTest extends TestCase
 
 		$this->assertFalse($this->Container->exists('TestClassPlainSimple1'));
 
-		$this->Container->register('TestClassPlainSimple1', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->register('TestClassPlainSimple1', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
 
 		$this->assertTrue($this->Container->exists('TestClassPlainSimple1'));
@@ -776,15 +702,15 @@ class ContainerTest extends TestCase
 
 		$this->assertFalse($this->Container->exists('TestClassPlainSimple2'));
 
-		$this->Container->locate('TestClassPlainSimple2', $this->dir_locations . '/TestClassPlainSimple.php');
+		$this->Container->register_path('TestClassPlainSimple2', $this->dir_registrations . '/TestClassPlainSimple.php');
 
 		$this->assertTrue($this->Container->exists('TestClassPlainSimple2'));
 
 		// by instance
-		
+
 		$this->assertFalse($this->Container->exists('TestClassPlainSimple3'));
 
-		$this->Container->set('TestClassPlainSimple3', new \PHPCanvas\Test\TestClassPlainSimple());
+		$this->Container->set('TestClassPlainSimple3', new TestClassPlainSimple());
 
 		$this->assertTrue($this->Container->exists('TestClassPlainSimple3'));
 	}
@@ -793,10 +719,10 @@ class ContainerTest extends TestCase
 	{
 		$this->assertFalse($this->Container->exists('TestClassPlainSimple'));
 
-		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
-			return new \PHPCanvas\Test\TestClassPlainSimple();
+		$this->Container->register('TestClassPlainSimple', function (): TestClassPlainSimple {
+			return new TestClassPlainSimple();
 		});
-		
+
 		$this->assertArrayNotHasKey('TestClassPlainSimple', $this->Container->list_instances());
 		$this->Container->create('TestClassPlainSimple', true);
 
@@ -806,642 +732,16 @@ class ContainerTest extends TestCase
 		$this->assertArrayNotHasKey('TestClassPlainSimple', $this->Container->list_instances());
 	}
 
-// 	public function testOffset()
-// 	{
-// 		$class = 'TestClassUnset';
-// 		$this->createClassPlainSimple($class);
-// 
-// 		static::mockAutoload($class);
-// 
-// 		/*$res = */
-// 		$this->Container[$class];
-// // 		$this->assertInstanceOf($class, $res);
-// 
-// 		//"Could not set $offset"
-// 
-// 		$this->Container->offsetSet($class, new $class);
-// 
-// 		$res = $this->Container->offsetExists($class);
-// 		$this->assertTrue($res);
-// 
-// //		$null =
-// 		$this->Container->offsetUnset($class);
-// //		$this->assertNull($null);
-// 
-// 		$res = $this->Container->offsetExists($class);
-// 		$this->assertFalse($res);
-// 
-// // 		$closure = $this->Container->register(
-// // 			$class.'2', );
-// 		$this->Container->offsetSet($class . '2', function () use ($class): Closure {
-// 			return new $class;
-// 		});
-// 
-// 		$this->assertTrue(isset($this->Container->list_registry()['TestClassUnset2']));
-// 	}
-// 
-// 	public function testOffsetException()
-// 	{
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('Could not set 111');
-// 
-// 		$this->Container->offsetSet(111, false);
-// 	}
-// 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 	protected function createClassPlainSimple(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public \$A = 'A';
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassPlainSimpleInstantiateFailure(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public \$A = 'A';
-// 	
-// 	public function __construct()
-// 	{
-// 		throw new Exception('failure');
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassCreateFromInstantiateNoConstructorFailure(string $className/*, bool $createRegisterFile = false*/): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// trait RequiresArgsTrait {
-//     public function __construct(bool \$arg1, int \$arg2) {
-//         // this constructor requires two arguments
-//     }
-// }
-// 
-// class $className {
-//     use RequiresArgsTrait;
-// 
-//     // this has no constructor in reflection
-// }
-// __
-// 		);
-// 
-// // 		if ($createRegisterFile) {
-// // 			$this->createSimpleClassRegister($className);
-// // 		}
-// 	}
-// 
-// 	protected function createClassFailure(string $className, int $createRegisterFile = 0): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public \$A = 'A';
-// 
-// 	public function __construct()
-// 	{
-// 		throw new \Exception('Error example');
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile === 1) {
-// 			file_put_contents(static::$dir_locations . "/register.$className.php", <<<__
-// <?php
-// 	PARSE FAILURE
-// 	};
-// __
-// 			);
-// 		} else {
-// 			if ($createRegisterFile === 2) {
-// 				file_put_contents(static::$dir_locations . "/register.$className.php", <<<__
-// <?php
-// 	throw new \Exception('Exception thrown');
-// __
-// 				);
-// 			} else {
-// 				if ($createRegisterFile === 3) {
-// 					file_put_contents(static::$dir_locations . "/register.$className.php", <<<__
-// <?php
-// return 1;
-// __
-// 					);
-// 
-// 				}
-// 			}
-// 		}
-// // TODO: set up a parse error
-// 	}
-// 
-// 	protected function createClassPlainSimpleReturnFailure(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public \$A = 'A';
-// 
-// 	public function __construct()
-// 	{
-// 		throw new \Exception('Error example');
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			file_put_contents(static::$dir_locations . "/register.$className.php", <<<__
-// <?php
-// 
-// // no return
-// 
-// __
-// 			);
-// 
-// 		}
-// // TODO: set up a parse error
-// 	}
-// 
-// 	protected function createClassWithArgsInConstructor(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public int \$a;
-// 	public int \$b;
-// 
-// 	public function __construct(?int \$a, ?int \$b)
-// 	{
-// 		\$this->a = !is_null(\$a) ? \$a : 0;
-// 		\$this->b = !is_null(\$b) ? \$b : 0;
-// 	}
-// }
-// __
-// 		);
-// 	}
-// 
-// 	protected function createClassWithDependencyInContructor(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		$class2 = $className . '2';
-// 		$this->createClassPlainSimple($class2, $createRegisterFile);
-// 
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// use $class2;
-// 
-// class $className
-// {
-// 	public $className \$$class2;
-// 
-// 	public function __construct($class2 \$$class2)
-// 	{
-// 		\$this->$class2 = \$$class2;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			file_put_contents(static::$dir_locations . "/register.$className.php", <<<__
-// <?php
-// return function (\$Container) {
-// 	PHPCanvas\ContainerTest::mockAutoload('$className');
-// 
-// 	return new $className(\$Container['$class2']);
-// };
-// __
-// 			);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithEmptyContructor(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	protected bool \$b;
-// 
-// 	public function __construct()
-// 	{
-// 		\$this->b = true;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethod(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test(): bool
-// 	{
-// 		return true;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithArgs(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test(
-// 		int \$i, string \$s, array \$a, bool \$b, float \$f,
-// 		int \$i2 = 2, string \$s2 = 'S2', array \$a2 = ['A2'], bool \$b2 = false, float \$f2 = 0.2
-// 	): array
-// 	{
-// 		return [
-// 			\$i, \$s, \$a, \$b, \$f,
-// 			\$i2, \$s2, \$a2, \$b2, \$f2
-// 		];
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithNullableArgs(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test(?int \$a = null, ?string \$b = null, ?array \$c = null, ?bool \$d = null): array
-// 	{
-// 		return [\$a, \$b, \$c, \$d];
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithObjectArgs(string $className, string $classNameObject, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test($classNameObject \$$classNameObject): string
-// 	{
-// 		return \${$classNameObject}->test();
-// 	}
-// }
-// __
-// 		);
-// 
-// 		file_put_contents(
-// 			static::$dir_classes . "/$classNameObject.php",
-// 			<<<__
-// <?php
-// class $classNameObject
-// {
-// 	public function test(): string
-// 	{
-// 		return 'abc';
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 			$this->createSimpleClassRegister($classNameObject);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithObjectArgsStoreForceNew(string $className, string $classNameObject, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test($classNameObject \$$classNameObject): int
-// 	{
-// 		return \${$classNameObject}->test();
-// 	}
-// }
-// __
-// 		);
-// 
-// 		file_put_contents(
-// 			static::$dir_classes . "/$classNameObject.php",
-// 			<<<__
-// <?php
-// class $classNameObject
-// {
-// 	protected int \$i = 0;
-// 
-// 	public function test(): int
-// 	{
-// 		return \$this->i++;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 			$this->createSimpleClassRegister($classNameObject);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithInterfaceArgs(string $className, string $classNameObject, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test({$classNameObject}Interface \$$classNameObject): int
-// 	{
-// 		return \${$classNameObject}->test();
-// 	}
-// }
-// __
-// 		);
-// 
-// 		file_put_contents(
-// 			static::$dir_classes . "/{$classNameObject}Interface.php",
-// 			<<<__
-// <?php
-// interface {$classNameObject}Interface
-// {
-// 	public function test(): int;
-// }
-// __
-// 		);
-// 
-// 		file_put_contents(
-// 			static::$dir_classes . "/$classNameObject.php",
-// 			<<<__
-// <?php
-// class $classNameObject implements {$classNameObject}Interface
-// {
-// 	protected int \$i = 0;
-// 
-// 	public function test(): int
-// 	{
-// 		return \$this->i++;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 			$this->createSimpleClassRegister($classNameObject);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithNullableUnionArgs(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test(null|false|int \$i): null|false|int
-// 	{
-// 		return \$i;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithUnionArgs(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test(false|int \$i): false|int
-// 	{
-// 		return \$i;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createClassWithSimpleMethodWithReqArgs(string $className, bool $createRegisterFile = false): void
-// 	{
-// 		file_put_contents(
-// 			static::$dir_classes . "/$className.php",
-// 			<<<__
-// <?php
-// class $className
-// {
-// 	public function test(int \$i): int
-// 	{
-// 		return \$i;
-// 	}
-// }
-// __
-// 		);
-// 
-// 		if ($createRegisterFile) {
-// 			$this->createSimpleClassRegister($className);
-// 		}
-// 	}
-// 
-// 	protected function createSimpleClassRegister($className): void
-// 	{
-// 		file_put_contents(static::$dir_locations . "/register.$className.php", <<<__
-// <?php
-// return function (\$Container) {
-// 	PHPCanvas\ContainerTest::mockAutoload('$className');
-// 
-// 	return new $className();
-// };
-// __
-// 		);
-// 	}
-
-// 	protected function getClassPath(string $class): string
-// 	{
-// 		return static::$dir_classes . "/$class.php";
-// 	}
-
-	protected function getClassLocationPath(string $class): string
+	protected function get_test_class_with_simple_methods(): TestClassWithSimpleMethods
 	{
-		return static::$dir_locations . "/register.$class.php";
+
+		$obj = $this->Container->create(TestClassWithSimpleMethods::class);
+
+		if (!$obj instanceof TestClassWithSimpleMethods) {
+			$this->fail('Container::create() must return TestClassWithSimpleMethods object');
+		}
+
+		return $obj;
 	}
 
-	protected function getClassClosure(string $class): Closure
-	{
-		return include static::$dir_locations . "/register.$class.php";
-	}
-
-
-// 	public function testInstantiate()
-// 	{
-// 		$class = 'TestClassInstantiate';
-// 		$this->createClassPlainSimple($class);
-// 		self::mockAutoload($class);
-// 
-// 		$res = $this->Container->instantiate($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-
-// 	public function testInstantiateNamedClass()
-// 	{
-// 		stantiate(string $class_name, ?string $name = null
-// 	}
-
-// 	public function testInstantiateWithContructor()
-// 	{
-// 		$class = 'TestClassInstantiateWithContructor';
-// 		$this->createClassWithArgsInConstructor($class);
-// 		self::mockAutoload($class);
-// 
-// 		// all args
-// 		$res = $this->Container->instantiate($class, null, [11, 12]);
-// 		$this->assertInstanceOf($class, $res);
-// 		$this->assertEquals(11, $res->a);
-// 		$this->assertEquals(12, $res->b);
-// 
-// 		// partial args
-// 		$res = $this->Container->instantiate($class, null, [1 => 99]);
-// 		$this->assertInstanceOf($class, $res);
-// 		$this->assertEquals(0, $res->a);
-// 		$this->assertEquals(99, $res->b);
-// 
-// 		// emtpy
-// 		$class = 'TestClassWithEmptyContructor';
-// 		$this->createClassWithEmptyContructor($class);
-// 		include_once static::$dir_classes . '/' . $class . '.php';
-// 
-// 		$res = $this->Container->instantiate($class, null, []);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-
-// 	public function testInstantiateWithName()
-// 	{
-// 		
-// 	}
-
-// 	public function testInstantiateFromRegistry()
-// 	{
-// 		$class = 'TestClassInstantiateFromRegistry';
-// 		$this->createClassPlainSimple($class, true);
-// 		self::mockAutoload($class);
-// 		$closure = $this->getClassClosure($class);
-// 
-// 		$this->Container->register($class, $closure);
-// 		$res = $this->Container->instantiate($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-
-// 	public function testInstantiateFromLocations()
-// 	{
-// 		$class = 'TestClassInstantiateFromLocations';
-// 		$this->createClassPlainSimple($class, true);
-// 		self::mockAutoload($class);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$res = $this->Container->instantiate($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
 }

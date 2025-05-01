@@ -12,7 +12,7 @@ class ContainerException extends RuntimeException
 	public function __construct(
 		string $message,
 		ContainerError $error,
-		int $code = 0,
+		int $code = 500,
 		?Throwable $previous = null
 	) {
 		$this->error = $error;

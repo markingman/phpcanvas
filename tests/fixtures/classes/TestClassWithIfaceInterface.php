@@ -2,6 +2,7 @@
 
 namespace PHPCanvas\Test;
 
-interface TestClassWithIfaceInterface {
+interface TestClassWithIfaceInterface
+{
 	public function test(): string;
 }
