@@ -9,16 +9,12 @@ use PHPCanvas\Routing\Dispatch;
 
 class Controller
 {
-	protected Config $Config;
-	protected Dispatch $Dispatch;
-	protected Request $Request;
-	protected Response $Response;
-
-	public function __construct(Config $Config, Dispatch $Dispatch, Request $Request, Response $Response)
+	public function __construct(
+		protected Config $Config,
+		protected Dispatch $Dispatch,
+		protected Request $Request,
+		protected Response $Response
+	)
 	{
-		$this->Config = $Config;
-		$this->Dispatch = $Dispatch;
-		$this->Request = $Request;
-		$this->Response = $Response;
 	}
 }

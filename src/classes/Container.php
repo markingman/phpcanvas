@@ -7,12 +7,13 @@ use Closure;
 use Exception;
 use InvalidArgumentException;
 use LogicException;
+use PHPCanvas\Exception\ContainerError;
+use PHPCanvas\Exception\ContainerException;
 use ReflectionClass;
 use ReflectionParameter;
 use ReflectionUnionType;
 use RuntimeException;
 use Throwable;
-use UnexpectedValueException;
 
 class Container implements ContainerInterface
 {
@@ -95,18 +96,18 @@ class Container implements ContainerInterface
 				$path = $this->locations[$name][0];
 				$args = $this->locations[$name][1] ?? [];
 				try {
-					$closure = Closure::bind(function () use ($path, $args) {
+					$closure = (Closure::bind(function () use ($path, $args): mixed {
 						extract($args);
 
 						return include $path;
-					}, null);
+					}, null)());
 
 				} catch (Throwable $e) {
-					throw new RuntimeException("CONTAINER_LOAD_FAILURE; Could not create $name, " . $e->getMessage(), previous: $e);
+					throw new ContainerException("Could not create '$name'", ContainerError::LOAD_FAILURE, 500, $e);
 				}
 
 				if (!($closure instanceof Closure)) {
-					throw new UnexpectedValueException("CONTAINER_TYPE_FAILURE; Could not create $name, expected Closure not found");
+					throw new ContainerException("Location for '$name' must return \Closure", ContainerError::TYPE_FAILURE, 500);
 				}
 
 				$this->register($name, $closure);
@@ -117,11 +118,11 @@ class Container implements ContainerInterface
 			try {
 				$instance = $this->registry[$name]($this);
 			} catch (Exception $e) {
-				throw new RuntimeException(message: "CONTAINER_CREATE_ERR; could not create '$name', {$e->getMessage()}", previous: $e);
+				throw new ContainerException("Could not create '$name'", ContainerError::CREATE_FAILURE, 500, $e);
 			}
 
 			if (!is_object($instance)) {
-				throw new RuntimeException("CONTAINER_OBJECT_ERR; object not created for '$name'");
+				throw new ContainerException("Object not created for '$name'", ContainerError::NOT_OBJECT, 500);
 			}
 
 			if ($store) {
@@ -131,9 +132,10 @@ class Container implements ContainerInterface
 			return $instance;
 		} else {
 			try {
+				// for this edge case it tries presuming $name is class name
 				return $this->instantiate($name, $name, $store);
-			} catch (Exception $e) {
-				throw new RuntimeException(message: "CONTAINER_INSTANTIATE_ERR; {$e->getMessage()}", previous: $e);
+			} catch (Throwable $e) {
+				throw new ContainerException("Could not instantiate '$name'", ContainerError::INSTANTIATE_FAILURE, 500, $e);
 			}
 		}
 	}
@@ -145,18 +147,22 @@ class Container implements ContainerInterface
 	{
 		$class_name = get_class($class);
 
+//		try {
 		$reflection = $this->reflections[$class_name] ?? new ReflectionClass($class_name);
+//		} catch (ReflectionException $e) {
+//			throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
+//		}
 
 		try {
 			$method = $reflection->getMethod($method_name);
-			$params = $args ? $this->set_params($method->getParameters(), $args, $store, $force_new) : [];
+// if ($method_name === 'get_string'){
+//  var_dump($method->getParameters());
+// exit('here');}
+			$method_params = $method->getParameters();
+			$params = ($args or $method_params) ? $this->set_params($method->getParameters(), $args, $store, $force_new) : [];
 		} catch (Exception $e) {
-			throw new RuntimeException(message: "CONTAINER_CALL_ERR; Could not call $class_name::$method_name, {$e->getMessage()}", previous: $e);
+			throw new ContainerException("Could not call $class_name::$method_name", ContainerError::CALL_FAILURE, previous: $e);
 		}
-
-// 		if (!is_array($params)) {
-// 			throw new Exception(message: "CONTAINER_CALL_ERR; Could not call $class_name::$method_name");
-// 		}
 
 		if ($store_reflection) {
 			$this->reflections[$class_name] = $reflection;
@@ -164,7 +170,7 @@ class Container implements ContainerInterface
 
 		$callable = [$class, $method_name];
 		if (!is_callable($callable)) {
-			throw new BadMethodCallException(message: "CONTAINER_CALL_ERR; Not callable $class_name::$method_name");
+			throw new BadMethodCallException("CONTAINER_CALL_ERR; Not callable $class_name::$method_name", 500);
 		}
 
 		return call_user_func_array($callable, $params);
@@ -263,16 +269,20 @@ class Container implements ContainerInterface
 		return $this->instances;
 	}
 
-	protected function get_realpath(string $path): string|false
+	protected function get_realpath(string $name): string|false
 	{
 		static $paths = [];
 
-		if (!isset($paths[$path])) {
-			$realpath = realpath($this->locate_path . DIRECTORY_SEPARATOR . 'register.' . $path . '.php');
-			$paths[$path] = ($realpath and str_starts_with($realpath, $this->locate_path)) ? $realpath : false;
+		if (!isset($paths[$name])) {
+			$realpath = realpath($this->locate_path . DIRECTORY_SEPARATOR . $name . '.php');
+			$paths[$name] = (
+				$realpath
+				and str_starts_with($realpath, $this->locate_path)
+				and basename($realpath, '.php') === $name
+			) ? $realpath : false;
 		}
 
-		return $paths[$path];
+		return $paths[$name];
 	}
 
 	protected function get_class_name_from_type(string $name): string
@@ -302,7 +312,11 @@ class Container implements ContainerInterface
 			$p_null = $param->allowsNull();
 
 			if ($p_opt) {
+// 				try {
 				$params[$i] = $param->getDefaultValue();
+// 				} catch (Throwable $e) {
+// 					throw new RunTimeException($e->getMessage(), $e->getCode(), $e);
+// 				}
 				continue;
 			}
 
@@ -359,7 +373,7 @@ class Container implements ContainerInterface
 	protected function instantiate(string $class_name, ?string $name = null, bool $store = false): object
 	{
 		if (!class_exists($class_name)) {
-			throw new RuntimeException(message: "Could not find $class_name");
+			throw new ContainerException("Could not find '$class_name'", ContainerError::CLASS_NOT_FOUND, 500);
 		}
 
 		$reflection = new ReflectionClass($class_name);
@@ -367,14 +381,15 @@ class Container implements ContainerInterface
 
 		try {
 			if (!is_null($constructor)) {
+
 				$class = $reflection->newInstanceArgs(
 					$this->set_params($constructor->getParameters())
 				);
 			} else {
 				$class = $reflection->newInstanceArgs();
 			}
-		} catch (Exception $e) {
-			throw new RuntimeException(message: "could not instantiate '$class_name', {$e->getMessage()}", previous: $e);
+		} catch (Throwable $e) {
+			throw new ContainerException("Could not instantiate '$class_name'", ContainerError::INSTANTIATE_FAILURE, 500, $e);
 		}
 
 		if ($store) {

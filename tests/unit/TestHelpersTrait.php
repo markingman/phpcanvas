@@ -2,10 +2,11 @@
 
 namespace PHPCanvas;
 
-use Exception;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
+use Throwable;
 
 trait TestHelpersTrait
 {
@@ -15,11 +16,11 @@ trait TestHelpersTrait
 	{
 		try {
 			static::$tmpdir = rtrim(sys_get_temp_dir(), '/') . '/' . bin2hex(random_bytes(4));
-		} catch (Exception $e) {
-			throw new Exception(message: 'Could not create tmp dir', previous: $e);
+		} catch (Throwable $e) {
+			throw new RuntimeException(message: 'Could not create tmp dir', previous: $e);
 		}
 
-		return mkdir(static::$tmpdir, 0755, true);
+		return mkdir(directory: static::$tmpdir, permissions: 0755, recursive: true);
 	}
 
 	protected static function tmpdir_remove(): bool

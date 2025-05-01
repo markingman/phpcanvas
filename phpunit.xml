@@ -18,7 +18,7 @@
       <file>tests/unit/ApplicationTest.php</file>
       <file>tests/unit/Exception/ApplicationExceptionTest.php</file>
       <file>tests/unit/ConfigTest.php</file>
-      <!--<file>tests/unit/ContainerTest.php</file>-->
+      <file>tests/unit/ContainerTest.php</file>
       <!--<file>tests/unit/Controller/ControllerTest.php</file>-->
       <!--<file>tests/Errors/ErrorHandlerTest.php</file>-->
       <!--<file>tests/unit/Http/RequestTest.php</file>-->

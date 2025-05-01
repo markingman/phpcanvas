@@ -10,30 +10,30 @@ use PHPCanvas\Http\ResponseInterface;
 
 class Dispatch implements DispatchInterface
 {
-	protected ContainerInterface $Container;
-	protected RequestInterface $Request;
-	protected ResponseInterface $Response;
-	protected RouterInterface $Router;
-	protected LinksInterface $Links;
+// 	protected ContainerInterface $Container;
+// 	protected RequestInterface $Request;
+// 	protected ResponseInterface $Response;
+// 	protected RouterInterface $Router;
+// 	protected LinksInterface $Links;
 	protected string $action_prefix;
 	protected string $action_suffix;
 	protected ?string $controller = null;
 	protected ?string $action = null;
 
 	function __construct(
-		ContainerInterface $Container,
-		RequestInterface $Request,
-		ResponseInterface $Response,
-		RouterInterface $Router,
-		LinksInterface $Links,
+		protected ContainerInterface $Container,
+		protected RequestInterface $Request,
+		protected ResponseInterface $Response,
+		protected RouterInterface $Router,
+		protected LinksInterface $Links,
 		?string $action_prefix = null,
 		?string $action_suffix = null,
 	) {
-		$this->Container = $Container;
-		$this->Request = $Request;
-		$this->Response = $Response;
-		$this->Router = $Router;
-		$this->Links = $Links;
+// 		$this->Container = $Container;
+// 		$this->Request = $Request;
+// 		$this->Response = $Response;
+// 		$this->Router = $Router;
+// 		$this->Links = $Links;
 		$this->action_prefix = $action_prefix ?? '';
 		$this->action_suffix = $action_suffix ?? '';
 	}

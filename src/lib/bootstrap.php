@@ -14,7 +14,7 @@ try {
 	throw new Exception('Could not load Container');
 }
 
-if (!$Container->cache_get('Config')) {
+if (!$Container->cache_get('Config', PHPCanvas\Config::class)) {
 	$Container->locate('Config', $dir . '/register.Config.php', ['config_paths' => $config_paths, 'config' => $config]);
 }
 

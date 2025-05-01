@@ -3,19 +3,22 @@
 namespace PHPCanvas;
 
 use Closure;
-use Exception;
+use PHPCanvas\Exception\ContainerException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use BadMethodCallException;
 
 class ContainerTest extends TestCase
 {
 	use TestHelpersTrait;
 
-	public static string $dir_classes;
-	public static string $dir_locations;
-	public static string $dir_store;
+	private string $dir_store;
+	private string $dir_fixtures;
+	private string $dir_classes;
+	private string $dir_locations;
 	protected ContainerInterface $Container;
 
-	public static function mockAutoload($class): void
+	public static function mockAutoload(string $class): void
 	{
 		include_once static::$dir_classes . '/' . $class . '.php';
 	}
@@ -23,15 +26,6 @@ class ContainerTest extends TestCase
 	public static function setUpBeforeClass(): void
 	{
 		static::tmpdir_make();
-
-		static::$dir_classes = static::$tmpdir . '/classes';
-		mkdir(static::$dir_classes);
-
-		static::$dir_locations = static::$tmpdir . '/locations';
-		mkdir(static::$dir_locations);
-
-		static::$dir_store = static::$tmpdir . '/cache';
-		mkdir(static::$dir_store);
 	}
 
 	public static function tearDownAfterClass(): void
@@ -42,6 +36,23 @@ class ContainerTest extends TestCase
 	public function setUp(): void
 	{
 		$this->Container = new Container();
+
+		$this->dir_store = static::$tmpdir;
+		if (!is_dir($this->dir_store)) {
+			throw new RuntimeException('Could not find cache dir');
+		}
+
+		if (!$this->dir_fixtures = (string)realpath(__DIR__ . '/../fixtures')) {
+			throw new RuntimeException('Could not find fixtures dir');
+		}
+
+		if (!$this->dir_classes = (string)realpath($this->dir_fixtures . '/classes')) {
+			throw new RuntimeException('Could not find classes dir');
+		}
+
+		if (!$this->dir_locations = (string)realpath($this->dir_fixtures . '/registry')) {
+			throw new RuntimeException('Could not find locations dir');
+		}
 	}
 
 	public function testCreate(): void
@@ -49,219 +60,356 @@ class ContainerTest extends TestCase
 		$this->assertInstanceOf(ContainerInterface::class, $this->Container);
 	}
 
+	public function testCreateWithStoreAndLocate(): void
+	{
+		$Container = new Container($this->dir_store, $this->dir_locations);
+		$this->assertSame($this->dir_store, $Container->get_store(), 'Can set store path on construct');
+		$this->assertSame($this->dir_locations, $Container->get_locate_path(), 'Can locations path on construct');
+	}
+
 	public function testStore(): void
 	{
-		$store = static::$tmpdir;
-		$this->Container->set_store($store);
+		$this->assertSame('', $this->Container->get_store(), 'Unset store path is empty');
 
-		$res = $this->Container->get_store();
-
-		$this->assertEquals(static::$tmpdir, $res, 'Can set and get the store path');
+		$this->Container->set_store($this->dir_store);
+		$this->assertSame($this->dir_store, $this->Container->get_store(), 'Can set and get the store path');
 	}
 
 	public function testLocatePath(): void
 	{
-		$store = realpath(static::$dir_locations);
-		$this->Container->set_locate_path($store);
+		$this->assertSame('', $this->Container->get_locate_path(), 'Unset locate path is empty');
 
-		$res = $this->Container->get_locate_path();
-
-		$this->assertEquals($store, $res, 'Can set and get the locations path');
+		$this->Container->set_locate_path($this->dir_locations);
+		$this->assertSame($this->dir_locations, $this->Container->get_locate_path(), 'Can set and get the locations path');
 	}
 
-// 	public function testAlias(): void
-// 	{
-// 		$this->Container->set_alias('Class1', 'Class2');
-// 
-// 		$res = $this->Container->get_alias('Class1');
-// 
-// 		$this->assertEquals('Class2', $res);
-// 	}
-// 
-// 	public function testLocate(): void
-// 	{
-// 		$class = 'TestClassLocate';
-// 		$this->createClassPlainSimple($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 
-// 		$res = $this->Container->list_locations();
-// 		$exp = [$class => [$path]];
-// 
-// 		$this->assertEquals($exp, $res);
-// 	}
-// 
-// 	public function testLocateWithArguments(): void
-// 	{
-// 		$class = 'TestClassLocateWithArguments';
-// 		$this->createClassPlainSimple($class);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$args = ['a' => 123, 'b' => 'test'];
-// 		$this->Container->locate($class, $path, $args);
-// 
-// 		$res = $this->Container->list_locations();
-// 		$exp = [$class => [$path, $args]];
-// 
-// 		$this->assertEquals($exp, $res);
-// 	}
-// 
-// 	public function testRegister(): void
-// 	{
-// 		$class = 'TestClassRegister';
-// 		$this->createClassPlainSimple($class, true);
-// 		$closure = $this->getClassClosure($class);
-// 
-// 		$this->Container->register($class, $closure);
-// 
-// 		$res = $this->Container->list_registry();
-// 		$exp = [$class => $closure];
-// 
-// 		$this->assertEquals($exp, $res, 'Can register a simple class');
-// 	}
-// 
-// 	public function testCreateFromLocation()
-// 	{
-// 		// create from explicitly set location path
-// 
-// 		$class = 'TestClassCreateFromLocation';
-// 		$this->createClassPlainSimple($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$res = $this->Container->create($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testCreateFromAssumedLocation()
-// 	{
-// 		// no location path set, assume closure is saved in locate_path
-// 
-// 		$this->Container->set_locate_path(realpath(static::$dir_locations));
-// 
-// 		$class = 'TestClassCreateFromAssumedLocation';
-// 		$this->createClassPlainSimple($class, true);
-// 
-// 		$res = $this->Container->create($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testCreateFromLocationParseFailure()
-// 	{
-// 		// calling closure throws an exception
-// 
-// 		$this->Container->set_locate_path(realpath(static::$dir_locations));
-// 
-// 		$class = 'TestClassCreateParseFailure';
-// 		$this->createClassFailure($class, 1);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create TestClassCreateParseFailure, syntax error, unexpected identifier "FAILURE"');
-// 
-// 		$this->Container->create($class);
-// 	}
-// 
-// 	public function testCreateFromLocationExceptionFailure()
-// 	{
-// 		// calling closure throws an exception
-// 
-// 		$this->Container->set_locate_path(realpath(static::$dir_locations));
-// 
-// 		$class = 'TestClassCreateExceptionFailure';
-// 		$this->createClassFailure($class, 2);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create TestClassCreateExceptionFailure, Exception thrown');
-// 
-// 		$this->Container->create($class);
-// 	}
-// 
-// 	public function testCreateFromLocationReturnFailure()
-// 	{
-// 		$this->Container->set_locate_path(realpath(static::$dir_locations));
-// 
-// 		$class = 'TestClassCreateClosureFailure';
-// 		$this->createClassFailure($class, 3);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_TYPE_FAILURE; Could not create TestClassCreateClosureFailure, expected Closure not found');
-// 
-// 		$this->Container->create($class);
-// 	}
-// 
-// 	public function testCreateFromRegistry()
-// 	{
-// 		$class = 'TestClassCreateFromRegistry';
-// 		$this->createClassPlainSimple($class, true);
-// 		$closure = $this->getClassClosure($class);
-// 
-// 		$this->Container->register($class, $closure);
-// 		$res = $this->Container->create($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testCreateFromRegistryFailure()
-// 	{
-// 		$class = 'TestClassCreateFromRegistryFailure';
-// 		$this->createClassPlainSimple($class, false);
-// 
-// 		$this->Container->register($class, function () {
-// 			throw new Exception('- exception message -');
-// 		});
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage("CONTAINER_CREATE_ERR; could not create '$class', - exception message -");
-// 
-// 		$res = $this->Container->create($class);
-// 	}
-// 
-// 	public function testCreateFromRegistryNotObjectFailure()
-// 	{
-// 		$class = 'TestClassCreateFromRegistryNotObjectFailure()';
-// 		$this->createClassPlainSimple($class, false);
-// 
-// 		$this->Container->register($class, function () {
-// 			return null;
-// 		});
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage("CONTAINER_OBJECT_ERR; object not created for '$class'");
-// 
-// 		$res = $this->Container->create($class);
-// 	}
-// 
-// 	public function testCreateFromStoredInstantiate()
-// 	{
-// 		$class = 'TestClassCreateFromStoredInstantiate';
-// 		$this->createClassPlainSimple($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$this->Container->create($class, true);
-// 
-// 		$instances = $this->Container->list_instances();
-// 		$this->assertTrue(isset($instances[$class]));
-// 		$res = $this->Container->create($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testCreateFromInstantiate()
-// 	{
-// 		$class = 'TestClassCreateFromInstantiate';
-// 		$this->createClassPlainSimple($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		static::mockAutoload($class);
-// 		$res = $this->Container->create($class);
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
+	public function testAlias(): void
+	{
+		$this->assertNull($this->Container->get_alias('Class1'));
+
+		$this->Container->set_alias('Class1', 'Class2');
+		$this->assertSame('Class2', $this->Container->get_alias('Class1'));
+	}
+
+	public function testLocate(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->locate('TestClassPlainSimple', $this->dir_classes . '/TestClassPlainSimple.php');
+
+		$this->assertEquals(
+			['TestClassPlainSimple' => [$this->dir_classes . '/TestClassPlainSimple.php']],
+			$this->Container->list_locations()
+		);
+	}
+
+	public function testLocateWithArguments(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->locate(
+			'TestClassPlainSimple', 
+			$this->dir_classes . '/TestClassPlainSimple.php',
+			['a' => 123, 'b' => 'test']
+		);
+
+		$res = $this->Container->list_locations();
+
+		$this->assertEquals(
+			['TestClassPlainSimple' => 
+				[$this->dir_classes . '/TestClassPlainSimple.php', ['a' => 123, 'b' => 'test']]],
+			$this->Container->list_locations()
+		);
+	}
+
+	public function testRegister(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->assertEquals(
+			[
+				'TestClassPlainSimple' => function(): \PHPCanvas\Test\TestClassPlainSimple {
+						return new \PHPCanvas\Test\TestClassPlainSimple();
+				}
+			],
+			$this->Container->list_registry(),
+			'Can register a simple class'
+		);
+	}
+
+	public function testCreateFromLocation(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class,
+			$this->Container->create('TestClassPlainSimple'),
+			'Can create class from explicitly set location path'
+		);
+	}
+
+
+	public function testCreateFromAssumedLocation(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class,
+			$this->Container->create('TestClassPlainSimple'),
+			'Can create class from explicitly set location path'
+		);
+	}
+
+	public function testCreateFromLocationWithParseFailure(): void
+	{
+		// calling closure throws an exception
+
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->set_locate_path(realpath(static::$tmpdir));
+		if (!file_put_contents(
+			static::$tmpdir . '/ParseFailure.php', '<?php PARSE FAILURE };'
+		)) {
+			throw RuntimeException('Could not create parse failure test file');
+		}
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create \'ParseFailure\'; syntax error');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('ParseFailure');
+	}
+
+	public function testCreateFromLocationWithImmedateExceptionFailure(): void
+	{
+		// calling closure throws an exception
+
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create \'throw_exception_error\'; Test runtime exception');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('throw_exception_error');
+	}
+
+	public function testCreateFromLocationWithReturnTypeFailure(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_TYPE_FAILURE; Location for \'return_true\' must return \\Closure');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('return_true');
+	}
+
+	public function testCreateFromLocationWithClosureExceptionFailure(): void
+	{
+		// calling closure throws an exception
+
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE; Could not create \'TestClosureWithException\'; Test runtime exception');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('TestClosureWithException');
+	}
+
+	public function testCreateFromLocationWithClosureReturnNotObject(): void
+	{
+		// calling closure throws an exception
+
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT; Object not created for \'TestClosureBoolReturn\'');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('TestClosureBoolReturn');
+	}
+
+	// to
+
+	// TODO:
+	// testCreateFromLocationNotLocationNoRegistrationConstructorFailure
+	// testCreateFromLocationNotLocationNoRegistrationSetParamsFailure
+
+	public function testCreateFromRegistry(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class,
+			$this->Container->create('TestClassPlainSimple'),
+			'Can create class from explicit registration'
+		);
+	}
+
+	public function testCreateFromRegistryAndStore(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->Container->create('TestClassPlainSimple');
+		$this->assertArrayNotHasKey('TestClassPlainSimple', $this->Container->list_instances());
+
+		$this->Container->create('TestClassPlainSimple', true);
+		$this->assertArrayHasKey('TestClassPlainSimple', $this->Container->list_instances());
+	}
+
+	public function testCreateFromRegistryWithClosureExceptionFailure(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->register('TestClassWithException', function(): void {
+			throw new RuntimeException('Test runtime exception');
+		});
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE; Could not create \'TestClassWithException\'');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('TestClassWithException');
+	}
+
+	public function testCreateFromRegistryWithClosureReturnNotObject(): void
+	{
+		// calling closure throws an exception
+
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+
+		$this->Container->register('TestClosureBoolReturn', function(): bool {
+			return true;
+		});
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT; Object not created for \'TestClosureBoolReturn\'');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('TestClosureBoolReturn');
+	}
+
+			// 	public function testCreateFromStoredInstantiate()
+			// 	{
+			// 		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			// 			return new \PHPCanvas\Test\TestClassPlainSimple();
+			// 		});
+			// 
+			// 		$this->Container->create('TestClassPlainSimple', true);
+			// 
+			// 		$this->assertInstanceOf(
+			// 			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			// 			$this->Container->create('TestClassPlainSimple')
+			// 		);
+			// 	}
+
+	public function testCreateFromInstantiate()
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+		$this->assertSame('', $this->Container->get_locate_path());
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			$this->Container->create(\PHPCanvas\Test\TestClassPlainSimple::class)
+		);
+	}
+
+	public function testCreateFromInstantiateAndStore()
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+		$this->assertSame('', $this->Container->get_locate_path());
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			$this->Container->create(\PHPCanvas\Test\TestClassPlainSimple::class, true)
+		);
+	}
+
+	public function testCreateFromInstantiateFailureNotExists(): void
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+		$this->assertSame('', $this->Container->get_locate_path());
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_CLASS_NOT_FOUND; Could not find \'ClassDoesNotExist\'');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create('ClassDoesNotExist');
+	}
+
+	public function testCreateFromInstantiateFailureException()
+	{
+		$this->assertSame([], $this->Container->list_locations());
+		$this->assertSame([], $this->Container->list_registry());
+		$this->assertSame([], $this->Container->list_instances());
+		$this->assertSame('', $this->Container->get_locate_path());
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_FAILURE; Could not instantiate \'' . \PHPCanvas\Test\TestClassWithException::class . '\'');
+		$this->expectExceptionCode(500);
+
+		$this->Container->create(\PHPCanvas\Test\TestClassWithException::class);
+	}
+
 // 	public function testCreateFromInstantiateFailure()
 // 	{
 // 		$class = 'TestClassCreateFromInstantiateFailure';
@@ -287,414 +435,377 @@ class ContainerTest extends TestCase
 // 		$this->Container->create($class);
 // 	}
 // 
-// 	public function testCall()
-// 	{
-// 		$class = 'TestClassCall';
-// 		$this->createClassWithSimpleMethod($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$this->assertTrue($res);
-// 	}
-// 
-// 	public function testCallAndStoreReflection()
-// 	{
-// 		$class = 'TestClassCall';
-// 		$this->createClassWithSimpleMethod($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$res = $this->Container->call($obj, 'test', store_reflection: true);
-// 		$this->assertTrue($res);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$this->assertTrue($res);
-// 	}
-// 
-// 	public function testCallWithArgs()
-// 	{
-// 		$class = 'TestClassCallWithArgs';
-// 		$this->createClassWithSimpleMethodWithArgs($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// // TODO:  callable and iterable types
-// 
-// 		$res = $this->Container->call($obj, 'test', [
-// 			1,
-// 			'foo',
-// 			['c' => 'C'],
-// 			true,
-// 			0.1
-// 		]);
-// 		$exp = [
-// 			1,
-// 			'foo',
-// 			['c' => 'C'],
-// 			true,
-// 			0.1,
-// 			2,
-// 			'S2',
-// 			['A2'],
-// 			false,
-// 			0.2
-// 		];
-// 
-// 		$this->assertEquals($exp, $res);
-// 	}
-// 
-// 	public function testCallWithNullableArgs()
-// 	{
-// 		$class = 'TestClassCallWithNullableArgs';
-// 		$this->createClassWithSimpleMethodWithNullableArgs($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = [null, null, null, null];
-// 		$this->assertEquals($exp, $res);
-// 
-// 		$res = $this->Container->call($obj, 'test', [1]);
-// 		$exp = [1, null, null, null];
-// 		$this->assertEquals($exp, $res);
-// 
-// 		$res = $this->Container->call($obj, 'test', [null, 'a']);
-// 		$exp = [null, 'a', null, null];
-// 		$this->assertEquals($exp, $res);
-// 
-// 		$res = $this->Container->call($obj, 'test', [null, null, ['A']]);
-// 		$exp = [null, null, ['A'], null];
-// 		$this->assertEquals($exp, $res);
-// 
-// 		$res = $this->Container->call($obj, 'test', [null, null, null, true]);
-// 		$exp = [null, null, null, true];
-// 		$this->assertEquals($exp, $res);
-// 	}
-// 
-// 	public function testCallWithObjectArgs()
-// 	{
-// 		$class = 'TestClassCallWithObjectArgs';
-// 		$classObject = $class . 'Object';
-// 		$this->createClassWithSimpleMethodWithObjectArgs($class, $classObject, true);
-// 		$path = $this->getClassLocationPath($class);
-// 		$pathObject = $this->getClassLocationPath($classObject);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$this->Container->locate($classObject, $pathObject);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = 'abc';
-// 
-// 		$this->assertEquals($exp, $res);
-// 	}
-// 
-// 	public function testCallWithObjectArgsStoreForceNew()
-// 	{
-// 		$class = 'TestClassCallWithObjectArgsStoreForceNew';
-// 		$classObject = $class . 'Object';
-// 		$this->createClassWithSimpleMethodWithObjectArgsStoreForceNew($class, $classObject, true);
-// 		$path = $this->getClassLocationPath($class);
-// 		$pathObject = $this->getClassLocationPath($class . 'Object');
-// 
-// 		$this->Container->locate($class, $path);
-// 		$this->Container->locate($classObject, $pathObject);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = 0;
-// 		$this->assertEquals($exp, $res, 'Should create new object');
-// 
-// 		$res = $this->Container->call($obj, 'test', [], true);
-// 		$exp = 0;
-// 		$this->assertEquals($exp, $res, 'Should create new object and store');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = 1;
-// 		$this->assertEquals($exp, $res, 'Should call stored object');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = 2;
-// 		$this->assertEquals($exp, $res, 'Should call stored object again');
-// 
-// 		$res = $this->Container->call($obj, 'test', [], false, true);
-// 		$exp = 0;
-// 		$this->assertEquals($exp, $res, 'Should create new object and leave stored object');
-// 
-// 		$res = $this->Container->call($obj, 'test', [], false, true);
-// 		$exp = 0;
-// 		$this->assertEquals($exp, $res, 'Should create new object and leave stored object again');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = 3;
-// 		$this->assertEquals($exp, $res, 'Should call original stored object');
-// 
-// 		$res = $this->Container->call($obj, 'test', [], true, true);
-// 		$exp = 0;
-// 		$this->assertEquals($exp, $res, 'Should create new object and store');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$exp = 1;
-// 		$this->assertEquals($exp, $res, 'Should call new stored object');
-// 
-// 		$res = $this->Container->call($obj, 'test', [], false, true);
-// 		$exp = 0;
-// 		$this->assertEquals($exp, $res, 'Should create new object again');
-// 	}
-// 
-// 	public function testCallReflectionFailure()
-// 	{
-// // 		$class = 'TestClassCall';
-// // 		$this->createClassWithSimpleMethod($class, true);
-// // 		$path = $this->getClassLocationPath($class);
-// // 
-// // 		$this->Container->locate($class, $path);
-// // 		$obj = $this->Container->create($class);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('Could not call stdClass::test');
-// // prx($this->Container->call((object)[], 'test22'));
-// 		$res = $this->Container->call((object)[], 'test');
-// 
-// // 		$this->assertFalse($res);
-// 	}
-// 
-// 	public function testCallWithObjectNullableUnionArgs()
-// 	{
-// 		$class = 'TestClassCallWithObjectNullableUnionArgs';
-// 
-// 		$this->createClassWithSimpleMethodWithNullableUnionArgs($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$this->assertNull($res, 'Should default to NULL');
-// 
-// 		$res = $this->Container->call($obj, 'test', [null]);
-// 		$this->assertNull($res, 'Should be setable as NULL');
-// 
-// 		$res = $this->Container->call($obj, 'test', [false]);
-// 		$this->assertFalse($res, 'Should setable as FALSE');
-// 
-// 		$res = $this->Container->call($obj, 'test', [100]);
-// 		$this->assertEquals(100, $res, 'Should setable as INT');
-// 	}
-// 
-// 	public function testCallWithObjectUnionArgsFailure()
-// 	{
-// 		$class = 'TestClassCallWithObjectUnionArgs';
-// 
-// 		$this->createClassWithSimpleMethodWithUnionArgs($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_CALL_ERR; Could not call TestClassCallWithObjectUnionArgs::test, cannot resolve paramter i');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 	}
-// 
-// 	public function testCallWithObjectReqArgsFailure()
-// 	{
-// 		$class = 'TestClassCallWithObjectReqArgs';
-// 
-// 		$this->createClassWithSimpleMethodWithReqArgs($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		$this->expectException(Exception::class);
-// 		$this->expectExceptionMessage('CONTAINER_CALL_ERR; Could not call TestClassCallWithObjectReqArgs::test, cannot resolve paramter i');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 	}
-// 
-// 	public function testCallWithReqObjectArg()
-// 	{
-// 		$class = 'TestClassCallWithReqObjectArg';
-// 		$classObject = $class . 'Object';
-// 		$this->createClassWithSimpleMethodWithObjectArgsStoreForceNew($class, $classObject, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		static::mockAutoload($classObject);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$this->assertEquals(0, $res, 'Should create new object using get_class_name_from_type()');
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$this->assertEquals(1, $res, 'Should create new object using get_class_name_from_type()');
-// 	}
-// 
-// 	public function testCallWithReqInterfaceArg()
-// 	{
-// 		$class = 'TestClassCallWithReqInterfaceArg';
-// 		$classObject = $class . 'Object';
-// 		$this->createClassWithSimpleMethodWithInterfaceArgs($class, $classObject, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$obj = $this->Container->create($class);
-// 
-// 		static::mockAutoload($classObject . 'Interface');
-// 		static::mockAutoload($classObject);
-// 
-// 		$res = $this->Container->call($obj, 'test');
-// 		$this->assertEquals(0, $res, 'Should create new object using get_class_name_from_type()');
-// 	}
-// 
-// 	public function testCacheName()
-// 	{
-// 		$res = $this->Container->cache_name('class');
-// 		$this->assertIsstring($res);
-// 	}
-// 
-// 	public function testCachePut()
-// 	{
-// 		$res = $this->Container->cache_put('class');
-// 		$this->assertFalse($res, 'Put cache is FALSE if no store_path');
-// 
-// 		$this->Container->set_store(static::$tmpdir);
-// 
-// 		$class = 'TestClassCachePutInstance';
-// 		$obj = (object)['test' => true];
-// 		$res = $this->Container->cache_put($class, $obj);
-// 
-// 		$this->assertTrue($res, 'Can put instance to cache');
-// 
-// 		$class = 'TestClassCachePut';
-// 		$this->createClassPlainSimple($class, true);
-// 		$path = $this->getClassLocationPath($class);
-// 
-// 		$this->Container->locate($class, $path);
-// 		$this->Container->create($class, true);
-// 		$res = $this->Container->cache_put($class);
-// 
-// 		$this->assertTrue($res, 'Can put existing indexed instance to cache');
-// 	}
-// 
-// 	public function testGetCache()
-// 	{
-// 		$res = $this->Container->cache_get('class');
-// 		$this->assertFalse($res, 'Cache is FALSE if no store_path');
-// 
-// 		$this->Container->set_store(static::$tmpdir);
-// 
-// 		$res = $this->Container->cache_get('class');
-// 		$this->assertFalse($res, 'Cache is FALSE if file not readable');
-// 
-// 		file_put_contents(
-// 			static::$tmpdir . '/' . $this->Container->cache_name('class'),
-// 			'test'
-// 		);
-// 		$res = $this->Container->cache_get('class');
-// 		$this->assertFalse($res, 'Cache is FALSE if cannot unserialize');
-// 
-// 		file_put_contents(
-// 			static::$tmpdir . '/' . $this->Container->cache_name('class'),
-// 			'O:1:"A":0:{}'
-// 		);
-// 
-// 		$res = $this->Container->cache_get('class');
-// 		$this->assertTrue($res, 'Cache is TRUE if can unserialize');
-// 	}
-// 
-// 	public function testGet()
-// 	{
-// 		$class = 'TestClassGet';
-// 		$className = 'TestClassGetName';
-// 		$this->createClassPlainSimple($class, true);
-// 
-// 		$path = $this->getClassLocationPath($class);
-// 		$this->Container->locate($className, $path);
-// 
-// 		$res = $this->Container[$className];
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 		$this->assertEquals('A', $res->A);
-// 	}
-// 
-// 	public function testGetAssumedLocation()
-// 	{
-// 		$class = 'TestClassGetAssumedLocation';
-// 		$this->createClassPlainSimple($class, true);
-// 
-// 		$this->Container->set_locate_path(static::$dir_locations);
-// 
-// 		$res = $this->Container[$class];
-// 		$this->assertInstanceOf($class, $res, 'If class not registered or located, should assume register closure in locations path');
-// 	}
-// 
-// 	public function testGetFromRegistry()
-// 	{
-// 		$class = 'TestClassGetFromRegistry';
-// 		$this->createClassPlainSimple($class, true);
-// 
-// 		$closure = $this->getClassClosure($class);
-// 
-// 		$this->Container->register($class, $closure);
-// 		$res = $this->Container[$class];
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testGetFromInstantiate()
-// 	{
-// 		$class = 'TestClassGetFromInstantiate';
-// 		$this->createClassPlainSimple($class);
-// 
-// 		static::mockAutoload($class);
-// 
-// 		$res = $this->Container[$class];
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testGetFromAlias()
-// 	{
-// 		$class = 'TestClassGetFromAlias';
-// 		$this->createClassPlainSimple($class, true);
-// 
-// 		$path = $this->getClassLocationPath($class);
-// 		$this->Container->locate($class, $path);
-// 
-// 		$alias = 'TestClassAlias';
-// 		$this->Container->set_alias($alias, $class);
-// 
-// 		$res = $this->Container[$alias];
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 
-// 		$alias2 = 'TestClassAlias2';
-// 		$this->Container->set_alias($alias2, $class);
-// 
-// 		$res = $this->Container[$alias2];
-// 
-// 		$this->assertInstanceOf($class, $res);
-// 	}
-// 
-// 	public function testExists(): void
-// 	{
-// 		$res = $this->Container->exists('zzz');
-// 		$this->assertFalse($res);
-// 	}
-// 
+	public function testCall()
+	{
+		$this->assertTrue($this->Container->call(
+			$this->Container->create(\PHPCanvas\Test\TestClassWithSimpleMethods::class), 'test'
+		));
+	}
+
+	public function testCallNoMethod()
+	{
+		$this->expectException(BadMethodCallException::class);
+		$this->expectExceptionMessage('CONTAINER_CALL_ERR; Not callable ' . \PHPCanvas\Test\TestClassWithSimpleMethods::class . '::test2');
+		$this->expectExceptionCode(500);
+
+		$this->assertTrue($this->Container->call(
+			$this->Container->create(\PHPCanvas\Test\TestClassWithSimpleMethods::class), 'test2'
+		));
+	}
+
+	public function testCallAndStoreReflection()
+	{
+		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithSimpleMethods::class);
+
+		$this->assertTrue($this->Container->call($obj, 'test', store_reflection: true));
+
+		$this->assertTrue($this->Container->call($obj, 'test'));
+	}
+
+	public function testCallWithArgs(): void
+	{
+		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithArguments::class);
+
+		$this->assertEquals([
+			1,
+			'foo',
+			['c' => 'C'],
+			true,
+			0.1,
+			2,
+			'S2',
+			['A2'],
+			false,
+			0.2
+		], $this->Container->call($obj, 'test', [
+			1,
+			'foo',
+			['c' => 'C'],
+			true,
+			0.1
+		]));
+	}
+
+	public function testCallWithNullableArgs(): void
+	{
+		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithNullableArguments::class);
+
+		$this->assertEquals([null, null, null, null], $this->Container->call($obj, 'test'));
+
+		$this->assertEquals([1, null, null, null], $this->Container->call($obj, 'test', [1]));
+
+		$this->assertEquals([null, 'a', null, null], $this->Container->call($obj, 'test', [null, 'a']));
+
+		$this->assertEquals([null, null, ['A'], null], $this->Container->call($obj, 'test', [null, null, ['A']]));
+
+		$this->assertEquals([null, null, null, true], $this->Container->call($obj, 'test', [null, null, null, true]));
+	}
+
+	public function testCallWithObjectArgs()
+	{
+		$this->Container->locate('TestClassWithObjectArguments', $this->dir_locations . '/TestClassWithObjectArguments.php');
+		$this->Container->locate('TestClassWithSimpleMethods', $this->dir_locations . '/TestClassWithSimpleMethods.php');
+
+		$this->assertEquals(
+			'abc',
+			$this->Container->call($this->Container->create('TestClassWithObjectArguments'), 'get_string')
+		);
+	}
+
+	public function testCallWithObjectArgsStoreForceNew()
+	{
+		$this->Container->locate('TestClassWithObjectArguments', $this->dir_locations . '/TestClassWithObjectArguments.php');
+		$this->Container->locate('TestClassWithSimpleMethods', $this->dir_locations . '/TestClassWithSimpleMethods.php');
+		$obj = $this->Container->create('TestClassWithObjectArguments');
+
+		$this->assertEquals(0, $this->Container->call($obj, 'inc'), 'Should create new object');
+
+		$this->assertEquals(0, $this->Container->call($obj, 'inc', store: true), 'Should create new object and store');
+
+		$this->assertEquals(1, $this->Container->call($obj, 'inc'), 'Should call stored object');
+
+		$this->assertEquals(2, $this->Container->call($obj, 'inc'), 'Should call stored object again');
+
+		$this->assertEquals(0, $this->Container->call($obj, 'inc', force_new: true), 'Should create new object and leave stored object');
+
+		$this->assertEquals(0, $this->Container->call($obj, 'inc', force_new: true), 'Should create new object and leave stored object again');
+
+		$this->assertEquals(3, $this->Container->call($obj, 'inc'), 'Should call original stored object');
+
+		$this->assertEquals(0, $this->Container->call($obj, 'inc', store: true, force_new: true), 'Should create new object and store');
+
+		$this->assertEquals(1, $this->Container->call($obj, 'inc'), 'Should call new stored object');
+
+		$this->assertEquals(0, $this->Container->call($obj, 'inc', force_new: true), 'Should create new object again');
+	}
+
+	public function testCallUnknownMethod()
+	{
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('Could not call stdClass::test');
+
+		$this->Container->call((object)[], 'test');
+	}
+
+	public function testCallWithObjectNullableUnionArgs()
+	{
+		$obj = $this->Container->create(\PHPCanvas\Test\TestClassWithNullableUnionArgs::class);
+
+		$this->assertNull($this->Container->call($obj, 'test'), 'Should default to NULL');
+
+		$this->assertNull($this->Container->call($obj, 'test', [null]), 'Should be setable as NULL');
+
+		$this->assertFalse($this->Container->call($obj, 'test', [false]), 'Should setable as FALSE');
+
+		$this->assertEquals(100, $this->Container->call($obj, 'test', [100]), 'Should setable as INT');
+	}
+
+	public function testCallWithObjectUnionArgsFailure()
+	{
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithUnionArgs::test; cannot handle union type parameter i');
+
+		$res = $this->Container->call($this->Container->create(\PHPCanvas\Test\TestClassWithUnionArgs::class), 'test');
+	}
+
+	public function testCallWithObjectReqArgsFailure()
+	{
+		$this->Container->locate('TestClassWithSimpleMethods', $this->dir_locations . '/TestClassWithSimpleMethods.php');
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithSimpleMethods::req; cannot resolve parameter i');
+
+		$res = $this->Container->call($this->Container->create('TestClassWithSimpleMethods'), 'req');
+	}
+
+	public function testCallWithReqObjectArg()
+	{
+		$this->Container->register('TestClassWithObjectArguments', function(): \PHPCanvas\Test\TestClassWithObjectArguments {
+			return new \PHPCanvas\Test\TestClassWithObjectArguments();
+		});
+		$obj = $this->Container->create('TestClassWithObjectArguments');
+
+		$this->assertTrue($this->Container->call($obj, 'test'), 'Should create new object using paramater type');
+	}
+
+	public function testCallWithReqInterfaceArg()
+	{
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->assertSame('iface', 
+			$this->Container->call($this->Container->create('TestClassWithSimpleMethods'), 'iface'),
+			'Should create new object using get_class_name_from_type()');
+	}
+
+	public function testCacheName()
+	{
+		$res = $this->Container->cache_name('class');
+		$this->assertIsstring($res);
+	}
+
+	public function testCachePut()
+	{
+		$res = $this->Container->cache_put('class');
+		$this->assertFalse($res, 'Put cache is FALSE if no store_path');
+
+		$this->Container->set_store($this->dir_store);
+
+		$this->assertTrue(
+			$this->Container->cache_put('TestClassCachePutDirect', (object)['test' => true]),
+			'Can put an object to cache'
+		);
+
+		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+		$this->Container->create('TestClassPlainSimple', true);
+
+		$this->assertTrue(
+			$this->Container->cache_put('TestClassPlainSimple'),
+			'Can put existing indexed instance to cache'
+		);
+	}
+
+	public function testGetCache()
+	{
+		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if no store_path');
+
+		$this->Container->set_store($this->dir_store);
+
+		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if file not readable');
+
+		file_put_contents(
+			$this->dir_store . DIRECTORY_SEPARATOR . $this->Container->cache_name('class'),
+			'test'
+		);
+
+		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if cannot unserialize');
+
+		file_put_contents(
+			$this->dir_store . DIRECTORY_SEPARATOR . $this->Container->cache_name('class'),
+			serialize(['a'])
+		);
+
+		$this->assertFalse($this->Container->cache_get('class'), 'Cache is FALSE if not an object');
+
+		$this->Container->cache_put('TestClassCachePutDirect', (object)['test' => true]);
+		$this->assertTrue(
+			$this->Container->cache_get('TestClassCachePutDirect'),
+			'Must be able to unserialize an object'
+		);
+			
+		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+		$this->Container->create('TestClassPlainSimple', true);
+		$this->Container->cache_put('TestClassPlainSimple');
+
+		$this->assertTrue(
+			$this->Container->cache_get('TestClassPlainSimple'),
+			'Must be able to unserialize an existing indexed instance'
+		);
+
+		$this->assertFalse(
+			$this->Container->cache_get('TestClassPlainSimple', 'ClassNotExists'),
+			'If instanceof is not match, return false'
+		);
+
+		$this->assertTrue(
+			$this->Container->cache_get('TestClassPlainSimple', \PHPCanvas\Test\TestClassPlainSimple::class),
+			'Must be able to unserialize an existing indexed instance and confirm instanceof'
+		);
+
+
+	}
+
+
+	public function testGet()
+	{
+		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+
+		$this->assertInstanceOf(\PHPCanvas\Test\TestClassPlainSimple::class, $this->Container->get('TestClassPlainSimple'));
+	}
+
+	public function testGetFromSet(): void
+	{
+		$this->Container->set('TestClassPlainSimple1', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class,
+			$this->Container->get('TestClassPlainSimple1')
+		);
+	}
+
+	public function testGetFromAssumedLocation()
+	{
+		$this->Container->set_locate_path($this->dir_locations);
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			$this->Container->get('TestClassPlainSimple'), 
+			'If class not registered or located, should assume register closure in locations path'
+		);
+	}
+
+	public function testGetFromRegistry()
+	{
+		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			$this->Container->get('TestClassPlainSimple'), 
+		);
+	}
+
+	public function testGetFromAlias()
+	{
+		$this->Container->locate('TestClassPlainSimple', $this->dir_locations . '/TestClassPlainSimple.php');
+
+		$this->Container->set_alias('TestClassAlias', 'TestClassPlainSimple');
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			$this->Container->get('TestClassAlias'), 
+		);
+
+		$this->Container->set_alias('TestClassAlias2', 'TestClassPlainSimple');
+
+		$this->assertInstanceOf(
+			\PHPCanvas\Test\TestClassPlainSimple::class, 
+			$this->Container->get('TestClassAlias2'), 
+		);
+
+	}
+
+	public function testSet(): void
+	{
+		// by registry
+
+		$this->assertFalse($this->Container->exists('TestClassPlainSimple1'));
+
+		$this->Container->set('TestClassPlainSimple1', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->assertTrue($this->Container->exists('TestClassPlainSimple1'));
+		$this->assertArrayHasKey('TestClassPlainSimple1', $this->Container->list_registry());
+
+		// by instance
+
+		$this->assertFalse($this->Container->exists('TestClassPlainSimple2'));
+
+		$this->Container->set('TestClassPlainSimple2', new \PHPCanvas\Test\TestClassPlainSimple());
+
+		$this->assertTrue($this->Container->exists('TestClassPlainSimple2'));
+		$this->assertArrayHasKey('TestClassPlainSimple2', $this->Container->list_instances());
+	}
+
+	public function testExists(): void
+	{
+		// by registry
+
+		$this->assertFalse($this->Container->exists('TestClassPlainSimple1'));
+
+		$this->Container->register('TestClassPlainSimple1', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+
+		$this->assertTrue($this->Container->exists('TestClassPlainSimple1'));
+
+		// by location
+
+		$this->assertFalse($this->Container->exists('TestClassPlainSimple2'));
+
+		$this->Container->locate('TestClassPlainSimple2', $this->dir_locations . '/TestClassPlainSimple.php');
+
+		$this->assertTrue($this->Container->exists('TestClassPlainSimple2'));
+
+		// by instance
+		
+		$this->assertFalse($this->Container->exists('TestClassPlainSimple3'));
+
+		$this->Container->set('TestClassPlainSimple3', new \PHPCanvas\Test\TestClassPlainSimple());
+
+		$this->assertTrue($this->Container->exists('TestClassPlainSimple3'));
+	}
+
+	public function testUnset(): void
+	{
+		$this->assertFalse($this->Container->exists('TestClassPlainSimple'));
+
+		$this->Container->register('TestClassPlainSimple', function(): \PHPCanvas\Test\TestClassPlainSimple {
+			return new \PHPCanvas\Test\TestClassPlainSimple();
+		});
+		
+		$this->assertArrayNotHasKey('TestClassPlainSimple', $this->Container->list_instances());
+		$this->Container->create('TestClassPlainSimple', true);
+
+		$this->assertArrayHasKey('TestClassPlainSimple', $this->Container->list_instances());
+		$this->Container->unset('TestClassPlainSimple');
+
+		$this->assertArrayNotHasKey('TestClassPlainSimple', $this->Container->list_instances());
+	}
+
 // 	public function testOffset()
 // 	{
 // 		$class = 'TestClassUnset';
@@ -737,6 +848,21 @@ class ContainerTest extends TestCase
 // 		$this->Container->offsetSet(111, false);
 // 	}
 // 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 	protected function createClassPlainSimple(string $className, bool $createRegisterFile = false): void
 // 	{
 // 		file_put_contents(

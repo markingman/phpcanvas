@@ -8,5 +8,7 @@ RUN echo "xdebug.mode=coverage" >> /usr/local/etc/php/conf.d/xdebug.ini
 
 RUN apt-get update && apt-get install -y unzip p7zip ssl-cert
 
+# TODO  get composer from image here
+
 RUN a2enmod rewrite ssl headers expires
 RUN a2ensite default-ssl.conf

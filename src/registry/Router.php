@@ -1,19 +1,16 @@
 <?php
 
 return function (PHPCanvas\ContainerInterface $c): PHPCanvas\Routing\Router {
-	if (!(($Config = $c->get('Config')) instanceof PHPCanvas\ConfigInterface)) {
-		throw new Exception('Expected Container to have Config');
+	if (!($Config = $c->get('Config')) instanceof PHPCanvas\ConfigInterface) {
+		throw new LogicException('Expected Container to have Config');
 	}
 
-	if (
-		!isset($Config->ACTION_DEFAULT) or !is_string($Config->ACTION_DEFAULT)
-		or !isset($Config->ROUTES) or !is_string($Config->ROUTES)
-	) {
-		throw new Exception('Expected Config to have ACTION_DEFAULT and ROUTES');
+	if (!isset($Config->ACTION_DEFAULT) or !isset($Config->ROUTES)) {
+		throw new LogicException('Expected Config to have ACTION_DEFAULT and ROUTES');
 	}
 
 	if (!$routes_path = realpath($Config->ROUTES)) {
-		throw new Exception('Could not find ROUTES path');
+		throw new LogicException('Could not find ROUTES path');
 	}
 
 	$Router = new PHPCanvas\Routing\Router($Config->ACTION_DEFAULT);
