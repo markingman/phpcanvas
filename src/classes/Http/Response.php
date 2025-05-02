@@ -1,6 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas\Http;
+
+use RuntimeException;
 
 class Response implements ResponseInterface
 {
@@ -17,24 +19,32 @@ class Response implements ResponseInterface
 		$this->set_terminate_after_response($terminate_after_response);
 	}
 
-	public function set_terminate_after_response(bool $terminate_after_response): void
+	public function set_terminate_after_response(bool $terminate_after_response): self
 	{
 		$this->terminate_after_response = $terminate_after_response;
+
+		return $this;
 	}
 
-	public function set_char_set(string $set): void
+	public function set_char_set(string $set): self
 	{
 		$this->char_set = $set;
+
+		return $this;
 	}
 
-	public function set_response_code(int $code): void
+	public function set_response_code(int $code): self
 	{
 		$this->response_code = $code;
+
+		return $this;
 	}
 
-	public function set_header(string $key, string $value): void
+	public function set_header(string $key, string $value): self
 	{
 		$this->headers[$key] = $value;
+
+		return $this;
 	}
 
 	public function unset_header(string $key): void
@@ -50,7 +60,7 @@ class Response implements ResponseInterface
 		string $domain = '',
 		bool $secure = false,
 		bool $httponly = false,
-	): void {
+	): self {
 		$this->cookies[$name] = new Cookie(
 			value: $value,
 			expires: $expires,
@@ -59,11 +69,15 @@ class Response implements ResponseInterface
 			secure: $secure,
 			httponly: $httponly,
 		);
+
+		return $this;
 	}
 
-	public function unset_cookie(string $key): void
+	public function unset_cookie(string $key): self
 	{
 		unset($this->cookies[$key]);
+
+		return $this;
 	}
 
 	public function html(string $html): void
@@ -80,20 +94,37 @@ class Response implements ResponseInterface
 
 	public function json(string $json): void
 	{
-		$this->set_header('Content-Type', sprintf('text/javascript; charset=%s', $this->char_set));
+		$this->set_header('Content-Type', sprintf('application/json; charset=%s', $this->char_set));
 		$this->respond($json);
 	}
 
-	public function file(string $file, bool $unlink_file = true): void
+	/** If $set_content_length FALSE will cause chunked downloads in common web server environments */
+	public function file(string $file, bool $set_content_length = false, bool $unlink_file = true, bool $inline = false): void
 	{
-		$this->set_header('Content-Type', sprintf('%s; charset=%s', mime_content_type($file), $this->char_set));
-		$this->set_header('Content-Disposition', sprintf('attachment;filename=%s', basename($file)));
-		$this->set_header('Content-Length', strval(filesize($file)));//careful of gzip here
+		if (!$mime_type = mime_content_type($file)) {
+			throw new RuntimeException('RESPONSE_MIME_TYPE; Could not resolve mime-type');
+		}
+
+		if ($set_content_length) {
+			if (!$size = filesize($file)) {
+				throw new RuntimeException('RESPONSE_FILE_SIZE; Could not get file size');
+			}
+		}
+
+		$this->set_header('Content-Type', sprintf('%s; charset=%s', $mime_type, $this->char_set));
+		$this->set_header('Content-Disposition', sprintf('%ss; filename=%s', $inline ? 'inline' : 'attachment', basename($file)));
+		if ($set_content_length) {
+			$this->set_header('Content-Length', strval($size));
+		}
+		$this->set_header('Content-Transfer-Encoding', 'binary');
 		$this->respond(
-			function () use ($file, $unlink_file) {
-				readfile($file);
+			function () use ($file, $set_content_length, $unlink_file) {
+				$this->readfile($file);
+				if ($set_content_length) {
+					$this->flush();
+				}
 				if ($unlink_file) {
-					unlink($file);
+					$this->unlink($file);
 				}
 			}
 		);
@@ -108,10 +139,10 @@ class Response implements ResponseInterface
 
 	public function respond(string|callable|null $content = '', bool $remove_headers = false): void
 	{
-		http_response_code($this->response_code);
+		$this->http_response_code($this->response_code);
 
 		if ($remove_headers) {
-			header_remove();// CAUTION this will remove Set-Cookie and Cache-Control
+			$this->header_remove();// CAUTION this will remove Set-Cookie and Cache-Control
 		}
 
 		foreach ($this->headers as $key => $value) {
@@ -136,5 +167,38 @@ class Response implements ResponseInterface
 		if ($this->terminate_after_response) {
 			exit;// @codeCoverageIgnore
 		}
+	}
+
+	protected function http_response_code(int $response_code = 0): int|bool
+	{
+		return http_response_code($response_code);
+	}
+
+	protected function header_remove(): void
+	{
+		header_remove();
+	}
+
+	protected function readfile(string $file): int
+	{
+		if (($i = readfile($file)) === false) {
+			throw new RuntimeException("RESPONSE_READFILE_FAIL; Failed reading file '$file'");
+		}
+
+		return $i;
+	}
+
+	protected function flush(): void
+	{
+		flush();
+	}
+
+	protected function unlink(string $file): true
+	{
+		if (!unlink($file)) {
+			throw new RuntimeException("RESPONSE_UNLINK_FAIL; Failed to unlink file '$file'");
+		}
+
+		return true;
 	}
 }

@@ -3,11 +3,12 @@
 namespace PHPCanvas\Routing;
 
 use Closure;
-use Exception;
+use LogicException;
 
 class Router implements RouterInterface
 {
-	const METHODS = [
+	/** @var array|int[] */
+	public const array METHODS = [
 		'GET' => 1,
 		'HEAD' => 2,
 		'POST' => 4,
@@ -65,7 +66,6 @@ class Router implements RouterInterface
 	/**
 	 * @param ?array<string, string> $vars
 	 * @param array<string>|string|null $method
-	 * @throws Exception
 	 */
 	public function add_route(
 		string $name,
@@ -80,11 +80,15 @@ class Router implements RouterInterface
 		$action = $action ?? $this->action_default;
 
 		if (empty($path)) {
-			throw new Exception('ROUTER_NO_PATH; No path set for route');
+			throw new LogicException('ROUTER_NO_PATH; No path set for route');
+		}
+
+		if ($path[0] === '{') {
+			throw new LogicException('ROUTER_NO_PATH; Path cannot start with a variable');
 		}
 
 		if (empty($controller) and is_null($callback)) {
-			throw new Exception('ROUTER_NO_CONTROLLER; No controller set for route');
+			throw new LogicException('ROUTER_NO_CONTROLLER; No controller set for route');
 		}
 
 		// can set action like 'name' => ['controller' => 'MyController::action']
@@ -109,67 +113,23 @@ class Router implements RouterInterface
 
 		// get index (any override value or, if present, the first path fragment)
 
-		$index = $index ?? '';
-		if (empty($index)) {
-			preg_match('~^([^/{]+/)~', $path, $m);
-
-			if (count($m) === 2) {
-				$index = substr($m[1], 0, -1);
-			}
-		}
+		$index = $this->add_route_index($index, $path);
 
 		// get vars (all the {var} items and any explicitly set values)
 
-		preg_match_all('~{([^}]+)}~', $path, $m);
-		$inline_vars = [];
-		if (count($m) === 2) {
-			$inline_vars = array_fill_keys($m[1], '');
-		}
-
-		if (is_null($vars)) {
-			$vars = [];
-		}
-
-		foreach ($inline_vars as $k => $v) {
-			if (!isset($vars[$k])) {
-				$vars[(string)$k] = (string)$v;
-			}
-		}
+		$vars = $this->add_route_vars($vars, $path);
 
 		// create URL regx (convert foo/{bar} notation to regx)
 
-		$esc = '~';
-		$route_esc = preg_replace('~\{[^}]+}~', PHP_EOL, $path);//make {markers} into EOL placeholder chars for preg_quote()
-		if (!is_string($route_esc)) {
-			throw new Exception('ROUTER_ADD_ROUTE; Cannot add route path');
-		}
-		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
-		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholder chars back to reqx
-		if ($any) {
-			$route_esc .= '.*';//TODO is this .* or just * ?
-		}
-		$regx = $esc . '^' . $route_esc . '$' . $esc;//make regx using $esc chars
+		$regx = $this->add_route_regx($any, $path);
 
 		// create rewrite sprintf (so get link uses sprintf() rather than str_replace
 
-		$sprintf = (string)preg_replace('~{([^}]+)}\**~', '%s', $path);
-		if ($any) {
-			$sprintf .= '%s';
-		}
+		$sprintf = $this->add_route_rewrite($any, $path);
 
 		// normalise method
 
-// 		$params['method'] = (array)$params['method'];
-// 		foreach ($params['method'] as $k => $v) {
-// 			$params['method'][$k] = strtoupper($v);
-// 		}
-		$method = empty($method) ? [] : array_map('strtoupper', (array)$method);
-		$methodi = 0;
-		foreach (static::METHODS as $method_type => $method_val) {
-			if (in_array($method_type, $method)) {
-				$methodi += $method_val;
-			}
-		}
+		$methodi = $this->add_route_normalise_method($method);
 
 		// store as integer
 
@@ -210,11 +170,14 @@ class Router implements RouterInterface
 
 		$i = $this->iname[$name];
 		unset($this->routes[$i], $this->iname[$name]);
-		foreach ($this->index as $index) {
-			foreach ($index as $k => $v) {
+		foreach ($this->index as $index => $items) {
+			foreach ($items as $k => $v) {
 				if ($v === $i) {
-					unset($this->index[$name][$k]);
+					unset($this->index[$index][$k]);
 				}
+			}
+			if (empty($this->index[$index])) {
+				unset($this->index[$index]);
 			}
 		}
 
@@ -272,9 +235,7 @@ class Router implements RouterInterface
 		];
 	}
 
-	/** @return false|array{controller: string, action: string, vars: array<string, string>}
-	 * @throws Exception
-	 */
+	/** @return false|array{controller: string, action: string, vars: array<string, string>} */
 	public function get_route(string $method, string $url): false|array
 	{
 		$url = trim($url, '/');
@@ -308,7 +269,7 @@ class Router implements RouterInterface
 
 	/**
 	 * @param array<string, string> $vars
-	 * @throws Exception
+	 * @throws LogicException If no route found (should always exist)
 	 */
 	public function get_rewrite(string $name, array $vars = []): string
 	{
@@ -334,7 +295,7 @@ class Router implements RouterInterface
 
 			return '/' . $link;
 		} else {
-			throw new Exception(sprintf('ROUTER_NO_ROUTE; No link named %s', $name));
+			throw new LogicException(sprintf('ROUTER_NO_ROUTE; No link named %s', $name));
 		}
 	}
 
@@ -364,7 +325,6 @@ class Router implements RouterInterface
 	 *  action : string,
 	 *  vars : array<string, string>
 	 * }
-	 * @throws Exception
 	 */
 	protected function parse_route(string $method, Route $route, array $m, string $url): false|array
 	{
@@ -382,12 +342,12 @@ class Router implements RouterInterface
 				or !isset($ret[1]) or !is_string($ret[1])
 				or !isset($ret[2]) or !is_array($ret[2])
 			) {
-				throw new Exception('ROUTER_INVALID_CALLBACK; callback returned invalid structure');
+				throw new LogicException('ROUTER_INVALID_CALLBACK; callback returned invalid structure');
 			}
 
 			foreach ($ret[2] as $k => $v) {
 				if (!is_string($k) or !is_string($v)) {
-					throw new Exception('ROUTER_INVALID_CALLBACK; callback returned invalid structure');
+					throw new LogicException('ROUTER_INVALID_CALLBACK; callback returned invalid structure');
 				}
 			}
 
@@ -403,5 +363,100 @@ class Router implements RouterInterface
 		}
 
 		return ['controller' => $route->controller, 'action' => $route->action, 'vars' => $this->get_route_vars($route->vars, $m)];
+	}
+
+	/**
+	 * Determines the route index used for fast lookup.
+	 * Defaults to the first static path segment if none provided.
+	 */
+	private function add_route_index(?string $index, string $path): string
+	{
+		$index = $index ?? '';
+
+		if (empty($index)) {
+			preg_match('~^([^/{]+/)~', $path, $m);
+
+			if (count($m) === 2) {
+				$index = substr($m[1], 0, -1);
+			}
+		}
+
+		return $index;
+	}
+
+	/**
+	 * @param ?array<string, string> $vars
+	 * @return array<string, string>
+	 */
+	private function add_route_vars(?array $vars, string $path): array
+	{
+		preg_match_all('~{([^}]+)}~', $path, $m);
+
+		$inline_vars = [];
+		if (count($m) === 2) {
+			$inline_vars = array_fill_keys($m[1], '');
+		}
+
+		if (is_null($vars)) {
+			$vars = [];
+		}
+
+		foreach ($inline_vars as $k => $v) {
+			if (!isset($vars[$k])) {
+				$vars[(string)$k] = (string)$v;
+			}
+		}
+
+		return $vars;
+	}
+
+	private function add_route_regx(bool $any, string $path): string
+	{
+		$esc = '~';
+		$route_esc = preg_replace('~\{[^}]+}~', PHP_EOL, $path);//temporarily mark var positions ("{markers}") with EOL placeholder chars safely escape preg_quote()
+		if (!is_string($route_esc)) {
+			throw new LogicException('ROUTER_ADD_ROUTE; Cannot add route path');
+		}
+		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
+		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholder chars back to reqx
+		if ($any) {
+			$route_esc .= '.*';//TODO is this .* or just * ?
+		}
+
+		return $esc . '^' . $route_esc . '$' . $esc;//make regx using $esc chars
+	}
+
+	private function add_route_rewrite(bool $any, string $path): string
+	{
+		if (!is_string($sprintf = preg_replace('~{([^}]+)}\**~', '%s', $path))) {
+			throw new LogicException("ROUTER; Invalid regx in '$path'");
+		}
+
+		if ($any) {
+			$sprintf .= '%s';
+		}
+
+		return $sprintf;
+	}
+
+	/** @param array<string>|string|null $method */
+	private function add_route_normalise_method(array|string|null $method): int
+	{
+		if (is_string($method)) {
+			$method = [strtoupper($method)];
+		} elseif (is_array($method)) {
+			$method = array_map('strtoupper', $method);
+		} else {
+			$method = [];
+		}
+
+		$methodi = 0;
+		foreach (static::METHODS as $method_type => $method_val) {
+			if (in_array($method_type, $method)) {
+				$methodi += $method_val;
+			}
+		}
+
+		return $methodi;
 	}
 }

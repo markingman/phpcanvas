@@ -15,18 +15,18 @@ try {
 }
 
 if (!$Container->cache_get('Config', PHPCanvas\Config::class)) {
-	$Container->locate('Config', $dir . '/register.Config.php', ['config_paths' => $config_paths, 'config' => $config]);
+	$Container->locate('Config', $dir . '/Config.php', ['config_paths' => $config_paths, 'config' => $config]);
 }
 
 foreach ([
-			 ['App', $dir . '/register.App.php', false],
-			 ['Dispatch', $dir . '/register.Dispatch.php', false],
-			 ['Errors', $dir . '/register.Errors.php', false],
-			 ['Links', $dir . '/register.Links.php', false],
-			 ['Log', $dir . '/register.Log.php', false],
-			 ['Request', $dir . '/register.Request.php', false],
-			 ['Response', $dir . '/register.Response.php', false],
-			 ['Router', $dir . '/register.Router.php', true],
+			 ['App', $dir . '/App.php', false],
+			 ['Dispatch', $dir . '/Dispatch.php', false],
+			 ['Errors', $dir . '/Errors.php', false],
+			 ['Links', $dir . '/Links.php', false],
+			 ['Log', $dir . '/Log.php', false],
+			 ['Request', $dir . '/Request.php', false],
+			 ['Response', $dir . '/Response.php', false],
+			 ['Router', $dir . '/Router.php', true],
 		 ] as $it) {
 	if ($it[2] and !$Container->cache_get($it[0])) {
 		$Container->locate($it[0], $it[1]);

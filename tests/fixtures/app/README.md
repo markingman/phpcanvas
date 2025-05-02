@@ -1,0 +1,1 @@
+This is a sample app used with the integration tests

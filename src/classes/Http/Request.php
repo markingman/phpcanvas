@@ -1,77 +1,64 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas\Http;
 
+use DomainException;
+use RuntimeException;
+
+/**
+ * Immutable wrapper around PHP's superglobals, with sanitization and filtering utilities.
+ *
+ * Handles GET, POST, FILES, SERVER, and COOKIE input, plus GETX override values.
+ */
 class Request implements RequestInterface
 {
-	const REGX_VAR = '~^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$~i';
+	public const string REGX_VAR = '~^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$~i';
+	public const string INPUT_TYPE_GET = 'GET';
+	public const string INPUT_TYPE_POST = 'POST';
+	public const string INPUT_TYPE_GETX = 'GETX';
 
-	// _GET, _POST etc presume COW
-
-	/** @var array<string|mixed> $_GET */
-	public /*TODO: readonly*/
-	array $_GET = [];
-	/** @var array<string|mixed> $_POST */
-	public /*TODO: readonly*/
-	array $_POST = [];
-	/** @var array<string|mixed> $_FILES */
-	public /*TODO: readonly*/
-	array $_FILES = [];
-	/** @var array<string|mixed> $_SERVER */
-	public /*TODO: readonly*/
-	array $_SERVER = [];
-	/** @var array<string|string> $_COOKIE */
-	public /*TODO: readonly*/
-	array $_COOKIE = [];
+	protected ?bool $is_ajax = null;
+	protected ?bool $is_ssl = null;
+	/** @var array<string, mixed> $GETX Manually set GETX values, e.g. from /url/path/{var} */
+	protected array $GETX = [];
 	protected ?string $method = null;
 	protected ?string $path = null;
 	protected ?string $ua = null;
 	protected ?string $ip = null;
 	protected ?string $ref = null;
-	/** @var array<string> $headers */
+	/** @var array<string, string> $headers */
 	protected ?array $headers = null;
 
 	/**
-	 * @param array<string, mixed>|null $get
-	 * @param array<string, mixed>|null $post
-	 * @param array<string, mixed>|null $files
-	 * @param array<string, mixed>|null $server
-	 * @param array<string, string>|null $cookie
+	 * Remember COW semantics, omitted &'s are intentional
+	 * @param array<string, mixed> $GET
+	 * @param array<string, mixed> $POST
+	 * @param array<string, mixed> $FILES
+	 * @param array<string, mixed> $SERVER
+	 * @param array<string, string> $COOKIE
 	 */
-	public function __construct(?array $get = null, ?array $post = null, ?array $files = null, ?array $server = null, ?array $cookie = null)
-	{
-		$this->set_get($get);
-		$this->set_post($post);
-		$this->set_files($files);
-		$this->set_server($server);
-		$this->set_cookie($cookie);
+	public function __construct(
+		protected readonly array $GET,
+		protected readonly array $POST,
+		protected readonly array $FILES,
+		protected readonly array $SERVER,
+		protected readonly array $COOKIE,
+	) {
 	}
 
-	/**
-	 * @param array<string, mixed>|null $files
-	 */
-	public function set_files(?array $files = null): void
-	{
-		$this->set('_FILES', is_null($files) ? $_FILES : $files);
-	}
-
-	/**
-	 * @param array<string>|null $headers
-	 */
+	/** @param array<string>|null $headers */
 	public function set_headers(?array $headers = null): void
 	{
 		if (is_null($headers)) {
-			$this->headers = /*is_callable('getallheaders') ? */
-				getallheaders()/* : []*/
-			;
-		} else {
-			$this->headers = $headers;
+			$headers = str_contains($this->php_sapi_name(), 'cli') ? [] : $this->getallheaders();
 		}
+
+		$this->headers = $headers ? array_change_key_case($headers) : [];
 	}
 
 	public function set_get_value(string $k, string $v): void
 	{
-		$this->_GET[$k] = $v;
+		$this->GETX[$k] = $v;
 	}
 
 	public function get_header(string $header): string|null
@@ -80,104 +67,75 @@ class Request implements RequestInterface
 			$this->set_headers();
 		}
 
-		return $this->headers[$header] ?? null;
+		return $this->headers[strtolower($header)] ?? null;
 	}
 
+	/** Retrieves a GET parameter, using GETX override if defined */
 	public function get_get(string $key): ?string
 	{
-		return (isset($this->_GET[$key]) and is_string($this->_GET[$key])) ? $this->_GET[$key] : null;
-	}
-
-	/**
-	 * @param array<string, mixed>|null $get
-	 */
-	public function set_get(?array $get = null): void
-	{
-		$this->set('_GET', is_null($get) ? $_GET : $get);
+		if (isset($this->GETX[$key]) and is_string($this->GETX[$key])) {
+			return $this->GETX[$key];
+		} else {
+			return (isset($this->GET[$key]) and is_string($this->GET[$key])) ? $this->GET[$key] : null;
+		}
 	}
 
 	public function get_post(string $key): ?string
 	{
-		return (isset($this->_POST[$key]) and is_string($this->_POST[$key])) ? $this->_POST[$key] : null;
-	}
-
-	/**
-	 * @param array<string, mixed>|null $post
-	 */
-	public function set_post(?array $post = null): void
-	{
-		$this->set('_POST', is_null($post) ? $_POST : $post);
+		return (isset($this->POST[$key]) and is_string($this->POST[$key])) ? $this->POST[$key] : null;
 	}
 
 	/**  @return array<string, string|int>|null */
 	public function get_file(string $key): ?array
 	{
-		return (!empty($this->_FILES[$key]) and is_array($this->_FILES[$key])) ? $this->_FILES[$key] : null;
+		return (!empty($this->FILES[$key]) and is_array($this->FILES[$key])) ? $this->FILES[$key] : null;
 	}
 
 	public function get_server(string $key): ?string
 	{
-		return (isset($this->_SERVER[$key]) and is_string($this->_SERVER[$key])) ? $this->_SERVER[$key] : null;
-	}
-
-	/**
-	 * @param array<string, mixed>|null $server
-	 */
-	public function set_server(?array $server = null): void
-	{
-		$this->set('_SERVER', is_null($server) ? $_SERVER : $server);
+		return (isset($this->SERVER[$key]) and is_string($this->SERVER[$key])) ? $this->SERVER[$key] : null;
 	}
 
 	public function get_cookie(string $key): ?string
 	{
-		return $this->_COOKIE[$key] ?? null;
-	}
-
-	/**
-	 * @param array<string, string>|null $cookie
-	 */
-	public function set_cookie(?array $cookie = null): void
-	{
-		$this->set('_COOKIE', is_null($cookie) ? $_COOKIE : $cookie);
+		return $this->COOKIE[$key] ?? null;
 	}
 
 	/**  @param string|string[] $vars */
-	public function get_int_from_get(string|array $vars = 'id', int $default = 0, /* params*/ int $min_range = 0): int
+	public function get_int_from_get(string|array $vars = 'id', int $default = 0, int $min_range = 0): int
 	{
-		return $this->get_int('_GET', $vars, $default, $min_range);
+		return $this->get_int_request($this->use_getx_input_type($vars) ? static::INPUT_TYPE_GETX : static::INPUT_TYPE_GET, $vars, $default, $min_range);
 	}
 
 	/**  @param string|string[] $vars */
 	public function get_int_from_post(string|array $vars = 'id', int $default = 0, int $min_range = 0): int
 	{
-		return $this->get_int('_POST', $vars, $default, $min_range);
+		return $this->get_int_request(static::INPUT_TYPE_POST, $vars, $default, $min_range);
 	}
 
 	/**  @param string|string[] $vars */
 	public function get_var_from_get(string|array $vars = 'arg1', string $default = ''): string
 	{
-		return $this->get_var('_GET', $vars, $default);
+		return $this->get_var_request($this->use_getx_input_type($vars) ? static::INPUT_TYPE_GETX : static::INPUT_TYPE_GET, $vars, $default);
 	}
 
 	/**  @param string|string[] $vars */
 	public function get_var_from_post(string|array $vars = 'arg1', string $default = ''): string
 	{
-		return $this->get_var('_POST', $vars, $default);
+		return $this->get_var_request(static::INPUT_TYPE_POST, $vars, $default);
 	}
 
 	/**  @param string|string[] $vars */
 	public function get_val_from_get(string|array $vars = 'arg1', string $default = ''): string
 	{
-		return $this->get_val('_GET', $vars, $default);
+		return $this->get_val_request($this->use_getx_input_type($vars) ? static::INPUT_TYPE_GETX : static::INPUT_TYPE_GET, $vars, $default);
 	}
 
 	/**  @param string|string[] $vars */
 	public function get_val_from_post(string|array $vars = 'arg1', string $default = ''): string
 	{
-		return $this->get_val('_POST', $vars, $default);
+		return $this->get_val_request(static::INPUT_TYPE_POST, $vars, $default);
 	}
-
-	// The following get_* methods are all helper shorthand methods
 
 	/**
 	 * @param string $var
@@ -187,7 +145,7 @@ class Request implements RequestInterface
 	 */
 	public function get_sel_from_get(string $var = 'arg1', array $opts = [], string $default = ''): string
 	{
-		return $this->get_sel('_GET', $var, $opts, $default);
+		return $this->get_sel_request($this->use_getx_input_type($var) ? static::INPUT_TYPE_GETX : static::INPUT_TYPE_GET, $var, $opts, $default);
 	}
 
 	/**
@@ -198,19 +156,7 @@ class Request implements RequestInterface
 	 */
 	public function get_sel_from_post(string $var = 'arg1', array $opts = [], string $default = ''): string
 	{
-		return $this->get_sel('_POST', $var, $opts, $default);
-	}
-
-	/**
-	 * @param string $where
-	 * @param string $var
-	 * @param array<string> $opts
-	 * @param string $default
-	 * @return string
-	 */
-	public function get_sel(string $where, string $var = 'arg1', array $opts = [], string $default = ''): string
-	{
-		return in_array($sel = $this->get_var($where, $var), $opts) ? $sel : $default;
+		return $this->get_sel_request(static::INPUT_TYPE_POST, $var, $opts, $default);
 	}
 
 	/**
@@ -221,7 +167,7 @@ class Request implements RequestInterface
 	 */
 	public function get_array_from_get(string $var, array $default = [], string $filter = 'filter_val'): array
 	{
-		return $this->get_array('_GET', $var, $default, $filter);
+		return $this->get_array($this->use_getx_input_type($var) ? static::INPUT_TYPE_GETX : static::INPUT_TYPE_GET, $var, $default, $filter);
 	}
 
 	/**
@@ -232,13 +178,13 @@ class Request implements RequestInterface
 	 */
 	public function get_array_from_post(string $var, array $default = [], string $filter = 'filter_val'): array
 	{
-		return $this->get_array('_POST', $var, $default, $filter);
+		return $this->get_array(static::INPUT_TYPE_POST, $var, $default, $filter);
 	}
 
 	public function get_ua(): string
 	{
 		if (is_null($this->ua)) {
-			$this->set_ua(trim((string)filter_var(@$this->_SERVER['HTTP_USER_AGENT'], FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH)));
+			$this->set_ua($this->filter_var($this->get_server('HTTP_USER_AGENT') ?? '', FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
 		}
 
 		return $this->ua ?? '';
@@ -246,16 +192,16 @@ class Request implements RequestInterface
 
 	public function set_ua(string $ua): void
 	{
-		$this->ua = trim((string)filter_var($ua, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
+		$this->ua = $this->filter_var($ua, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH);
 	}
 
 	public function get_ip(): string
 	{
 		if (is_null($this->ip)) {
-			if (isset($this->_SERVER['HTTP_X_FORWARDED_FOR']) and is_string($this->_SERVER['HTTP_X_FORWARDED_FOR'])) {
-				$this->set_ip($this->_SERVER['HTTP_X_FORWARDED_FOR']);
-			} elseif (is_string($this->_SERVER['REMOTE_ADDR'])) {
-				$this->set_ip($this->_SERVER['REMOTE_ADDR']);
+			if ($ip = $this->get_server('HTTP_X_FORWARDED_FOR')) {
+				$this->set_ip($ip);
+			} elseif ($ip = $this->get_server('REMOTE_ADDR')) {
+				$this->set_ip($ip);
 			}
 		}
 
@@ -264,15 +210,14 @@ class Request implements RequestInterface
 
 	public function set_ip(string $ip): void
 	{
-		$this->ip = (string)filter_var($ip, FILTER_VALIDATE_IP);
+		$this->ip = $this->filter_var($ip, FILTER_VALIDATE_IP);
 	}
 
 	public function get_ref(): string
 	{
 		if (is_null($this->ref)) {
-			//TODO: if proxy
-			if (!empty($this->_SERVER['HTTP_REFERER']) and is_string($this->_SERVER['HTTP_REFERER'])) {
-				$this->set_ref($this->_SERVER['HTTP_REFERER']);
+			if ($ref = $this->get_server('HTTP_REFERER')) {
+				$this->set_ref($ref);
 			}
 		}
 
@@ -281,15 +226,13 @@ class Request implements RequestInterface
 
 	public function set_ref(?string $ref = null): void
 	{
-		// referrer
-
-		$this->ref = (string)filter_var($ref, FILTER_SANITIZE_URL);
+		$this->ref = $this->filter_var($ref, FILTER_SANITIZE_URL);
 	}
 
 	public function get_method(): string
 	{
 		if (is_null($this->method)) {
-			if (is_string($method = $this->_SERVER['REQUEST_METHOD'] ?? '')) {
+			if ($method = $this->get_server('REQUEST_METHOD')) {
 				$this->set_method($method);
 			}
 		}
@@ -299,13 +242,13 @@ class Request implements RequestInterface
 
 	public function set_method(string $method = null): void
 	{
-		$this->method = strtoupper((string)filter_var($method, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
+		$this->method = strtoupper($this->filter_var($method, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
 	}
 
 	public function get_path(): string
 	{
 		if (is_null($this->path)) {
-			if (is_string($path = $this->_SERVER['REDIRECT_URL'] ?? '')) {
+			if ($path = $this->get_server('REDIRECT_URL')) {
 				$this->set_path($path);
 			}
 		}
@@ -315,39 +258,18 @@ class Request implements RequestInterface
 
 	public function set_path(string $url): void
 	{
-		if (is_string($val = filter_var($url, FILTER_SANITIZE_URL))) {
-			if (is_string($val = parse_url($val, PHP_URL_PATH))) {
-				$this->path = $val;
-			}
+		if (!is_string($path = parse_url($this->filter_var($url, FILTER_SANITIZE_URL), PHP_URL_PATH))) {
+			throw new RuntimeException('Set path parse URL failed');
 		}
+
+		$this->path = $path;
 	}
 
-// 	public function get_int_array_from_get(string $var, array $default = []): array
-// 	{
-// 		return $this->get_int_array('_GET', $var, $default);
-// 	}
-// 
-// 	public function get_int_array_from_post(string $var, array $default = []): array
-// 	{
-// 		return $this->get_int_array('_POST', $var, $default);
-// 	}
-// 
-// 
-// 	public function get_int_array(string $where, string $var, array $default = []): array
-// 	{
-// 		$return = $this->get_single_level_array($where, $var, $default);
-// 
-// 		foreach ($return as $i => $item) {
-// /// same as get_int filter
-// 			if (!(int)filter_var($item, FILTER_SANITIZE_NUMBER_INT)) {
-// 				unset($return[$i]);
-// 			}
-// 		}
-// 
-// 		return array_values($return);
-// 	}
-
-	/**  @return string[] */
+	/**
+	 * @param string|null $method
+	 * @param string|null $path
+	 * @return array{0: string, 1: string}
+	 */
 	public function get_request(?string $method = null, ?string $path = null): array
 	{
 		if (!is_null($method)) {
@@ -361,53 +283,57 @@ class Request implements RequestInterface
 		return [$this->get_method(), $this->get_path()];
 	}
 
-	public function is_ssl(?int $port = 443, bool $no_cache = false): bool
+	public function clear_cache(): void
 	{
-		static $is_ssl;
+		$this->is_ssl = null;
+		$this->is_ajax = null;
+	}
 
-		if (is_null($is_ssl) or $no_cache) {
-			if (is_null($port)) {
-				$port = 443;
-			}
-
-			$is_ssl = (!empty($this->_SERVER['HTTPS']) and !empty($this->_SERVER['SERVER_PORT']) and $this->_SERVER['SERVER_PORT'] === $port);
+	public function is_ssl(?int $port = 443): bool
+	{
+		if (is_null($this->is_ssl)) {
+			$this->is_ssl = ($this->get_server('HTTPS') and $this->get_server('SERVER_PORT') === $port);
 		}
 
-		return $is_ssl;
+		return $this->is_ssl;
 	}
 
 	public function is_post(): bool
 	{
-		return ($this->get_method() === 'POST');
+		return ($this->get_method() === static::INPUT_TYPE_POST);
 	}
 
-	public function is_ajax(bool $no_cache = false): bool
+	public function is_ajax(): bool
 	{
-		static $is_ajax;
-
-		if (is_null($is_ajax) or $no_cache) {
-			//TODO: or accept application/json header
-			$is_ajax = (strtolower((string)filter_var($this->_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest');
+		if (is_null($this->is_ajax)) {
+			$req = strtolower($this->get_server('HTTP_X_REQUESTED_WITH') ?? '') === 'xmlhttprequest';
+			$acc = str_contains(strtolower($this->get_server('ACCEPT') ?? ''), 'application/json');
+			$this->is_ajax = ($req or $acc);
 		}
 
-		return $is_ajax;
+		return $this->is_ajax;
 	}
 
 	/**
-	 * $param string $var
-	 * @param array<string, mixed> $values
+	 * @param string $input_type
+	 * @param string $var
+	 * @param array<string> $opts
+	 * @param string $default
+	 * @return string
 	 */
-	protected function set(string $var, array $values): void
+	protected function get_sel_request(string $input_type, string $var = 'arg1', array $opts = [], string $default = ''): string
 	{
-		$this->$var = $values;
+		return in_array($sel = $this->get_var_request($input_type, $var), $opts) ? $sel : $default;
 	}
 
 	/**  @param string|string[] $vars */
-	protected function get_int(string $where, string|array $vars = 'id', int $default = 0, int $min_range = 0): int
+	protected function get_int_request(string $input_type, string|array $vars = 'id', int $default = 0, int $min_range = 0): int
 	{
+		$this->validate_input_type($input_type);
+
 		foreach ((array)$vars as $var) {
-			if (isset($this->$where[$var]) and is_string($this->$where[$var])) {
-				return $this->filter_int($this->$where[$var], $default, $min_range);
+			if ($this->is_usable_input($this->$input_type, $var)) {
+				return $this->filter_int($this->$input_type[$var], $default, $min_range);
 			}
 		}
 
@@ -415,11 +341,13 @@ class Request implements RequestInterface
 	}
 
 	/**  @param string|string[] $vars */
-	protected function get_var(string $where, string|array $vars = 'arg1', string $default = ''): string
+	protected function get_var_request(string $input_type, string|array $vars = 'arg1', string $default = ''): string
 	{
+		$this->validate_input_type($input_type);
+
 		foreach ((array)$vars as $var) {
-			if (isset($this->$where[$var]) and is_string($this->$where[$var])) {
-				return $this->filter_regx_var($this->$where[$var]);
+			if ($this->is_usable_input($this->$input_type, $var)) {
+				return $this->filter_regx_var($this->$input_type[$var]);
 			}
 		}
 
@@ -427,11 +355,13 @@ class Request implements RequestInterface
 	}
 
 	/**  @param string|string[] $vars */
-	protected function get_val(string $where, string|array $vars = 'arg1', string $default = ''): string
+	protected function get_val_request(string $input_type, string|array $vars = 'arg1', string $default = ''): string
 	{
+		$this->validate_input_type($input_type);
+
 		foreach ((array)$vars as $var) {
-			if (isset($this->$where[$var]) and is_string($this->$where[$var])) {
-				return $this->filter_val($this->$where[$var]);
+			if ($this->is_usable_input($this->$input_type, $var)) {
+				return $this->filter_val($this->$input_type[$var]);
 			}
 		}
 
@@ -439,15 +369,15 @@ class Request implements RequestInterface
 	}
 
 	/**
-	 * @param string $where
+	 * @param string $input_type
 	 * @param string $var
 	 * @param string[] $default
 	 * @param string $filter
 	 * @return array<int, string>
 	 */
-	protected function get_array(string $where, string $var, array $default = [], string $filter = 'filter_val'): array
+	protected function get_array(string $input_type, string $var, array $default = [], string $filter = 'filter_val'): array
 	{
-		$return = $this->get_single_level_array($where, $var, $default);
+		$return = $this->get_array_single_level($input_type, $var, $default);
 
 		$return = array_filter($return, 'is_string');
 
@@ -456,32 +386,93 @@ class Request implements RequestInterface
 		}, array: array_values($return));
 	}
 
-	protected function filter_regx_var(mixed $value/*, array $opts*/): string
+	protected function filter_regx_var(mixed $value): string
 	{
-		return (string)filter_var($value, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => static::REGX_VAR]]);
-
+		return $this->filter_var($value, FILTER_VALIDATE_REGEXP, ['options' => ['regexp' => static::REGX_VAR]]);
 	}
 
-	protected function filter_val(mixed $var/*, array $opts*/): string
+	protected function filter_val(mixed $value): string
 	{
-		return trim((string)filter_var($var, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_HIGH | FILTER_FLAG_STRIP_LOW/*, opts*/));
+		return $this->filter_var($value, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_HIGH | FILTER_FLAG_STRIP_LOW);
 	}
 
-	protected function filter_int(mixed $var, /*, array $opts*/ int $default = 0, int $min_range = 0): int
+	protected function filter_int(mixed $value, int $default = 0, int $min_range = 0): int
 	{
-		return (int)filter_var($var, FILTER_SANITIZE_NUMBER_INT, /*$opts*/ ['default' => $default, 'min_range' => $min_range]);
+		return (int)$this->filter_var($value, FILTER_VALIDATE_INT, ['default' => $default, 'min_range' => $min_range]);
+	}
+
+	/**
+	 * Applies a filter to the given value and returns the result as a trimmed string.
+	 *
+	 * @param mixed $value The value to filter.
+	 * @param int $filter The filter to apply (e.g., FILTER_SANITIZE_STRING, FILTER_VALIDATE_INT).
+	 * @param array<string, mixed>|int $options Options or flags to modify the behavior of the filter.
+	 *                                          Accepts an associative array of options or a bitwise disjunction of flags.
+	 *
+	 * @return string The filtered and trimmed string.
+	 *
+	 * @throws RuntimeException If the filter fails.
+	 */
+
+	protected function filter_var(mixed $value, int $filter = FILTER_DEFAULT, array|int $options = 0): string
+	{
+		if (($var = filter_var($value, $filter, $options)) === false) {
+			throw new RuntimeException('Filter var failed');
+		}
+
+		return trim((string)$var);
 	}
 
 	/**
 	 * @param string[] $default
 	 * @return string[]
 	 */
-	protected function get_single_level_array(string $where, string|int $var, array $default): array
+	protected function get_array_single_level(string $input_type, string|int $var, array $default): array
 	{
-		if (isset($this->$where[$var])) {
-			return array_values((array)$this->$where[$var]);
+		$this->validate_input_type($input_type);
+
+		if (isset($this->$input_type[$var])) {
+			return array_values((array)$this->$input_type[$var]);
 		} else {
 			return $default;
 		}
 	}
+
+	protected function php_sapi_name(): string
+	{
+		return php_sapi_name();
+	}
+
+	/** @return array<string> */
+	protected function getallheaders(): array
+	{
+		return getallheaders();
+	}
+
+	/**  @param string|string[] $vars */
+	private function use_getx_input_type(string|array $vars = 'id'): bool
+	{
+		foreach ((array)$vars as $var) {
+			if (isset($this->GETX[$var]) and is_string($this->GETX[$var])) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/** @throws DomainException If the wrong type */
+	private function validate_input_type(string $input_type): void
+	{
+		if (!in_array($input_type, [static::INPUT_TYPE_GET, static::INPUT_TYPE_POST, static::INPUT_TYPE_GETX], true)) {
+			throw new DomainException("Unsupported input source: '$input_type'");
+		}
+	}
+
+	/** @param array<string, mixed> $input */
+	private function is_usable_input(array $input, string $var): bool
+	{
+		return (isset($input[$var]) and is_string($input[$var]));
+	}
+
 }
