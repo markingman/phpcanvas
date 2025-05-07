@@ -1,0 +1,14 @@
+<?php declare(strict_types=1);
+
+namespace PHPCanvas\Exception;
+
+enum RouterError: string
+{
+	case ADD_ROUTE = 'ROUTER_ADD_ROUTE';
+	case INDEX_COLLISION = 'ROUTER_INDEX_COLLISION';
+	case INVALID_CALLBACK = 'ROUTER_INVALID_CALLBACK';
+	case NO_CONTROLLER = 'ROUTER_NO_CONTROLLER';
+	case NO_PATH = 'ROUTER_NO_PATH';
+	case NO_ROUTE = 'ROUTER_NO_ROUTE';
+	case REWRITE_FAIL = 'ROUTER_REWRITE_FAIL';
+}

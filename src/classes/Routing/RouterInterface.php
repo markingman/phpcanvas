@@ -32,23 +32,13 @@ interface RouterInterface
 
 	public function delete_route(string $name): bool;
 
-	/**
-	 * @return array<string, array{
-	 *     path : string,
-	 *     controller ?: string,
-	 *     action ?: string,
-	 *     method ?: array<string>,
-	 *     vars ?: array<string, string>,
-	 *     callback ?: Closure
-	 * }>
-	 */
+	/** @return array<int, Route> */
 	public function get_routes(): array;
 
 	/** @return array{iname: array<string, int>, routes: array<int, Route>, index: array<string, int[]>} */
 	public function dump(): array;
 
-	/** @return false|array{controller: string, action: string, vars: array<string, string>} */
-	public function get_route(string $method, string $url): false|array;
+	public function match_route(string $method, string $url): RouteMatch|false;
 
 	/** @param array<string, string> $vars */
 	public function get_rewrite(string $name, array $vars = []): string;

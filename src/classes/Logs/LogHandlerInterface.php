@@ -1,22 +1,33 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas\Logs;
 
 interface LogHandlerInterface
 {
-	public function emerg(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function emerg(string $log, array $context = []): void;
 
-	public function alert(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function alert(string $log, array $context = []): void;
 
-	public function crit(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function crit(string $log, array $context = []): void;
 
-	public function err(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function err(string $log, array $context = []): void;
 
-	public function waring(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function warning(string $log, array $context = []): void;
 
-	public function notice(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function notice(string $log, array $context = []): void;
 
-	public function debug(string $log): void;
+	/** @param array<string, mixed> $context */
+	public function info(string $log, array $context = []): void;
 
-	public function log(string $log, int $type = 0): void;
+	/** @param array<string, mixed> $context */
+	public function debug(string $log, array $context = []): void;
+
+	/** @param array<string, mixed> $context */
+	public function log(string $log, int $level = 0, array $context = []): void;
 }

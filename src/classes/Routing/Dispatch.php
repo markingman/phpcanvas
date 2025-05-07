@@ -5,18 +5,14 @@ namespace PHPCanvas\Routing;
 use Closure;
 use Exception;
 use PHPCanvas\ContainerInterface;
+use PHPCanvas\Exception\DispatchError;
+use PHPCanvas\Exception\DispatchException;
 use PHPCanvas\Http\RequestInterface;
 use PHPCanvas\Http\ResponseInterface;
+use Throwable;
 
 class Dispatch implements DispatchInterface
 {
-// 	protected ContainerInterface $Container;
-// 	protected RequestInterface $Request;
-// 	protected ResponseInterface $Response;
-// 	protected RouterInterface $Router;
-// 	protected LinksInterface $Links;
-	protected string $action_prefix;
-	protected string $action_suffix;
 	protected ?string $controller = null;
 	protected ?string $action = null;
 
@@ -26,23 +22,16 @@ class Dispatch implements DispatchInterface
 		protected ResponseInterface $Response,
 		protected RouterInterface $Router,
 		protected LinksInterface $Links,
-		?string $action_prefix = null,
-		?string $action_suffix = null,
+		protected string $action_prefix = '',
+		protected string $action_suffix = '',
 	) {
-// 		$this->Container = $Container;
-// 		$this->Request = $Request;
-// 		$this->Response = $Response;
-// 		$this->Router = $Router;
-// 		$this->Links = $Links;
-		$this->action_prefix = $action_prefix ?? '';
-		$this->action_suffix = $action_suffix ?? '';
 	}
 
 	public function call_controller(?string $method = null, ?string $url = null): void
 	{
-		if (!$route = $this->Router->get_route((string)$method, (string)$url)) {
+		if (!$route = $this->Router->match_route($method ?? '', $url ?? '')) {
 			// TODO response types, e.g. method not implemented
-			throw new Exception(sprintf('DISPATCH_NO_ROUTE; No route found for URL "%s"', $url), 404);
+			throw new DispatchException(sprintf('No route found for URL "%s"', $url), DispatchError::NO_ROUTE, 404);
 		} else {
 			//[$controller, $action, $vars/*, $name*/] = $route;//TODO: route is class
 			$controller = $route['controller'];
@@ -60,40 +49,36 @@ class Dispatch implements DispatchInterface
 			$this->Request->set_get_value((string)$k, $v);
 		}
 
-// 		$name = !empty($route['name']) ? $route['name'] : null;//@todo: setable controller name in route
-		// this->Reponse = $code
-
 		if (!class_exists($this->controller)) {
-			throw new Exception(sprintf('DISPATCH_NO_CONTROLLER; Could not load controller "%s"', $this->controller), 500);
+			throw new DispatchException(sprintf('Could not load controller "%s"', $this->controller), DispatchError::NO_CONTROLLER, 500);
 		}
 
 		try {
-			$Controller = $this->instanciate($this->controller /*$name,*/ /*true*/);
-		} catch (Exception $e) {
-			throw new Exception(sprintf('DISPATCH_FAILED_INSTANCIATE; Could not instanciate controller "%s"', $this->controller), 500, $e);
+			$Controller = $this->instantiate($this->controller);
+		} catch (Throwable $e) {
+			throw new DispatchException(sprintf('Could not instantiate controller "%s"', $this->controller), DispatchError::FAILED_INSTANTIATE, 500, $e);
 		}
 
 		if (!is_object($Controller)) {
-			throw new Exception(sprintf('DISPATCH_FAILED_INSTANCIATE; Unexpectant controller format "%s"', $this->controller), 500);
+			throw new DispatchException(sprintf('Unexpectant controller format "%s"', $this->controller), DispatchError::FAILED_INSTANTIATE, 500);
 		}
 
 		if (!is_callable([$Controller, $this->action])) {
-			throw new Exception(sprintf('DISPATCH_NO_ACTION; Could not find action "%s::%s"', $this->controller, $this->action), 404);
+			throw new DispatchException(sprintf('Could not find action "%s::%s"', $this->controller, $this->action), DispatchError::NO_ACTION, 404);
 		}
 
 		try {
 			if (is_callable([$Controller, '__invoke'])) {
 				$this->call($Controller, '__invoke');
 			}
-		} catch (Exception $e) {
-			throw new Exception(sprintf('DISPATCH_FAILED_INVOKE; Could not invoke controller "%s"', $this->controller), 500, $e);
+		} catch (Throwable $e) {
+			throw new DispatchException(sprintf('Could not invoke controller "%s"', $this->controller), DispatchError::FAILED_INVOKE, 500, $e);
 		}
 
 		try {
 			$this->call($Controller, $this->action);
 		} catch (Exception $e) {
-			throw $e;
-// 			throw new Exception(sprintf('DISPATCH_FAILED_ACTION; Could not call action "%s::%s"', $this->controller, $this->action), 500, $e);
+			throw new DispatchException(sprintf('Could not call action "%s::%s"', $this->controller, $this->action), DispatchError::FAILED_ACTION, 500, $e);
 		}
 	}
 
@@ -114,11 +99,11 @@ class Dispatch implements DispatchInterface
 	}
 
 	/** @param array<string, string> $vars */
-	public function go_to(string $name, array $vars = [], int $code = 307, bool $relative = true): never
+	public function go_to(string $name, array $vars = [], int $code = 307, bool $relative = true): void
 	{
 		$to = $this->get_link($name, $vars, $relative);
 		$this->Response->redirect($to, $code);
-		exit;
+		$this->exit();
 	}
 
 	/**
@@ -136,12 +121,7 @@ class Dispatch implements DispatchInterface
 		return $this->Router->get_routes();
 	}
 
-// 	public function get_rewrites()
-// 	{
-// 		return $this->Router->get_rewrites();
-// 	}
-
-	public function instanciate(string $class, /*string $name,*/ bool $store = false): mixed
+	public function instantiate(string $class, /*string $name,*/ bool $store = false): mixed
 	{
 		return $this->Container->create($class, $store);
 	}
@@ -155,5 +135,10 @@ class Dispatch implements DispatchInterface
 	public function store(string $name, object $object): void
 	{
 		$this->Container->set($name, $object);
+	}
+
+	protected function exit(): void
+	{
+		exit;
 	}
 }

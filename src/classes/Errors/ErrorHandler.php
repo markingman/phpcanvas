@@ -12,84 +12,94 @@ Example:
 
 1) Set handlers:
 
-register_shutdown_function([$App->Container['Errors'], 'handle_shutdown']);
-set_error_handler([$App->Container['Errors'], 'handle_error']);
-set_exception_handler([$App->Container['Errors'], 'handle_exception']);
+register_shutdown_function([$ErrorHandler, 'handle_shutdown']);
+set_error_handler([$ErrorHandler, 'handle_error']);
+set_exception_handler([$ErrorHandler, 'handle_exception']);
 
-2) Set log and view:
+2) Set log and view: (any Closures)
 
-$App->Container['Errors']->set_log(function (Throwable $e) use ($App) {
-	// log this string
-	return (include $App->Config->DIR_FRAMEWORK . '/functions/error_log.php')($e, $App->Container['Log'], $App->is_prod());
+$ErrorHandler->set_log(function (Throwable $e) use ($LogHandler, $debug) {
+	return (include '/app/error_log_function.php')($e, $LogHandler, $debug);
 });
 
-$App->Container['Errors']->set_view(function (Throwable $e, $m = null) use ($App) {
-	// if view
-	return (include $App->Config->DIR_APP . '/functions/error_view_html.php')($App->Container['Response'], $App->Container['Page'], $e);
+$ErrorHandler->set_view(function (Throwable $e, $m = null) use ($Response, $Page) {
+	return (include '/app/error_view_function.php')($Response, $Page, $e);
 });
 */
 
 class ErrorHandler
 {
+	protected const array ERROR_CODES = [
+		400 => '400 Bad Request',
+		401 => '401 Unauthorized',
+		403 => '403 Forbidden',
+		404 => '404 Not Found',
+		405 => '405 Method Not Allowed',
+		408 => '408 Request Timeout',
+		409 => '409 Conflict',
+		410 => '410 Gone',
+		413 => '413 Payload Too Large',
+		415 => '415 Unsupported Media Type',
+		422 => '422 Unprocessable Entity',
+		429 => '429 Too Many Requests',
+		500 => '500 Internal Server Error',
+		501 => '501 Not Implemented',
+		502 => '502 Bad Gateway',
+		503 => '503 Service Unavailable',
+		504 => '504 Gateway Timeout',
+	];
+
 	protected bool $terminate = true;
-	protected ?Closure $view = null;
+	protected bool $debug = false;
+
+	/** @var Closure(Throwable): void|null */
 	protected ?Closure $log = null;
 
-	public static function log(Throwable $e, ?LogHandler $LogHandler = null): void
+	/** @var Closure(Throwable, mixed): void|null */
+	protected ?Closure $view = null;
+
+	public static function log(Throwable $e, ?LogHandler $LogHandler = null, bool $debug = false): void
 	{
 		// basic placeholder, override with custom function
+		// only logs first and root exceptions, not full chain
 
-// 		$sev = is_callable([$e, 'getSeverity']) ? $e->getSeverity() : error_get_last()['type'];
+		$sev = $e instanceof ErrorException ? $e->getSeverity() : E_ERROR;
 
-		$stack = '';
-		if ($p = $e->getPrevious()) {
-			$stack = $p->getTraceAsString() . PHP_EOL;
-// 			$stack =  var_export($p->getTrace(), true) . PHP_EOL;
-			while ($p = $p->getPrevious()) {
-				$stack = $p->getTraceAsString() . PHP_EOL;
-// 				$stack = var_export($p->getTrace(), true) . PHP_EOL;
+		$log = '';
+		$i = 0;
+
+		do {
+			if ($i === 0 or $e->getPrevious() === null) {
+				$log .= sprintf(
+						"%s[%d] %s in %s:%d",
+						$i === 0 ? static::severity_label($sev) : 'CAUSE: ',
+						$e->getCode(),
+						get_class($e) . ': ' . $e->getMessage(),
+						$e->getFile(),
+						$e->getLine()
+					) . PHP_EOL;
+
+				if ($debug and $i === 0) {
+					$log .= $e->getTraceAsString() . PHP_EOL;
+				}
 			}
-		}
-		$stack = $e->getTraceAsString() . PHP_EOL . $stack;
-// 		$stack = var_export($e->getTrace(), true) . PHP_EOL . $stack;
+			$e = $e->getPrevious();
+			$i++;
+		} while ($e instanceof Throwable);
 
-		$sev = E_ERROR;
-		$log = sprintf(
-			"%s\t%s\t%s\t%s\n%s",
-			$sev, $e->getCode(), trim($e->getMessage()), $e->getFile() . ':' . $e->getLine(), $stack
-		);
-		$lev = match ($sev) {
-			E_ERROR => LOG_ERR,
-//			E_WARNING => LOG_WARNING,
-//			E_PARSE => LOG_ALERT,
-//			E_NOTICE => LOG_NOTICE,
-//			E_CORE_ERROR => LOG_ERR,
-//			E_CORE_WARNING => LOG_WARNING,
-//			E_COMPILE_ERROR => LOG_ERR,
-//			E_COMPILE_WARNING => LOG_ALERT,
-//			E_USER_ERROR => LOG_ERR,
-//			E_USER_WARNING => LOG_WARNING,
-//			E_USER_NOTICE => LOG_NOTICE,
-//			E_STRICT => LOG_NOTICE,
-//			E_RECOVERABLE_ERROR => LOG_ERR,
-//			E_DEPRECATED => LOG_NOTICE,
-//			E_USER_DEPRECATED => LOG_NOTICE,
-//			E_ALL => LOG_NOTICE,
-//			default => LOG_CRIT,
-		};
 		if ($LogHandler) {
-			$LogHandler->log($log, $lev);
+			$LogHandler->log($log, $sev);
 		} else {
-			error_log(date('c') . "\t" . $log);
+			static::error_log(date('c') . "\t" . $log);
 		}
 	}
 
-	public static function view(Throwable $e, mixed $m = null): string
+	public static function view(Throwable $e, mixed $m = null): void
 	{
 		// basic placeholder, override with custom function
 
-		if (PHP_SAPI === 'cli') {
-			return vsprintf(
+		if (static::is_cli()) {
+			static::echo(vsprintf(
 				PHP_EOL .
 				"\033[3;101m  %1\$s  \033[0m" . PHP_EOL .
 				'%2$s' . PHP_EOL .
@@ -101,17 +111,16 @@ class ErrorHandler
 					3 => $e->getFile(),
 					4 => $e->getLine(),
 				]
-			);
+			));
 		} else {
+			$code = array_key_exists($e->getCode(), static::ERROR_CODES) ? $e->getCode() : 500;
 
-			$msg = match ($e->getPrevious()?->getCode()) {
-				404 => '404 File not found',
-				401 => '401 No pemission',
-				403 => '403 Authorissed',
-				default => '500 System error',
-			};
-
-			$html = <<<__
+			if (is_array($m) and ($m['format'] ?? '') === 'json') {
+				header('Content-Type: application/json', true, $code);
+				$res = '{"error": "%s"}';
+			} else {
+				header('Content-Type: text/html', true, $code);
+				$res = <<<__
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -124,93 +133,54 @@ class ErrorHandler
 </body>
 </html>
 __;
+			}
 
-			return vsprintf(
-				$html, [$msg]
-			);
+			static::echo(vsprintf($res, [static::ERROR_CODES[$code]]));
 		}
 	}
 
-	public function set_terminate(bool $exit): void
+	protected static function error_log(string $log): void
 	{
-		$this->terminate = $exit;
+		error_log($log);
 	}
 
-	/*
-	// Custom error handler
-	function customErrorHandler($errno, $errstr, $errfile, $errline) {
-		// Determine the severity of the error
-		switch ($errno) {
-			case E_ERROR:
-			case E_CORE_ERROR:
-			case E_COMPILE_ERROR:
-			case E_USER_ERROR:
-				// Log the error and exit
-				error_log("Fatal Error [$errno]: $errstr in $errfile on line $errline");
-				exit(1);
-				break;
-
-			case E_WARNING:
-			case E_USER_WARNING:
-				// Log the warning and continue
-				error_log("Warning [$errno]: $errstr in $errfile on line $errline");
-				break;
-
-			case E_NOTICE:
-			case E_USER_NOTICE:
-				// Log the notice and continue
-				error_log("Notice [$errno]: $errstr in $errfile on line $errline");
-				break;
-
-			default:
-				// Handle unknown error types
-				error_log("Unknown error type: [$errno]: $errstr in $errfile on line $errline");
-				break;
-		}
-
-		// Don't execute PHP's internal error handler
-		return true;
+	protected static function severity_label(int $severity): string
+	{
+		return match ($severity) {
+			E_COMPILE_ERROR => 'E_COMPILE_ERROR',
+			E_CORE_ERROR => 'E_CORE_ERROR',
+			E_DEPRECATED => 'E_DEPRECATED',
+			E_ERROR => 'E_ERROR',
+			E_NOTICE => 'E_NOTICE',
+			E_PARSE => 'E_PARSE',
+			E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
+			E_USER_DEPRECATED => 'E_USER_DEPRECATED',
+			E_USER_ERROR => 'E_USER_ERROR',
+			E_USER_WARNING => 'E_USER_WARNING',
+			E_WARNING => 'E_WARNING',
+			default => 'E_UNKNOWN',
+		};
 	}
 
-	// Custom exception handler
-
-	// Set custom error and exception handlers
-	set_error_handler("customErrorHandler");
-	set_exception_handler("customExceptionHandler");
-
-	// Example custom exception class for critical exceptions
-	class CriticalException extends Exception {}
-
-	// Example usage
-	try {
-		// Some code that might throw exceptions
-		throw new CriticalException("Critical failure");
-	} catch (Exception $e) {
-		customExceptionHandler($e);
+	protected static function is_cli(): bool
+	{
+		return (PHP_SAPI === 'cli');
 	}
 
-	*/
+	public function set_terminate(bool $terminate): void
+	{
+		$this->terminate = $terminate;
+	}
+
+	public function set_debug(bool $active): void
+	{
+		$this->debug = $active;
+	}
 
 	public function set_view(Closure $view): void
 	{
 		$this->view = $view;
 	}
-
-	/*
-	function customExceptionHandler($exception) {
-		// Log the exception
-		error_log("Uncaught Exception: " . $exception->getMessage());
-
-		// Determine if the exception is fatal
-		if ($exception instanceof CriticalException) {
-			exit(1);
-		} else {
-			// Optionally, display a user-friendly error message
-			echo "An error occurred, please try again later.";
-		}
-	}
-
-	*/
 
 	public function set_log(Closure $log): void
 	{
@@ -219,22 +189,9 @@ __;
 
 	public function handle_error(int $errno, string $errstr, ?string $errfile = null, ?int $errline = null): bool
 	{
-		if ($errno < 1) {//TODO when is this case
-			return false;
-		}
-
-// 		if (error_reporting() & $e->getCode()) {// if code is at reporting level
-// 			return true;
-// 		}
-
-// 		if (error_reporting() & $e->getCode()) {// if code is at reporting level
-// 			return false;
-// 		}
-
-// CriticalException or ErrorException
 		$this->handle_exception(// change error messages into ErrorException
-		//note this is not `throw new ...`
-			new ErrorException($errstr, 0, $errno, $errfile, $errline)
+			// note this is not `throw new ...`
+			new ErrorException($errstr, 0, $errno, $errfile, $errline);
 		);
 
 		return true;
@@ -243,28 +200,37 @@ __;
 	public function handle_exception(Throwable $e): void
 	{
 		if ($this->log) {// callback can ignore or log
-			call_user_func($this->log, $e);
+			($this->log)($e);
 		}
 
-		//$exit = 0;
 		if ($this->view) {// callback can ignore or view
-			/*$exit = */
-			call_user_func($this->view, $e);
-			// TODO: view can set exit
+			($this->view)($e, null);
+		} elseif (static::is_cli()) {
+			static::view($e);
 		}
 
-		if ($this->terminate) {// omit exit for testing
-			exit($e->getCode());
+		if ($this->terminate) {
+			$this->exit();
 		}
 	}
 
 	public function handle_shutdown(): void
 	{
 		if (($err = error_get_last()) !== null) {
-			if ((E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR) & $err['type']) {
+			if (((E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR) & $err['type']) !== 0) {
 				// fatal error handler
 				$this->handle_error($err['type'], $err['message'], $err['file'], $err['line']);
 			}
 		}
+	}
+
+	protected function exit(int $code = 1): void
+	{
+		exit(($code >= 1 and $code <= 255) ? $code : 1);
+	}
+
+	protected static function echo(string $string): void
+	{
+		echo $string;
 	}
 }

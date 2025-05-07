@@ -103,16 +103,16 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/');
+		$res = $this->Router->match_route('GET', '/');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '');
+		$res = $this->Router->match_route('GET', '');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '//');
+		$res = $this->Router->match_route('GET', '//');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '///');
+		$res = $this->Router->match_route('GET', '///');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
 		$res = $this->Router->get_rewrite('test');
@@ -135,16 +135,16 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/simple');
+		$res = $this->Router->match_route('GET', '/simple');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '/simple/');
+		$res = $this->Router->match_route('GET', '/simple/');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '/simple///');
+		$res = $this->Router->match_route('GET', '/simple///');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '///simple///');
+		$res = $this->Router->match_route('GET', '///simple///');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
 		$res = $this->Router->get_rewrite('test');
@@ -167,7 +167,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/simple');
+		$res = $this->Router->match_route('GET', '/simple');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 	}
 
@@ -187,10 +187,10 @@ class RouterTest extends TestCase
 			'vars' => []
 		];
 
-		$res = $this->Router->get_route('GET', '/simple/path');
+		$res = $this->Router->match_route('GET', '/simple/path');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 
-		$res = $this->Router->get_route('GET', '/simple/path123');
+		$res = $this->Router->match_route('GET', '/simple/path123');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
 	}
 
@@ -297,10 +297,10 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/test/123');
+		$res = $this->Router->match_route('GET', '/test/123');
 		$this->assertEquals($exp, $res);
 
-		$res = $this->Router->get_route('GET', '/test/123//');
+		$res = $this->Router->match_route('GET', '/test/123//');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('test', ['id' => '123']);
@@ -326,7 +326,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/test/123/test/abc/xyz');
+		$res = $this->Router->match_route('GET', '/test/123/test/abc/xyz');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('test', ['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']);
@@ -357,11 +357,11 @@ class RouterTest extends TestCase
 			if ($test === 'POST') {
 				continue;
 			}
-			$res = $this->Router->get_route($test, '/test');
+			$res = $this->Router->match_route($test, '/test');
 			$this->assertFalse($res);
 		}
 
-		$res = $this->Router->get_route('POST', '/test');
+		$res = $this->Router->match_route('POST', '/test');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('test');
@@ -384,7 +384,7 @@ class RouterTest extends TestCase
 			if (in_array($test, ['POST', 'PUT', 'PATCH'])) {
 				continue;
 			}
-			$res = $this->Router->get_route($test, '/method');
+			$res = $this->Router->match_route($test, '/method');
 			$this->assertFalse($res);
 		}
 
@@ -394,13 +394,13 @@ class RouterTest extends TestCase
 			'vars' => []
 		];
 
-		$res = $this->Router->get_route('PATCH', $path);
+		$res = $this->Router->match_route('PATCH', $path);
 		$this->assertEquals($exp, $res);
 
-		$res = $this->Router->get_route('PUT', $path);
+		$res = $this->Router->match_route('PUT', $path);
 		$this->assertEquals($exp, $res);
 
-		$res = $this->Router->get_route('POST', $path);
+		$res = $this->Router->match_route('POST', $path);
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('method');
@@ -424,7 +424,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'simple', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/simple/action');
+		$res = $this->Router->match_route('GET', '/simple/action');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('simple');
@@ -448,7 +448,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/with/queries');
+		$res = $this->Router->match_route('GET', '/with/queries');
 		$this->assertEquals($exp, $res, 'Should get expected query var route');
 
 		$res = $this->Router->get_rewrite('test', ['var1' => '1', 'var2' => '2']);
@@ -472,7 +472,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/with/a/b/queries');
+		$res = $this->Router->match_route('GET', '/with/a/b/queries');
 		$this->assertEquals($exp, $res, 'Should get expected query var route');
 
 		$res = $this->Router->get_rewrite('test', ['var1' => 'a', 'var2' => 'b', 'var3' => 'c']);
@@ -496,7 +496,7 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/callback');
+		$res = $this->Router->match_route('GET', '/callback');
 		$this->assertFalse($res, 'Callback can resolve FALSE itself');
 
 		$res = $this->Router->get_rewrite('callback');
@@ -523,10 +523,10 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/callback');
+		$res = $this->Router->match_route('GET', '/callback');
 		$this->assertFalse($res);
 
-		$res = $this->Router->get_route('POST', '/callback');
+		$res = $this->Router->match_route('POST', '/callback');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('callback');
@@ -554,10 +554,10 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback'], method: $route['method']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/callback');
+		$res = $this->Router->match_route('GET', '/callback');
 		$this->assertFalse($res);
 
-		$res = $this->Router->get_route('POST', '/callback');
+		$res = $this->Router->match_route('POST', '/callback');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->get_rewrite('callback');
@@ -580,13 +580,13 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$res = $this->Router->get_route('GET', '/test');
+		$res = $this->Router->match_route('GET', '/test');
 		$this->assertEquals($exp, $res);
 
 		$res = $this->Router->delete_route('test');
 		$this->assertTrue($res);
 
-		$res = $this->Router->get_route('GET', '/test');
+		$res = $this->Router->match_route('GET', '/test');
 		$this->assertFalse($res);
 
 		$res = $this->Router->delete_route('test');

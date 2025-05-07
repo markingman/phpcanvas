@@ -1,85 +1,66 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas\Logs;
 
 class LogHandler implements LogHandlerInterface
 {
-	protected LogWriteInterface $Out;
-	protected string $type;
-
-	public function __construct(LogWriteInterface $out, string $type = '')
-	{
-		$this->Out = $out;
-		$this->type = $type;
+	public function __construct(
+		protected LogFormatterInterface $out,
+		protected string $type = ''
+	) {
 	}
 
-	public function emerg(string $log): void
+	/** @param array<string, mixed> $context */
+	public function emerg(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_EMERG);
+		$this->log($log, LOG_EMERG, $context);
 	}
 
-	public function alert(string $log): void
+	/** @param array<string, mixed> $context */
+	public function alert(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_ALERT);
+		$this->log($log, LOG_ALERT, $context);
 	}
 
-	public function crit(string $log): void
+	/** @param array<string, mixed> $context */
+	public function crit(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_CRIT);
+		$this->log($log, LOG_CRIT, $context);
 	}
 
-	public function err(string $log): void
+	/** @param array<string, mixed> $context */
+	public function err(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_ERR);
+		$this->log($log, LOG_ERR, $context);
 	}
 
-	public function waring(string $log): void
+	/** @param array<string, mixed> $context */
+	public function warning(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_WARNING);
+		$this->log($log, LOG_WARNING, $context);
 	}
 
-	public function notice(string $log): void
+	/** @param array<string, mixed> $context */
+	public function notice(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_NOTICE);
+		$this->log($log, LOG_NOTICE, $context);
 	}
 
-	public function debug(string $log): void
+	/** @param array<string, mixed> $context */
+	public function info(string $log, array $context = []): void
 	{
-		$this->log($log, LOG_DEBUG);
+		$this->log($log, LOG_INFO, $context);
 	}
 
-	public function log(string $log, int $type = 0): void
+	/** @param array<string, mixed> $context */
+	public function debug(string $log, array $context = []): void
 	{
-		switch ($type) {
-			case LOG_EMERG:
-				$label = 'EMERGENCY';
-				break;
-			case LOG_ALERT:
-				$label = 'ALERT';
-				break;
-			case LOG_CRIT:
-				$label = 'CRITICAL';
-				break;
-			case LOG_ERR:
-				$label = 'ERROR';
-				break;
-			case LOG_WARNING:
-				$label = 'WARNING';
-				break;
-			case LOG_NOTICE:
-				$label = 'NOTICE';
-				break;
-			case LOG_INFO:
-				$label = 'INFO';
-				break;
-			case LOG_DEBUG:
-				$label = 'DEBUG';
-				break;
-			default:
-				$label = '-';
-				$type = 0;
-		}
+		$this->log($log, LOG_DEBUG, $context);
+	}
 
-		$this->Out->write(date('c') . "\t$label ($type)\t" . $log, $this->type);
+	/** @param array<string, mixed> $context */
+	public function log(string $log, int $level = 0, array $context = []): void
+	{
+		$this->out->write($log, $this->type, $level, $context);
 	}
 }

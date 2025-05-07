@@ -2,7 +2,7 @@
 
 namespace PHPCanvas;
 
-use UnexpectedValueException;
+use PHPCanvas\Exception\ConfigUnexpectedValueException;
 
 final class Config implements ConfigInterface
 {
@@ -68,16 +68,16 @@ final class Config implements ConfigInterface
 	public function __unserialize(array $data): void
 	{
 		if (!isset($data['config']) || !is_array($data['config'])) {
-			throw new UnexpectedValueException('Config requires a "config" array');
+			throw new ConfigUnexpectedValueException('Config requires a "config" array');
 		}
 
 		foreach ($data['config'] as $k => $v) {
 			if (!is_string($k)) {
-				throw new UnexpectedValueException('Tried to load non-string Config key');
+				throw new ConfigUnexpectedValueException('Tried to load non-string Config key');
 			}
 
 			if (!is_string($v)) {
-				throw new UnexpectedValueException("Tried to load non-string Config value for key '$k'");
+				throw new ConfigUnexpectedValueException("Tried to load non-string Config value for key '$k'");
 			}
 		}
 

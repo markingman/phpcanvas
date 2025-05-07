@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace PHPCanvas\Logs;
 
@@ -13,6 +13,8 @@ class WriteErrorLog implements LogWriteInterface
 
 	public function write(string $log, string $type = ''): void
 	{
-		error_log($log . PHP_EOL, 3, $this->path . '/' . basename($type ?: 'error') . '.log');
+		$filename = substr(trim(preg_replace('/[^a-zA-Z0-9._-]/', '', $type) ?: '', '.'), 0, 32) ?: 'error';
+
+		error_log($log . PHP_EOL, 3, $this->path . '/' . basename($filename, '.log') . '.log');
 	}
 }

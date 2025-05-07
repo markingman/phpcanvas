@@ -4,7 +4,7 @@ namespace PHPCanvas;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use UnexpectedValueException;
+use PHPCanvas\Exception\ConfigUnexpectedValueException;
 
 class ConfigTest extends TestCase
 {
@@ -113,7 +113,7 @@ class ConfigTest extends TestCase
 
 	public function testUnserializeEmpty(): void
 	{
-		$this->expectException(UnexpectedValueException::class);
+		$this->expectException(ConfigUnexpectedValueException::class);
 		$this->expectExceptionMessage('Config requires a "config" array');
 
 		$config = new Config();
@@ -123,7 +123,7 @@ class ConfigTest extends TestCase
 
 	public function testUnserializeNotArray(): void
 	{
-		$this->expectException(UnexpectedValueException::class);
+		$this->expectException(ConfigUnexpectedValueException::class);
 		$this->expectExceptionMessage('Config requires a "config" array');
 
 		$config = new Config();
@@ -133,7 +133,7 @@ class ConfigTest extends TestCase
 
 	public function testUnserializeKeyNotString(): void
 	{
-		$this->expectException(UnexpectedValueException::class);
+		$this->expectException(ConfigUnexpectedValueException::class);
 		$this->expectExceptionMessage('Tried to load non-string Config key');
 
 		$config = new Config();
@@ -147,7 +147,7 @@ class ConfigTest extends TestCase
 
 	public function testUnserializeValueNotString(): void
 	{
-		$this->expectException(UnexpectedValueException::class);
+		$this->expectException(ConfigUnexpectedValueException::class);
 		$this->expectExceptionMessage('Tried to load non-string Config value for key \'key\'');
 
 		$config = new Config();

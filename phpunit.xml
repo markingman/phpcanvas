@@ -29,9 +29,9 @@
       <!--<file>tests/unit/Http/RequestTest.php</file>-->
       <!--<file>tests/Http/ResponseTest.php</file>-->
 
-      <!--<file>tests/Logs/LogHandlerTest.php</file>-->
-      <!--<file>...</file>-->
-      <!--<file>...</file>-->
+      <!--<file>tests/unit/Logs/ErrorLogTest.php</file>
+      <file>tests/unit/Logs/LogHandlerTest.php</file>
+      <file>tests/unit/Logs/WriteStdOutTest.php</file>-->
 
       <!--<file>tests/unit/Routing/DispatchTest.php</file>-->
       <!--<file>...links...</file>-->

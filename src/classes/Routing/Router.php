@@ -3,7 +3,8 @@
 namespace PHPCanvas\Routing;
 
 use Closure;
-use LogicException;
+use PHPCanvas\Exception\RouterError;
+use PHPCanvas\Exception\RouterException;
 
 class Router implements RouterInterface
 {
@@ -80,15 +81,15 @@ class Router implements RouterInterface
 		$action = $action ?? $this->action_default;
 
 		if (empty($path)) {
-			throw new LogicException('ROUTER_NO_PATH; No path set for route');
+			throw new RouterException('No path set for route', RouterError::NO_PATH);
 		}
 
 		if ($path[0] === '{') {
-			throw new LogicException('ROUTER_NO_PATH; Path cannot start with a variable');
+			throw new RouterException('Path cannot start with a variable', RouterError::NO_PATH);
 		}
 
 		if (empty($controller) and is_null($callback)) {
-			throw new LogicException('ROUTER_NO_CONTROLLER; No controller set for route');
+			throw new RouterException('No controller set for route', RouterError::NO_CONTROLLER);
 		}
 
 		// can set action like 'name' => ['controller' => 'MyController::action']
@@ -134,6 +135,9 @@ class Router implements RouterInterface
 		// store as integer
 
 		$i = $this->i++;
+		if (isset($this->iname[$name])) {
+			throw new RouterException('Index collision', RouterError::INDEX_COLLISION);
+		}
 		$this->iname[$name] = $i;
 
 		// route (each route leads to a controller from URL string)
@@ -184,45 +188,10 @@ class Router implements RouterInterface
 		return true;
 	}
 
-	/**
-	 * @return array<string, array{
-	 *     path : string,
-	 *     controller ?: string,
-	 *     action ?: string,
-	 *     method ?: array<string>,
-	 *     vars ?: array<string, string>,
-	 *     callback ?: Closure
-	 * }>
-	 */
+	/** @return array<int, Route> */
 	public function get_routes(): array
 	{
-		$routes = [];
-
-		foreach ($this->routes as $route) {
-			$_route = [
-				'path' => $route->regx,
-			];
-
-			$_route['controller'] = $route->controller;
-
-			$_route['action'] = $route->action;
-
-			if ($route->method !== 0) {
-				$_route['method'] = $this->get_route_methods($route->method);
-			}
-
-			if (count($route->vars)) {
-				$_route['vars'] = $route->vars;
-			}
-
-			if ($route->callback) {
-				$_route['callback'] = $route->callback;
-			}
-
-			$routes[$route->name] = $_route;
-		}
-
-		return $routes;
+		return $this->routes;
 	}
 
 	/** @return array{iname: array<string, int>, routes: array<int, Route>, index: array<string, int[]>} */
@@ -235,8 +204,7 @@ class Router implements RouterInterface
 		];
 	}
 
-	/** @return false|array{controller: string, action: string, vars: array<string, string>} */
-	public function get_route(string $method, string $url): false|array
+	public function match_route(string $method, string $url): RouteMatch|false
 	{
 		$url = trim($url, '/');
 		$url_index = strstr($url . '/', '/', true);
@@ -269,7 +237,7 @@ class Router implements RouterInterface
 
 	/**
 	 * @param array<string, string> $vars
-	 * @throws LogicException If no route found (should always exist)
+	 * @throws RouterException If no route found (should always exist)
 	 */
 	public function get_rewrite(string $name, array $vars = []): string
 	{
@@ -295,7 +263,7 @@ class Router implements RouterInterface
 
 			return '/' . $link;
 		} else {
-			throw new LogicException(sprintf('ROUTER_NO_ROUTE; No link named %s', $name));
+			throw new RouterException(sprintf('No link named %s', $name), RouterError::NO_ROUTE);
 		}
 	}
 
@@ -320,38 +288,21 @@ class Router implements RouterInterface
 
 	/**
 	 * @param array<string> $m
-	 * @return false|array{
-	 * controller : string,
-	 *  action : string,
-	 *  vars : array<string, string>
-	 * }
 	 */
-	protected function parse_route(string $method, Route $route, array $m, string $url): false|array
+	protected function parse_route(string $method, Route $route, array $m, string $url): RouteMatch|false
 	{
 		if (!is_null($route->callback)) {
-			$ret = call_user_func_array($route->callback, [$method, $route, $m, $url]);
+			$ret = ($route->callback)($method, $route, $m, $url);
 
 			if ($ret === false) {
 				return false;
 			}
 
-			if (
-				!is_array($ret)
-				or count($ret) !== 3
-				or !isset($ret[0]) or !is_string($ret[0])
-				or !isset($ret[1]) or !is_string($ret[1])
-				or !isset($ret[2]) or !is_array($ret[2])
-			) {
-				throw new LogicException('ROUTER_INVALID_CALLBACK; callback returned invalid structure');
+			if (!$ret instanceof RouteMatch) {
+				throw new RouterException('callback returned invalid structure', RouterError::INVALID_CALLBACK);
 			}
 
-			foreach ($ret[2] as $k => $v) {
-				if (!is_string($k) or !is_string($v)) {
-					throw new LogicException('ROUTER_INVALID_CALLBACK; callback returned invalid structure');
-				}
-			}
-
-			return ['controller' => $ret[0], 'action' => $ret[1], 'vars' => $ret[2]];
+			return $ret;
 		}
 
 		if (empty($route->controller)) {
@@ -362,7 +313,11 @@ class Router implements RouterInterface
 			return false;
 		}
 
-		return ['controller' => $route->controller, 'action' => $route->action, 'vars' => $this->get_route_vars($route->vars, $m)];
+		return new RouteMatch(
+			controller: $route->controller,
+			action: $route->action,
+			vars: $this->get_route_vars($route->vars, $m)
+		);
 	}
 
 	/**
@@ -415,10 +370,10 @@ class Router implements RouterInterface
 		$esc = '~';
 		$route_esc = preg_replace('~\{[^}]+}~', PHP_EOL, $path);//temporarily mark var positions ("{markers}") with EOL placeholder chars safely escape preg_quote()
 		if (!is_string($route_esc)) {
-			throw new LogicException('ROUTER_ADD_ROUTE; Cannot add route path');
+			throw new RouterException('Cannot add route path', RouterError::ADD_ROUTE);
 		}
 		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
-		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholder chars back to reqx
+		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholders with capture groups for path variables
 		if ($any) {
 			$route_esc .= '.*';//TODO is this .* or just * ?
 		}
@@ -429,7 +384,7 @@ class Router implements RouterInterface
 	private function add_route_rewrite(bool $any, string $path): string
 	{
 		if (!is_string($sprintf = preg_replace('~{([^}]+)}\**~', '%s', $path))) {
-			throw new LogicException("ROUTER; Invalid regx in '$path'");
+			throw new RouterException("Invalid regx in '$path'", RouterError::REWRITE_FAIL);
 		}
 
 		if ($any) {
