@@ -5,7 +5,7 @@
 // else http_response_code(503)
 // exit('currently unavailble');
 // ob_start();
-require __DIR__ . '/../app/app.php';
+require __DIR__ . '/../app.php';
 (App\app())->run();
 ?>
 <!DOCTYPE html>

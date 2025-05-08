@@ -18,7 +18,7 @@
     "psr-4": {
       "PHPCanvas\\Test\\": [
         "tests/fixtures/classes",
-        "tests/fixtures/app/classes"
+        "tests/fixtures/app/src"
       ],
       "PHPCanvas\\": [
         "tests/unit",

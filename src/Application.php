@@ -11,7 +11,7 @@ use Throwable;
 
 class Application
 {
-	const PHPCANVAS_VERSION = 4.0;
+	const float PHPCANVAS_VERSION = 4.0;
 
 	public function __construct(
 		public readonly ConfigInterface $Config,

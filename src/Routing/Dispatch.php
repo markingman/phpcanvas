@@ -2,7 +2,6 @@
 
 namespace PHPCanvas\Routing;
 
-use Closure;
 use Exception;
 use PHPCanvas\ContainerInterface;
 use PHPCanvas\Exception\DispatchError;
