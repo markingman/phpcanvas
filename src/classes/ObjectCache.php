@@ -25,13 +25,19 @@ class ObjectCache implements ObjectCacheInterface
 		return $this->cache_path;
 	}
 
-	/** @throws ObjectCacheException When cannot read file or cannot unserialize */
-	public function cache_get(string $name, string $instanceof): object|false
+	/**
+	 * @template T of object
+	 * @param string $name
+	 * @param class-string<T> $instanceof
+	 * @return T|null
+	 * @throws ObjectCacheException When cannot read file or cannot unserialize
+	 */
+	public function cache_get(string $name, string $instanceof): ?object
 	{
 		$cache_path = $this->cache_path . DIRECTORY_SEPARATOR . $this->get_cache_key($name);
 
 		if (!file_exists($cache_path)) {
-			return false;
+			return null;
 		}
 
 		if (!$this->is_readable($cache_path) or !$serialized = $this->file_get_contents($cache_path)) {
@@ -43,11 +49,11 @@ class ObjectCache implements ObjectCacheInterface
 		}
 
 		if (!is_object($class)) {
-			return false;
+			return null;
 		}
 
 		if (!$class instanceof $instanceof) {
-			return false;
+			return null;
 		}
 
 		return $class;

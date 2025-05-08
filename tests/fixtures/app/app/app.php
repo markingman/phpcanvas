@@ -1,45 +1,124 @@
 <?php
 
+namespace App;
+
+use LogicException;
+use PHPCanvas\Application;
+use PHPCanvas\Config;
+use PHPCanvas\Container;
+use PHPCanvas\ContainerInterface;
+use PHPCanvas\Errors\ErrorHandler;
+use PHPCanvas\Http\Request;
+use PHPCanvas\Http\Response;
+use PHPCanvas\Logs\LogFormatterString;
+use PHPCanvas\Logs\LogHandler;
+use PHPCanvas\Logs\WriteStdErr;
+use PHPCanvas\ObjectCache;
+use PHPCanvas\Routing\Dispatch;
+use PHPCanvas\Routing\Links;
+use PHPCanvas\Routing\Router;
+use Throwable;
+use Closure;
+
 // Generic bootstrap (copy and create new as required)
+// Hint: consider Composer autoload files 
 
-function app(): PHPCanvas\Application
+function app(): Application
 {
-	$dir = (string)($dir ?? __DIR__);
-	$container_store = (string)($container_store ?? '');
-	$locate_path = (string)($locate_path ?? '');
-	$config_paths = (array)($config_paths ?? [$dir . '/../config/config.php', $dir . '/../../../../../app/config/config.php']);
-	$config = (array)($config ?? []);
+	$regs = __DIR__ . '/registry';
 
-	try {
-		$Container = new PHPCanvas\Container($container_store, $locate_path);
-	} catch (Exception $e) {
-		throw new LogicException('Could not load Container');
+	$ObjectCache = new ObjectCache(sys_get_temp_dir());// TEMP DIR NOT FOR PRODUCTION (Only this test example)
+	$Container = new Container($regs);
+
+	$Container->set('Log', new LogHandler(new LogFormatterString(new WriteStdErr())));
+
+	// Set error handlers
+
+	$ErrorHandler = new ErrorHandler;
+
+	register_shutdown_function([$ErrorHandler, 'handle_shutdown']);
+	set_error_handler([$ErrorHandler, 'handle_error']);
+	set_exception_handler([$ErrorHandler, 'handle_exception']);
+
+	$ErrorHandler->set_log(function (Throwable $e) use ($Container): void {
+		ErrorHandler::log($e, $Container->get_as('Log', LogHandler::class), true);
+	});
+
+	$ErrorHandler->set_view(function (Throwable $e): void {
+		ErrorHandler::view($e);
+	});
+
+	// Example object cache
+
+	if (!$Config = $ObjectCache->cache_get('Config', Config::class)) {
+		$Config = new Config([__DIR__ . '/config.php']);
+		$ObjectCache->cache_put('Config', $Config);
 	}
-	
-	if (!$Container->cache_get('Config', PHPCanvas\Config::class)) {
-		$Container->locate('Config', $dir . '/Config.php', ['config_paths' => $config_paths, 'config' => $config]);
-	}
-	
-	foreach ([
-				 ['App', $dir . '/App.php', false],
-				 ['Dispatch', $dir . '/Dispatch.php', false],
-				 ['Errors', $dir . '/Errors.php', false],
-				 ['Links', $dir . '/Links.php', false],
-				 ['Log', $dir . '/Log.php', false],
-				 ['Request', $dir . '/Request.php', false],
-				 ['Response', $dir . '/Response.php', false],
-				 ['Router', $dir . '/Router.php', true],
-			 ] as $it) {
-		if ($it[2] and !$Container->cache_get($it[0])) {
-			$Container->locate($it[0], $it[1]);
-		} else {
-			$Container->locate($it[0], $it[1]);
+	$Container->set('Config', $Config);
+
+// 	if (!$Router = $ObjectCache->cache_get('Router', Router::class)) {
+		$Router = new Router();
+		$routes = (Closure::bind(function (): mixed {
+			return include(__DIR__ . '/routes.php');
+		}, null)());
+		if (is_array($routes)) {
+			foreach ($routes as $name => $route) {
+				if (is_string($name) and is_array($route)) {
+					$Router->add_route(
+						name: $name,
+						path: $route['path'] ?? '',
+						controller: $route['controller'] ?? '',
+						action: $route['action'] ?? null,
+						callback: $route['callback'] ?? null,
+						index: $route['index'] ?? null,
+						vars: $route['vars'] ?? null,
+						method: $route['method'] ?? null,
+					);
+				}
+			}
 		}
-	}
-	
-	if (!(($App = $Container->get('App')) instanceof PHPCanvas\Application)) {
-		throw new Exception('Could not load App');
-	}
-	
-	return $App;
+		$ObjectCache->cache_put('Router', $Router);
+// 	}
+	$Container->set('Router', $Router);
+
+	// Example inline register
+
+	$Container->register('Request', function (): Request {
+		return new Request($_GET, $_POST, $_FILES, $_SERVER, $_COOKIE);
+	});
+
+	$Container->register('Response', function (): Response {
+		return new Response();
+	});
+
+	$Container->register('Links', function (ContainerInterface $Container): Links {
+		$Config = $Container->get_as('Config', Config::class);
+		return new Links($Container->get_as('Router', Router::Class), $Config->list()['SITE_URL'] ?? '', $Config->list()['SITE_PATH'] ?? '');
+	});
+
+	$Container->register('Dispatch', function (ContainerInterface $Container): Dispatch {
+		return new Dispatch(
+			Container: $Container,
+			Request: $Container->get_as('Request', Request::class),
+			Response: $Container->get_as('Response', Response::class),
+			Router: $Container->get_as('Router', Router::class),
+			Links: $Container->get_as('Links', Links::class),
+			action_prefix: 'action_',
+		);
+	});
+
+	$Container->register('App', function (ContainerInterface $Container): Application {
+		return new Application(
+			Config: $Container->get_as('Config', Config::class),
+			Container: $Container,
+			Request: $Container->get_as('Request', Request::class),
+			Response: $Container->get_as('Response', Response::class),
+			Dispatch: $Container->get_as('Dispatch', Dispatch::class),
+		);
+	});
+
+	// Example locate distinct path
+	// 	$Container->register_path('Links', $regs . '/Links.php');
+
+	return $Container->get_as('App', Application::class);
 }

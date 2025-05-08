@@ -3,6 +3,7 @@
 namespace PHPCanvas;
 
 use Closure;
+use PHPCanvas\Exception\ContainerException;
 
 interface ContainerInterface
 {
@@ -24,7 +25,27 @@ interface ContainerInterface
 	/** @param array<mixed> $args */
 	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed;
 
-	public function get(string $name, bool $store_created = true): mixed;
+	/**
+	 * Retrieve an instance by name or alias.
+	 * If not yet created, will attempt to build it via registered closure, location path, or reflection.
+	 *
+	 * @param string $name Service name or alias
+	 * @param bool $store_created Whether to cache the created instance
+	 * @return object
+	 */
+	public function get(string $name, bool $store_created = true): object;
+
+	/**
+	 * Retrieve an instance and confirm it's type or fail
+	 *
+	 * @template T of object
+	 * @param string $name Service name or alias
+	 * @param class-string<T> $instanceof Optionally confirm the class type
+	 * @param bool $store_created Whether to cache the instance if it's newly created
+	 * @return T
+	 * @throws ContainerException If instantiation fails
+	 */
+	public function get_as(string $name, string $instanceof, bool $store_created = true): object;
 
 	public function set(string $name, object $value): void;
 

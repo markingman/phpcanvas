@@ -138,15 +138,34 @@ class Container implements ContainerInterface
 	 *
 	 * @param string $name Service name or alias
 	 * @param bool $store_created Whether to cache the created instance
-	 * @return object|null
-	 *
-	 * @throws ContainerException If instantiation fails
+	 * @return object
 	 */
-	public function get(string $name, bool $store_created = true): object|null
+	public function get(string $name, bool $store_created = true): object
 	{
 		$name = $this->aliases[$name] ?? $name;
 
 		return $this->instances[$name] ?? $this->create($name, $store_created);
+	}
+
+	/**
+	 * Retrieve an instance and confirm its type or fail
+	 *
+	 * @template T of object
+	 * @param string $name Service name or alias
+	 * @param class-string<T> $instanceof Optionally confirm the class type
+	 * @param bool $store_created Whether to cache the instance if it's newly created
+	 * @return T
+	 * @throws ContainerException If instantiation fails
+	 */
+	public function get_as(string $name, string $instanceof, bool $store_created = true): object
+	{
+		$instance = $this->get($name, $store_created);
+
+		if (!$instance instanceof $instanceof) {
+			throw new ContainerException("Object '$name' not instanceof '$instanceof'", ContainerError::UNEXPECTED_CLASS);
+		}
+
+		return $instance;
 	}
 
 	public function set(string $name, object $value): void

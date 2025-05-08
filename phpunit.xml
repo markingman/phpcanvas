@@ -13,6 +13,9 @@
     </report>
   </coverage>
   <testsuites>
+  	<testsuite name="Integration Tests">
+  		<file>tests/integration/ExampleTest.php</file>
+  	</testsuite>
     <testsuite name="Unit Tests">
       <!--<directory suffix="Test.php">tests</directory>-->
       <file>tests/unit/ApplicationTest.php</file>
@@ -29,15 +32,15 @@
       <!--<file>tests/unit/Http/RequestTest.php</file>-->
       <!--<file>tests/Http/ResponseTest.php</file>-->
 
-      <!--<file>tests/unit/Logs/ErrorLogTest.php</file>
-      <file>tests/unit/Logs/LogHandlerTest.php</file>
-      <file>tests/unit/Logs/WriteStdOutTest.php</file>-->
+      <file>tests/unit/Logs/ErrorLogTest.php</file>
+      <!--<file>tests/unit/Logs/LogHandlerTest.php</file>-->
+      <file>tests/unit/Logs/WriteStdErrTest.php</file>
 
       <!--<file>tests/unit/Routing/DispatchTest.php</file>-->
       <!--<file>...links...</file>-->
       <file>tests/unit/Routing/RouteTest.php</file>
-      <!--<file>tests/unit/Routing/LinksTest.php</file>-->
-      <file>tests/unit/Routing/RouterTest.php</file>
+      <file>tests/unit/Routing/LinksTest.php</file>
+      <!--<file>tests/unit/Routing/RouterTest.php</file>-->
     </testsuite>
   </testsuites>
   <source>

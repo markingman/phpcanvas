@@ -13,6 +13,11 @@ class WriteStdErr implements LogWriteInterface
 
 	public function write(string $log, string $type = ''): void
 	{
+		$this->fwrite($log . PHP_EOL);
+	}
+
+	protected function fwrite(string $log): void
+	{
 		if (is_resource($this->fp)) {
 			fwrite($this->fp, $log . PHP_EOL);
 		}

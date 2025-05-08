@@ -2,5 +2,6 @@ parameters:
 	level: 9
 	paths:
 		- src
+		- tests/fixtures/app/app/app.php
 	tips:
 		treatPhpDocTypesAsCertain: false

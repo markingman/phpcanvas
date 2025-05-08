@@ -191,7 +191,7 @@ __;
 	{
 		$this->handle_exception(// change error messages into ErrorException
 			// note this is not `throw new ...`
-			new ErrorException($errstr, 0, $errno, $errfile, $errline);
+			new ErrorException($errstr, 0, $errno, $errfile, $errline)
 		);
 
 		return true;
@@ -206,7 +206,7 @@ __;
 		if ($this->view) {// callback can ignore or view
 			($this->view)($e, null);
 		} elseif (static::is_cli()) {
-			static::view($e);
+			static::view($e, null);
 		}
 
 		if ($this->terminate) {

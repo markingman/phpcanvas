@@ -248,7 +248,7 @@ class Request implements RequestInterface
 	public function get_path(): string
 	{
 		if (is_null($this->path)) {
-			if ($path = $this->get_server('REDIRECT_URL')) {
+			if ($path = $this->get_server('REQUEST_URI')) {
 				$this->set_path($path);
 			}
 		}

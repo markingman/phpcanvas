@@ -225,6 +225,12 @@ class Router implements RouterInterface
 			if (isset($tried[$i])) {
 				continue;
 			}
+// 			if ($this->routes[$i]->action === 'test'){
+// echo $url.'   ';
+// var_dump($this->routes[$i]->regx);
+// 			exit('a');
+// 			}
+// 			var_dump($this->routes);exit;
 			if (preg_match($this->routes[$i]->regx, $url, $m)) {
 				if (($return = $this->parse_route($method, $this->routes[$i], $m, $url)) !== false) {
 					return $return;

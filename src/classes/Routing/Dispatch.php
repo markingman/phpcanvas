@@ -29,23 +29,19 @@ class Dispatch implements DispatchInterface
 
 	public function call_controller(?string $method = null, ?string $url = null): void
 	{
-		if (!$route = $this->Router->match_route($method ?? '', $url ?? '')) {
+		if (!$RouteMatch = $this->Router->match_route($method ?? '', $url ?? '')) {
 			// TODO response types, e.g. method not implemented
 			throw new DispatchException(sprintf('No route found for URL "%s"', $url), DispatchError::NO_ROUTE, 404);
-		} else {
-			//[$controller, $action, $vars/*, $name*/] = $route;//TODO: route is class
-			$controller = $route['controller'];
-			$action = $route['action'];
-			$vars = $route['vars'];
 		}
 
-		if (str_starts_with($controller, 'http') and str_contains($controller, '://')) { //Router can make http redirect
-			$this->go_to($controller);
+		if (str_starts_with($RouteMatch->controller, 'http') and str_contains($RouteMatch->controller, '://')) { //Router can make http redirect
+			$this->go_to($RouteMatch->controller);
 		}
 
-		$this->controller = $controller;
-		$this->action = $this->action_prefix . $action . $this->action_suffix;
-		foreach ($vars as $k => $v) {
+		$this->controller = $RouteMatch->controller;
+		$this->action = $this->action_prefix . $RouteMatch->action . $this->action_suffix;
+
+		foreach ($RouteMatch->vars as $k => $v) {
 			$this->Request->set_get_value((string)$k, $v);
 		}
 
@@ -106,16 +102,7 @@ class Dispatch implements DispatchInterface
 		$this->exit();
 	}
 
-	/**
-	 * @return array<string, array{
-	 *     path : string,
-	 *     controller ?: string,
-	 *     action ?: string,
-	 *     method ?: array<string>,
-	 *     vars ?: array<string, string>,
-	 *     callback ?: Closure
-	 * }>
-	 */
+	/** @return array<int, Route> */
 	public function get_routes(): array
 	{
 		return $this->Router->get_routes();
