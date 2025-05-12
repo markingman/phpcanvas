@@ -2,14 +2,15 @@
 
 namespace PHPCanvas\Http;
 
-use RuntimeException;
+use PHPCanvas\Exception\ResponseError;
+use PHPCanvas\Exception\ResponseException;
 
 class Response implements ResponseInterface
 {
 	protected bool $terminate_after_response = true;
 	protected int $response_code = 200;
 	protected string $char_set = 'UTF-8';
-	/** @var array<string> $headers */
+	/** @var array<string, string> $headers */
 	protected array $headers = [];
 	/** @var array<string, Cookie> $cookies */
 	protected array $cookies = [];
@@ -101,30 +102,34 @@ class Response implements ResponseInterface
 	/** If $set_content_length FALSE will cause chunked downloads in common web server environments */
 	public function file(string $file, bool $set_content_length = false, bool $unlink_file = true, bool $inline = false): void
 	{
-		if (!$mime_type = mime_content_type($file)) {
-			throw new RuntimeException('RESPONSE_MIME_TYPE; Could not resolve mime-type');
+		if (!$mime_type = $this->mime_content_type($file)) {
+			throw new ResponseException("Could not resolve mime-type for '$file'", ResponseError::MIME_TYPE);
 		}
 
 		if ($set_content_length) {
-			if (!$size = filesize($file)) {
-				throw new RuntimeException('RESPONSE_FILE_SIZE; Could not get file size');
+			if (!$size = $this->filesize($file)) {
+				throw new ResponseException("Could not get file size for '$file'", ResponseError::FILE_SIZE);
 			}
 		}
 
 		$this->set_header('Content-Type', sprintf('%s; charset=%s', $mime_type, $this->char_set));
-		$this->set_header('Content-Disposition', sprintf('%ss; filename=%s', $inline ? 'inline' : 'attachment', basename($file)));
+		$this->set_header('Content-Disposition', sprintf('%s; filename=%s', $inline ? 'inline' : 'attachment', basename($file)));
 		if ($set_content_length) {
 			$this->set_header('Content-Length', strval($size));
 		}
 		$this->set_header('Content-Transfer-Encoding', 'binary');
 		$this->respond(
 			function () use ($file, $set_content_length, $unlink_file) {
-				$this->readfile($file);
+				if ($this->readfile($file) === false) {
+					throw new ResponseException("Failed reading file '$file'", ResponseError::READFILE_FAIL);
+				}
 				if ($set_content_length) {
 					$this->flush();
 				}
 				if ($unlink_file) {
-					$this->unlink($file);
+					if (!$this->unlink($file)) {
+						throw new ResponseException("Failed to unlink '$file'", ResponseError::UNLINK_FAIL);
+					}
 				}
 			}
 		);
@@ -146,15 +151,15 @@ class Response implements ResponseInterface
 		}
 
 		foreach ($this->headers as $key => $value) {
-			header($key . ': ' . $value);
+			$this->header($key . ': ' . $value);
 		}
 
 		foreach ($this->cookies as $name => $cookie) {
-			setcookie($name, $cookie->value, $cookie->expires, $cookie->path, $cookie->domain, $cookie->secure, $cookie->httponly);
+			$this->setcookie($name, $cookie->value, $cookie->expires, $cookie->path, $cookie->domain, $cookie->secure, $cookie->httponly);
 		}
 
 		if (is_string($content)) {
-			echo $content;
+			$this->echo($content);
 		} elseif (is_callable($content)) {
 			$content();
 		}
@@ -179,13 +184,9 @@ class Response implements ResponseInterface
 		header_remove();
 	}
 
-	protected function readfile(string $file): int
+	protected function readfile(string $filename): int|false
 	{
-		if (($i = readfile($file)) === false) {
-			throw new RuntimeException("RESPONSE_READFILE_FAIL; Failed reading file '$file'");
-		}
-
-		return $i;
+		return readfile($filename);
 	}
 
 	protected function flush(): void
@@ -193,12 +194,40 @@ class Response implements ResponseInterface
 		flush();
 	}
 
-	protected function unlink(string $file): true
+	protected function unlink(string $file): bool
 	{
-		if (!unlink($file)) {
-			throw new RuntimeException("RESPONSE_UNLINK_FAIL; Failed to unlink file '$file'");
-		}
+		return unlink($file);
+	}
 
-		return true;
+	protected function header(string $header): void
+	{
+		header($header);
+	}
+
+	protected function setcookie(
+		string $name,
+		string $value = '',
+		int $expires_or_options = 0,
+		string $path = '',
+		string $domain = '',
+		bool $secure = false,
+		bool $httponly = false
+	): bool {
+		return setcookie($name, $value, $expires_or_options, $path, $domain, $secure, $httponly);
+	}
+
+	protected function mime_content_type(string $filename): string|false
+	{
+		return mime_content_type($filename);
+	}
+
+	protected function filesize(string $filename): int|false
+	{
+		return filesize($filename);
+	}
+
+	protected function echo(string $echo): void
+	{
+		echo $echo;
 	}
 }

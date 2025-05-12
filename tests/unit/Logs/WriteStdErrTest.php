@@ -8,8 +8,6 @@ class WriteStdErrTest extends TestCase
 {
 	public function testWriteToStdErr(): void
 	{
-		$writer = new WriteStdErr();
-
 		$WriteStdErr = new class extends WriteStdErr {
 			public readonly string $test;
 
@@ -22,5 +20,29 @@ class WriteStdErrTest extends TestCase
 		$WriteStdErr->write('Test message', 'CLI');
 
 		$this->assertSame('Test message' . PHP_EOL, $WriteStdErr->test);
+	}
+
+	public function testFWrite(): void
+	{
+		$WriteStdErr = new class() extends WriteStdErr {
+			public function __construct()
+			{
+				$this->fp = tmpfile();
+			}
+
+			public function testFp(): string
+			{
+				$contents = '';
+				rewind($this->fp);
+				$contents = stream_get_contents($this->fp);
+				fclose($this->fp);
+
+				return $contents;
+			}
+		};
+
+		$WriteStdErr->write('Test message', 'CLI');
+
+		$this->assertSame('Test message', trim($WriteStdErr->testFp()));
 	}
 }

@@ -4,6 +4,8 @@ namespace PHPCanvas\Routing;
 
 use Exception;
 use PHPUnit\Framework\TestCase;
+use PHPCanvas\Exception\RouterException;
+use PHPCanvas\Exception\RouterError;
 
 class RouterTest extends TestCase
 {
@@ -12,47 +14,63 @@ class RouterTest extends TestCase
 	/**
 	 * @param array<string> $m
 	 * @return false|array{string, string, array<string, string>}
-	 * @throws Exception
 	 */
 	public static function __test_callback_function(string $method, Route $route, array $m, string $url): array|false
 	{
 		return false;
 	}
 
-	/**
-	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
-	 * @throws Exception
-	 */
-	public static function __test_callback_route_function(string $method, Route $route, array $m, string $url): array|false
+	/** @param array<string> $m */
+	public static function __test_callback_invalid_function(string $method, Route $route, array $m, string $url): int
 	{
-		if ($method !== 'POST') {
-			return false;
-		}
-
-		$controller = 'App\\Controller\\Callback';
-		$action = 'callback_action';
-		$vars = ['var1' => 'ONE', 'var2' => 'TWO'];
-
-		return [$controller, $action, $vars];
+		return 100;
 	}
 
 	/**
 	 * @param array<string> $m
 	 * @return false|array{string, string, array<string, string>}
-	 * @throws Exception
 	 */
-	public static function __test_callback_method_function(string $method, Route $route, array $m, string $url): false|array
+	public static function __test_callback_empty_function(string $method, Route $route, array $m, string $url): RouteMatch|false
+	{
+		return new RouteMatch(
+			controller: '',
+			action: 'callback_action',
+			vars:['var1' => 'ONE', 'var2' => 'TWO'],
+		);
+	}
+
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 */
+	public static function __test_callback_route_function(string $method, Route $route, array $m, string $url): RouteMatch|false
+	{
+		if ($method !== 'POST') {
+			return false;
+		}
+
+		return new RouteMatch(
+			controller: 'App\\Controller\\Callback',
+			action: 'callback_action',
+			vars:['var1' => 'ONE', 'var2' => 'TWO'],
+		);
+	}
+
+	/**
+	 * @param array<string> $m
+	 * @return false|array{string, string, array<string, string>}
+	 */
+	public static function __test_callback_method_function(string $method, Route $route, array $m, string $url): RouteMatch|false
 	{
 		if (!Router::is_route_method($method, $route->method)) {
 			return false;
 		}
 
-		$controller = 'App\\Controller\\Callback';
-		$action = 'callback_action';
-		$vars = [];
-
-		return [$controller, $action, $vars];
+		return new RouteMatch(
+			controller: 'App\\Controller\\Callback',
+			action: 'callback_action',
+			vars: [],
+		);
 	}
 
 	public function setUp(): void
@@ -67,24 +85,77 @@ class RouterTest extends TestCase
 
 	public function testAddRouteNoPathFailure(): void
 	{
-		$this->expectException(Exception::class);
-		$this->expectExceptionMessage('ROUTER_NO_PATH; No path set for route');
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::NO_PATH->value);
+		$this->expectExceptionCode(500);
 
-		$this->Router->add_route(name: 'test', path: '');
+		try {
+			$this->Router->add_route(name: 'test', path: '');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::NO_PATH, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testAddRouteVarFirstFailure(): void
+	{
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::NO_PATH->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$this->Router->add_route(name: 'test', path: '{var}');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::NO_PATH, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testAddRouteNoControllerFailure(): void
 	{
-		$this->expectException(Exception::class);
-		$this->expectExceptionMessage('ROUTER_NO_CONTROLLER; No controller set for route');
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::NO_CONTROLLER->value);
+		$this->expectExceptionCode(500);
 
-		$this->Router->add_route(name: 'test', path: '/');
+		try {
+			$this->Router->add_route(name: 'test', path: '/');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::NO_CONTROLLER, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testAddRouteIndexExistsFailure(): void
+	{
+		$Router  = new class('default') Extends Router {
+			/** @var array<string, int> $iname */
+			protected array $iname = [
+				'test' => 1,
+			];
+		};
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::INDEX_COLLISION->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->add_route(name: 'test', path: '/', controller: 'TextController');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::INDEX_COLLISION, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testGetActionDefault(): void
 	{
 		$res = $this->Router->get_action_default();
 		$this->assertEquals('default', $res);
+	}
+
+	public function testGetRouteMethods(): void
+	{
+		$this->assertSame(['GET'], $this->Router->get_route_methods(Router::METHODS['GET']));
+		$this->assertSame(['PATCH'], $this->Router->get_route_methods(Router::METHODS['PATCH']));
+		$this->assertSame(['GET', 'POST'], $this->Router->get_route_methods(Router::METHODS['GET'] + Router::METHODS['POST']));
 	}
 
 	public function testRouteEmptyRoute(): void
@@ -94,11 +165,11 @@ class RouterTest extends TestCase
 			'controller' => 'App\\Controller\\Test'
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Test',
-			'action' => 'default',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Test',
+			action: 'default',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
@@ -126,11 +197,11 @@ class RouterTest extends TestCase
 			'controller' => 'App\\Controller\\Simple'
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Simple',
-			'action' => 'default',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Simple',
+			action: 'default',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
@@ -158,11 +229,11 @@ class RouterTest extends TestCase
 			'controller' => 'App\\Controller\\Simple::method_name'
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Simple',
-			'action' => 'method_name',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Simple',
+			action: 'method_name',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
@@ -181,11 +252,11 @@ class RouterTest extends TestCase
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
 
-		$exp = [
-			'controller' => 'App\\Controller\\Simple',
-			'action' => 'default',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Simple',
+			action: 'default',
+			vars: []
+		);
 
 		$res = $this->Router->match_route('GET', '/simple/path');
 		$this->assertEquals($exp, $res, 'Should get expected route from path');
@@ -288,11 +359,11 @@ class RouterTest extends TestCase
 			'controller' => 'App\\Controller\\Test'
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Test',
-			'action' => 'default',
-			'vars' => ['id' => '123']
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Test',
+			action: 'default',
+			vars: ['id' => '123']
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
@@ -308,6 +379,9 @@ class RouterTest extends TestCase
 
 		$res = $this->Router->get_rewrite('test', ['id' => 'abc']);
 		$this->assertEquals('/test/abc', $res);
+
+		$res = $this->Router->get_rewrite('test');
+		$this->assertEquals('/test/', $res);
 	}
 
 	public function testRouteMultiVarRoute(): void
@@ -317,11 +391,11 @@ class RouterTest extends TestCase
 			'controller' => 'App\\Controller\\MultiVar'
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\MultiVar',
-			'action' => 'default',
-			'vars' => ['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\MultiVar',
+			action: 'default',
+			vars: ['var1' => '123', 'var2' => 'abc', 'var3' => 'xyz']
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
 		$this->assertTrue($res, 'Should add route');
@@ -344,11 +418,11 @@ class RouterTest extends TestCase
 			'method' => 'POST'
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Test',
-			'action' => 'default',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Test',
+			action: 'default',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], method: $route['method']);
 		$this->assertTrue($res, 'Should add route');
@@ -384,15 +458,14 @@ class RouterTest extends TestCase
 			if (in_array($test, ['POST', 'PUT', 'PATCH'])) {
 				continue;
 			}
-			$res = $this->Router->match_route($test, '/method');
-			$this->assertFalse($res);
+			$this->assertFalse($this->Router->match_route($test, '/method'));
 		}
 
-		$exp = [
-			'controller' => 'App\\Controller\\Test',
-			'action' => 'default',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Test',
+			action: 'default',
+			vars: []
+		);
 
 		$res = $this->Router->match_route('PATCH', $path);
 		$this->assertEquals($exp, $res);
@@ -415,11 +488,11 @@ class RouterTest extends TestCase
 			'action' => 'simple_action',
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Simple',
-			'action' => 'simple_action',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Simple',
+			action: 'simple_action',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'simple', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
@@ -439,11 +512,11 @@ class RouterTest extends TestCase
 			'action' => 'test_action',
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\TestClass',
-			'action' => 'test_action',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\TestClass',
+			action: 'test_action',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
@@ -463,11 +536,11 @@ class RouterTest extends TestCase
 			'action' => 'test_action',
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\TestClass',
-			'action' => 'test_action',
-			'vars' => ['var1' => 'a', 'var2' => 'b']
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\TestClass',
+			action: 'test_action',
+			vars: ['var1' => 'a', 'var2' => 'b']
+		);
 
 		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller'], action: $route['action']);
 		$this->assertTrue($res, 'Should add route');
@@ -503,6 +576,33 @@ class RouterTest extends TestCase
 		$this->assertEquals('/callback', $res);
 	}
 
+	public function testRouteInvalidCallback(): void
+	{
+		$route = [
+			'path' => '/callback',
+			'callback' => function (string $method, Route $route, array $m, string $url) {
+				$class = RouterTest::class;
+
+				return $class::__test_callback_invalid_function($method, $route, $m, $url);
+			}
+		];
+
+		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback']);
+		$this->assertTrue($res, 'Should add route');
+
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::INVALID_CALLBACK->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$res = $this->Router->match_route('GET', '/callback');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::INVALID_CALLBACK, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
 	public function testRouteCallbackRoute(): void
 	{
 		$route = [
@@ -514,11 +614,11 @@ class RouterTest extends TestCase
 			}
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Callback',
-			'action' => 'callback_action',
-			'vars' => ['var1' => 'ONE', 'var2' => 'TWO']
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Callback',
+			action: 'callback_action',
+			vars: ['var1' => 'ONE', 'var2' => 'TWO']
+		);
 
 		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback']);
 		$this->assertTrue($res, 'Should add route');
@@ -545,11 +645,11 @@ class RouterTest extends TestCase
 			}
 		];
 
-		$exp = [
-			'controller' => 'App\\Controller\\Callback',
-			'action' => 'callback_action',
-			'vars' => []
-		];
+		$exp = new RouteMatch(
+			controller: 'App\\Controller\\Callback',
+			action: 'callback_action',
+			vars: []
+		);
 
 		$res = $this->Router->add_route(name: 'callback', path: $route['path'], callback: $route['callback'], method: $route['method']);
 		$this->assertTrue($res, 'Should add route');
@@ -566,31 +666,33 @@ class RouterTest extends TestCase
 
 	public function testDeleteRoute(): void
 	{
-		$route = [
-			'path' => '/test',
-			'controller' => 'App\\Controller\\Test',
-		];
+		$this->assertTrue(
+			$this->Router->add_route(name: 'test', path: '/test', controller: 'App\\Controller\\Test'),
+		);
 
-		$exp = [
-			'controller' => 'App\\Controller\\Test',
-			'action' => 'default',
-			'vars' => []
-		];
+		$this->assertTrue(
+			$this->Router->add_route(name: 'test/path', path: '/test/path', controller: 'App\\Controller\\Test::test'),
+		);
 
-		$res = $this->Router->add_route(name: 'test', path: $route['path'], controller: $route['controller']);
-		$this->assertTrue($res, 'Should add route');
+		$this->assertEquals(new RouteMatch(
+			controller:  'App\\Controller\\Test',
+			action:  'default',
+			vars:  []
+		), $this->Router->match_route('GET', '/test'));
 
-		$res = $this->Router->match_route('GET', '/test');
-		$this->assertEquals($exp, $res);
+		$this->assertEquals(new RouteMatch(
+			controller:  'App\\Controller\\Test',
+			action:  'test',
+			vars:  []
+		), $this->Router->match_route('GET', '/test/path'));
 
-		$res = $this->Router->delete_route('test');
-		$this->assertTrue($res);
+		$this->assertTrue($this->Router->delete_route('test'));
+		$this->assertFalse($this->Router->match_route('GET', '/test'));
+		$this->assertFalse($this->Router->delete_route('test'));
 
-		$res = $this->Router->match_route('GET', '/test');
-		$this->assertFalse($res);
-
-		$res = $this->Router->delete_route('test');
-		$this->assertFalse($res);
+		$this->assertTrue($this->Router->delete_route('test/path'));
+		$this->assertFalse($this->Router->match_route('GET', '/test/path'));
+		$this->assertFalse($this->Router->delete_route('test/path'));
 	}
 
 	public function testGetRoutes(): void
@@ -634,34 +736,48 @@ class RouterTest extends TestCase
 		}
 
 		$exp = [
-			'test1' => [
-				'path' => '~^test$~',
-				'controller' => 'App\\Controller\\Test',
-				'action' => 'default',
-			],
-			'test2' => [
-				'path' => '~^test2/foo$~',
-				'controller' => 'App\\Controller\\Test2',
-				'action' => 'foo',
-			],
-			'test3' => [
-				'path' => '~^test3/foo/([^/]+)$~',
-				'controller' => 'App\\Controller\\Test3',
-				'action' => 'default',
-				'method' => ['GET', 'POST'],
-				'vars' => [
+			new Route(
+				regx: '~^test$~',
+				controller: 'App\\Controller\\Test',
+				action: 'default',
+				vars:[],
+				method: 0,
+				sprintf:'test',
+				name: 'test1',
+			),
+			new Route(
+				regx: '~^test2/foo$~',
+				controller: 'App\\Controller\\Test2',
+				action: 'foo',
+								vars:[],
+				sprintf:'test2/foo',
+
+				name: 'test2',
+				method: 0,
+			),
+			new Route(
+				regx: '~^test3/foo/([^/]+)$~',
+				controller: 'App\\Controller\\Test3',
+				action: 'default',
+				sprintf:'test3/foo/%s',
+				method: Router::METHODS['GET'] + Router::METHODS['POST'],
+				vars: [
 					'var1' => 'VAR1_DEFAULT',
 					'var2' => '',
-				]
-			],
-			'test4' => [
-				'path' => '~^callback$~',
-				'controller' => '',
-				'action' => 'default',
-				'method' => ['POST', 'PUT'],
-				'callback' => function (string $method, Route $route, array $m, string $url) {
+				],
+				name: 'test3',
+			),
+			new Route(
+				regx: '~^callback$~',
+				controller: '',
+				action: 'default',
+				sprintf:'callback',
+				vars:[],
+				method: Router::METHODS['POST'] + Router::METHODS['PUT'],
+				callback: function (string $method, Route $route, array $m, string $url) {
 				},
-			]
+				name: 'test4',
+			)
 		];
 
 		$res = $this->Router->get_routes();
@@ -719,8 +835,8 @@ class RouterTest extends TestCase
 		}
 	}
 
-	// TODO: move these to fixtures
-
+// 	// TODO: move these to fixtures
+// 
 	public function getGetRouteMethods(): void
 	{
 		$res = $this->Router->get_route_methods(0);
@@ -753,6 +869,77 @@ class RouterTest extends TestCase
 		$res = Router::get_route_vars($route_vars, $m);
 		$exp = ['var1' => 'test1', 'var2' => 'test2'];
 		$this->assertEquals($exp, $res);
+	}
+
+	public function testParseRouteEmptyController(): void
+	{
+		$Router = new class('default') extends Router {
+			public function testParseRoute(): bool
+			{
+				return $this->parse_route('GET', new Route(
+				
+				regx: '',
+				controller: '',
+				action: '',
+				vars:[],
+				method: 0,
+				sprintf:'',
+				name: '',
+				
+				
+				),[],'path');
+			}
+		};
+		$this->assertFalse($Router->testParseRoute());
+	}
+
+	public function testAddRouteRegxInvalid(): void
+	{
+		$Router = new class('default') extends Router {
+			/** @return string|string[] */
+			protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
+			{
+				return null;
+			}
+		};
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::ADD_ROUTE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->add_route(name: 'test', path: '/', controller: 'TextController');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::ADD_ROUTE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testAddRouteRewriteRegxInvalid(): void
+	{
+		$Router = new class('default') extends Router {
+			private int $test_preg_replace_called = 0;
+			/** @return string|string[] */
+			protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
+			{
+				$this->test_preg_replace_called++;
+
+				if ($this->test_preg_replace_called > 1) {
+					return null;
+				} else {
+					return parent::preg_replace($pattern, $replacement, $subject);
+				}
+			}
+		};
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::REWRITE_FAIL->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->add_route(name: 'test', path: '/', controller: 'TextController');
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::REWRITE_FAIL, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testDump(): void
@@ -828,4 +1015,194 @@ class RouterTest extends TestCase
 		$res = $this->Router->dump();
 		$this->assertEquals($exp, $res);
 	}
+
+	public function testRouterSerializationPreservesRoutes(): void
+	{
+		$router = new Router();
+
+		$router->add_route(
+			name: 'test',
+			path: '/foo/{id}',
+			controller: 'TestController',
+			action: 'show',
+			method: ['GET'],
+			vars: ['id' => ''],
+			index: 'foo'
+		);
+
+		$dumpBefore = $router->dump();
+
+		// Serialize and unserialize
+		$serialized = serialize($router);
+		$unserialized = unserialize($serialized);
+
+		$this->assertInstanceOf(Router::class, $unserialized);
+		$dumpAfter = $unserialized->dump();
+
+		// Check structure consistency
+		$this->assertSame($dumpBefore['iname'], $dumpAfter['iname']);
+		$this->assertSame(array_keys($dumpBefore['routes']), array_keys($dumpAfter['routes']));
+		$this->assertSame($dumpBefore['index'], $dumpAfter['index']);
+
+		// Check a single route's core data (ignoring callback)
+		$beforeRoute = reset($dumpBefore['routes']);
+		$afterRoute = reset($dumpAfter['routes']);
+
+		$this->assertInstanceOf(Route::class, $afterRoute);
+		$this->assertSame($beforeRoute->controller, $afterRoute->controller);
+		$this->assertSame($beforeRoute->action, $afterRoute->action);
+		$this->assertSame($beforeRoute->method, $afterRoute->method);
+		$this->assertSame($beforeRoute->name, $afterRoute->name);
+		$this->assertSame($beforeRoute->vars, $afterRoute->vars);
+		$this->assertSame($beforeRoute->sprintf, $afterRoute->sprintf);
+		$this->assertSame($beforeRoute->regx, $afterRoute->regx);
+
+		// Callbacks must not be preserved
+		$this->assertNull($afterRoute->callback);
+	}
+
+	public function testRouterSerializationRequiresValidIname(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize([]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidInameFormat(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [100 => true]]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidRoutes(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => []]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidRoutesFormat(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [], 'routes' => ['z' => true]]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidIndex(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [], 'routes' => []]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidIndexFormat(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [], 'routes' => [], 'index' => [100 => true]]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidIndexSubFormat(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [], 'routes' => [], 'index' => ['test' => ['string']]]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidI(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [], 'routes' => [], 'index' => [], 'i' => true]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testRouterSerializationRequiresValidDefaultAction(): void
+	{
+		$Router = new Router();
+
+		$this->expectException(RouterException::class);
+		$this->expectExceptionMessage(RouterError::UNSERIALIZE->value);
+		$this->expectExceptionCode(500);
+
+		try {
+			$Router->__unserialize(['iname' => [], 'routes' => [], 'index' => [], 'i' => 0, 'action_default' => true]);
+		} catch (RouterException $e) {
+			$this->assertSame(RouterError::UNSERIALIZE, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
 }

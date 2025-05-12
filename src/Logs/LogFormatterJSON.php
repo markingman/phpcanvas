@@ -14,7 +14,7 @@ class LogFormatterJSON implements LogFormatterInterface
 	/** @param array<string, mixed> $context */
 	public function write(string $log, string $type = '', int $level = 0, array $context = []): void
 	{
-		$log = json_encode([
+		$log = $this->json_encode([
 			'timestamp' => $this->now(),
 			'type' => $type ?: 'UNKNOWN',
 			'level' => LogLevel::label($level),
@@ -29,9 +29,13 @@ class LogFormatterJSON implements LogFormatterInterface
 		$this->writer->write($log, $type);
 	}
 
-
-	public function now(): string
+	protected function now(): string
 	{
 		return date('c');
+	}
+
+	protected function json_encode(mixed $value, int $flags = 0): string|false
+	{
+		return json_encode($value, $flags);
 	}
 }

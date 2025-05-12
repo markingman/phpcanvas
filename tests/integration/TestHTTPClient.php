@@ -3,6 +3,7 @@
 namespace PHPCanvas;
 
 use GuzzleHttp\Client;
+use RuntimeException;
 use tidy;
 
 class TestHTTPClient

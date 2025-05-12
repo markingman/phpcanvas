@@ -31,6 +31,11 @@ class TestClassWithSimpleMethods
 		return $iface->test();
 	}
 
+	public function echo(): void
+	{
+		echo 'value';
+	}
+
 	protected function test2(): bool
 	{
 		return true;

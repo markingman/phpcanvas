@@ -11,4 +11,5 @@ enum RouterError: string
 	case NO_PATH = 'ROUTER_NO_PATH';
 	case NO_ROUTE = 'ROUTER_NO_ROUTE';
 	case REWRITE_FAIL = 'ROUTER_REWRITE_FAIL';
+	case UNSERIALIZE = 'ROUTER_UNSERIALIZE';
 }

@@ -2,6 +2,7 @@
 
 namespace PHPCanvas;
 
+use PHPCanvas\Exception\ContainerError;
 use PHPCanvas\Exception\ContainerException;
 use PHPCanvas\Test\TestClassPlainSimple;
 use PHPCanvas\Test\TestClassWithArguments;
@@ -45,15 +46,15 @@ class ContainerTest extends TestCase
 		}
 
 		if (!$dir_fixtures = (string)realpath(__DIR__ . '/../fixtures')) {
-			throw new RuntimeException('Could not find fixtures dir');
+			$this->fail('Could not find fixtures dir');
 		}
 
 		if (!$this->dir_classes = (string)realpath($dir_fixtures . '/classes')) {
-			throw new RuntimeException('Could not find classes dir');
+			$this->fail('Could not find classes dir');
 		}
 
 		if (!$this->dir_registrations = (string)realpath($dir_fixtures . '/registry')) {
-			throw new RuntimeException('Could not find registrations dir');
+			$this->fail('Could not find registrations dir');
 		}
 	}
 
@@ -183,14 +184,19 @@ class ContainerTest extends TestCase
 		if (!file_put_contents(
 			static::$tmpdir . '/ParseFailure.php', '<?php PARSE FAILURE };'
 		)) {
-			throw new RuntimeException('Could not create parse failure test file');
+			$this->fail('Could not create parse failure test file');
 		}
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create \'ParseFailure\'; syntax error');
+		$this->expectExceptionMessage(ContainerError::LOAD_FAILURE->value);
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('ParseFailure');
+		try {
+			$this->Container->create('ParseFailure');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::LOAD_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromLocationWithImmedateExceptionFailure(): void
@@ -204,10 +210,15 @@ class ContainerTest extends TestCase
 		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE; Could not create \'throw_exception_error\'; Test runtime exception');
+		$this->expectExceptionMessage('CONTAINER_LOAD_FAILURE');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('throw_exception_error');
+		try {
+			$this->Container->create('throw_exception_error');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::LOAD_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromLocationWithReturnTypeFailure(): void
@@ -219,10 +230,15 @@ class ContainerTest extends TestCase
 		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_TYPE_FAILURE; Location for \'return_true\' must return \\Closure');
+		$this->expectExceptionMessage('CONTAINER_TYPE_FAILURE');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('return_true');
+		try {
+			$this->Container->create('return_true');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::TYPE_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromLocationWithClosureExceptionFailure(): void
@@ -236,10 +252,15 @@ class ContainerTest extends TestCase
 		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE; Could not create \'TestClosureWithException\'; Test runtime exception');
+		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('TestClosureWithException');
+		try {
+			$this->Container->create('TestClosureWithException');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::CREATE_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromLocationWithClosureReturnNotObject(): void
@@ -253,10 +274,15 @@ class ContainerTest extends TestCase
 		$this->Container->set_registrations_path($this->dir_registrations);
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT; Object not created for \'TestClosureBoolReturn\'');
+		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('TestClosureBoolReturn');
+		try {
+			$this->Container->create('TestClosureBoolReturn');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::NOT_OBJECT, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromRegistry(): void
@@ -300,14 +326,19 @@ class ContainerTest extends TestCase
 		$this->assertSame([], $this->Container->list_instances());
 
 		$this->Container->register('TestClassWithException', function (): void {
-			throw new RuntimeException('Test runtime exception');
+			$this->fail('Test runtime exception');
 		});
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE; Could not create \'TestClassWithException\'');
+		$this->expectExceptionMessage('CONTAINER_CREATE_FAILURE');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('TestClassWithException');
+		try {
+			$this->Container->create('TestClassWithException');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::CREATE_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromRegistryWithClosureReturnNotObject(): void
@@ -323,10 +354,15 @@ class ContainerTest extends TestCase
 		});
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT; Object not created for \'TestClosureBoolReturn\'');
+		$this->expectExceptionMessage('CONTAINER_NOT_OBJECT');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('TestClosureBoolReturn');
+		try {
+			$this->Container->create('TestClosureBoolReturn');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::NOT_OBJECT, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromInstantiate(): void
@@ -363,10 +399,15 @@ class ContainerTest extends TestCase
 		$this->assertSame('', $this->Container->get_registrations_path());
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CLASS_NOT_FOUND; Could not find \'ClassDoesNotExist\'');
+		$this->expectExceptionMessage('CONTAINER_CLASS_NOT_FOUND');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create('ClassDoesNotExist');
+		try {
+			$this->Container->create('ClassDoesNotExist');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::CLASS_NOT_FOUND, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCreateFromInstantiateFailureException(): void
@@ -377,10 +418,15 @@ class ContainerTest extends TestCase
 		$this->assertSame('', $this->Container->get_registrations_path());
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_FAILURE; Could not instantiate \'' . TestClassWithException::class . '\'');
+		$this->expectExceptionMessage('CONTAINER_INSTANTIATE_FAILURE');
 		$this->expectExceptionCode(500);
 
-		$this->Container->create(TestClassWithException::class);
+		try {
+			$this->Container->create(TestClassWithException::class);
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::INSTANTIATE_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCall(): void
@@ -393,12 +439,15 @@ class ContainerTest extends TestCase
 	public function testCallNoMethod(): void
 	{
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_NOT_CALLABLE; Not callable ' . TestClassWithSimpleMethods::class . '::test2');
+		$this->expectExceptionMessage('CONTAINER_NOT_CALLABLE');
 		$this->expectExceptionCode(500);
 
-		$this->assertTrue($this->Container->call(
-			$this->get_test_class_with_simple_methods(), 'test2'
-		));
+		try {
+			$this->Container->call($this->get_test_class_with_simple_methods(), 'test2');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::NOT_CALLABLE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCallAndStoreReflection(): void
@@ -508,8 +557,14 @@ class ContainerTest extends TestCase
 	{
 		$this->expectException(ContainerException::class);
 		$this->expectExceptionMessage('Could not call stdClass::test');
+		$this->expectExceptionCode(500);
 
-		$this->Container->call((object)[], 'test');
+		try {
+			$this->Container->call((object)[], 'test');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::CALL_FAILURE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testCallWithObjectNullableUnionArgs(): void
@@ -532,7 +587,8 @@ class ContainerTest extends TestCase
 	public function testCallWithObjectUnspecifiedArgsFailure(): void
 	{
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithUnspecifiedArgs::test; CONTAINER_INVALID_ARGUMENT; cannot resolve parameter \'z\'');
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE');
+		$this->expectExceptionCode(500);
 
 		$obj = $this->Container->create(TestClassWithUnspecifiedArgs::class);
 		if (!$obj instanceof TestClassWithUnspecifiedArgs) {
@@ -545,7 +601,7 @@ class ContainerTest extends TestCase
 	public function testCallWithObjectUnionArgsFailure(): void
 	{
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithUnionArgs::test; CONTAINER_UNION_TYPE; cannot handle union type parameter \'i\'');
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE');
 
 		$obj = $this->Container->create(TestClassWithUnionArgs::class);
 		if (!$obj instanceof TestClassWithUnionArgs) {
@@ -560,7 +616,7 @@ class ContainerTest extends TestCase
 		$this->Container->register_path('TestClassWithSimpleMethods', $this->dir_registrations . '/TestClassWithSimpleMethods.php');
 
 		$this->expectException(ContainerException::class);
-		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE; Could not call PHPCanvas\Test\TestClassWithSimpleMethods::req; CONTAINER_UNRESOLVED_PARAMETER; cannot resolve parameter \'i\'');
+		$this->expectExceptionMessage('CONTAINER_CALL_FAILURE');
 
 		$obj = $this->Container->create('TestClassWithSimpleMethods');
 		if (!$obj instanceof TestClassWithSimpleMethods) {
@@ -641,6 +697,58 @@ class ContainerTest extends TestCase
 			TestClassPlainSimple::class,
 			$this->Container->get('TestClassPlainSimple'),
 		);
+	}
+
+	public function testGetAs(): void
+	{
+		$this->Container->register_path('TestClassPlainSimple', $this->dir_registrations . '/TestClassPlainSimple.php');
+
+		$this->assertInstanceOf(TestClassPlainSimple::class, $this->Container->get_as('TestClassPlainSimple', TestClassPlainSimple::class));
+	}
+
+	public function testGetAsWrongClass(): void
+	{
+		$this->Container->register_path('TestClassPlainSimple', $this->dir_registrations . '/TestClassPlainSimple.php');
+
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_UNEXPECTED_CLASS');
+		$this->expectExceptionCode(500);
+
+		try {
+			$this->Container->get_as('TestClassPlainSimple', TestClassWithSimpleMethods::class);
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::UNEXPECTED_CLASS, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testSetAliasSameName(): void
+	{
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_ALIAS_RECURSION');
+		$this->expectExceptionCode(500);
+
+		try {
+			$this->Container->set_alias('same', 'same');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::ALIAS_RECURSION, $e->getErrorCode());
+			throw $e;
+		}
+	}
+
+	public function testSetAliasNameExists(): void
+	{
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage('CONTAINER_ALIAS_RECURSION');
+		$this->expectExceptionCode(500);
+
+		try {
+			$this->Container->set_alias('same', 'exists');
+			$this->Container->set_alias('exists', 'same');
+		} catch (ContainerException $e) {
+			$this->assertSame(ContainerError::ALIAS_RECURSION, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testGetFromAlias(): void

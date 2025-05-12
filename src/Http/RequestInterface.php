@@ -4,7 +4,7 @@ namespace PHPCanvas\Http;
 
 interface RequestInterface
 {
-	/** @param array<string>|null $headers */
+	/** @param array<string, string>|null $headers */
 	public function set_headers(?array $headers = null): void;
 
 	public function set_get_value(string $k, string $v): void;

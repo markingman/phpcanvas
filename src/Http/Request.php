@@ -35,7 +35,7 @@ class Request implements RequestInterface
 	 * @param array<string, mixed> $POST
 	 * @param array<string, mixed> $FILES
 	 * @param array<string, mixed> $SERVER
-	 * @param array<string, string> $COOKIE
+	 * @param array<string, mixed> $COOKIE
 	 */
 	public function __construct(
 		protected readonly array $GET,
@@ -46,7 +46,7 @@ class Request implements RequestInterface
 	) {
 	}
 
-	/** @param array<string>|null $headers */
+	/** @param array<string, string>|null $headers */
 	public function set_headers(?array $headers = null): void
 	{
 		if (is_null($headers)) {
@@ -98,7 +98,7 @@ class Request implements RequestInterface
 
 	public function get_cookie(string $key): ?string
 	{
-		return $this->COOKIE[$key] ?? null;
+		return (isset($this->COOKIE[$key]) and is_string($this->COOKIE[$key])) ? $this->COOKIE[$key] : null;
 	}
 
 	/**  @param string|string[] $vars */
@@ -242,6 +242,7 @@ class Request implements RequestInterface
 
 	public function set_method(string $method = null): void
 	{
+		// TODO: thow exception for invalid?
 		$this->method = strtoupper($this->filter_var($method, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));
 	}
 
@@ -258,7 +259,7 @@ class Request implements RequestInterface
 
 	public function set_path(string $url): void
 	{
-		if (!is_string($path = parse_url($this->filter_var($url, FILTER_SANITIZE_URL), PHP_URL_PATH))) {
+		if (!is_string($path = $this->parse_url($this->filter_var($url, FILTER_SANITIZE_URL), PHP_URL_PATH))) {
 			throw new RuntimeException('Set path parse URL failed');
 		}
 
@@ -292,7 +293,7 @@ class Request implements RequestInterface
 	public function is_ssl(?int $port = 443): bool
 	{
 		if (is_null($this->is_ssl)) {
-			$this->is_ssl = ($this->get_server('HTTPS') and $this->get_server('SERVER_PORT') === $port);
+			$this->is_ssl = ($this->get_server('HTTPS') and (int)$this->get_server('SERVER_PORT') === $port);
 		}
 
 		return $this->is_ssl;
@@ -398,7 +399,7 @@ class Request implements RequestInterface
 
 	protected function filter_int(mixed $value, int $default = 0, int $min_range = 0): int
 	{
-		return (int)$this->filter_var($value, FILTER_VALIDATE_INT, ['default' => $default, 'min_range' => $min_range]);
+		return (int)$this->filter_var($value, FILTER_VALIDATE_INT, ['options'=>['default' => $default, 'min_range' => $min_range]]);
 	}
 
 	/**
@@ -416,11 +417,16 @@ class Request implements RequestInterface
 
 	protected function filter_var(mixed $value, int $filter = FILTER_DEFAULT, array|int $options = 0): string
 	{
-		if (($var = filter_var($value, $filter, $options)) === false) {
-			throw new RuntimeException('Filter var failed');
+		if (($var = filter_var($value, $filter, $options)) !== false) {
+			if (is_int($var)) {
+				return (string)$var;
+			}			
+			if (is_string($var)) {
+				return trim($var);
+			}
 		}
 
-		return trim((string)$var);
+		return '';
 	}
 
 	/**
@@ -443,7 +449,7 @@ class Request implements RequestInterface
 		return php_sapi_name();
 	}
 
-	/** @return array<string> */
+	/** @return array<string, string> */
 	protected function getallheaders(): array
 	{
 		return getallheaders();
@@ -475,4 +481,9 @@ class Request implements RequestInterface
 		return (isset($input[$var]) and is_string($input[$var]));
 	}
 
+	/** @return array{scheme?: string, host?: string, port?: int<0, 65535>, user?: string, pass?: string, path?: string, query?: string, fragment?: string}|int<0, 65535>|string|false|null */
+	protected function parse_url(string $url, int $component = -1): int|string|array|null|false
+	{
+		return parse_url($url, $component);
+	}
 }

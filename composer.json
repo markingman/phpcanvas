@@ -26,13 +26,14 @@
       ]
     },
 	"files": [
-		"tests/integration/fixtures/app/app.php"
+		"tests/fixtures/app/app.php"
 	]
   },
   "require-dev": {
     "phpunit/phpunit": "~11.4.2",
     "phpstan/phpstan": "~1.12",
-    "guzzlehttp/guzzle": "^7.9"
+    "guzzlehttp/guzzle": "^7.9",
+    "ext-tidy": "*"
   },
   "config": {
     "vendor-dir": "vendor"

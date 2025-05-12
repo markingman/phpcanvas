@@ -93,17 +93,13 @@ class Container implements ContainerInterface
 
 			return $instance;
 		} else {
-			try {
-				// for this edge case it tries presuming $name is class name
-				return $this->instantiate($name, $name, $store);
-			} catch (Throwable $e) {
-				throw new ContainerException("Could not instantiate '$name'", ContainerError::INSTANTIATE_FAILURE, previous: $e);
-			}
+			// for this edge case it tries presuming $name is class name
+			return $this->instantiate($name, $name, $store);
 		}
 	}
 
 	/**
-	 * Attempt to call an object's method and attempt to instantiate any objects that are paramters.
+	 * Attempt to call an object's method and attempt to instantiate any objects that are parameters.
 	 * @param array<mixed> $args
 	 */
 	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed
@@ -306,12 +302,10 @@ class Container implements ContainerInterface
 					$params[$i] = $this->instances[$p_name];
 				} else {
 					$name = $this->aliases[$p_name] ?? $p_name;
-					if ($this->exists($name)) {
-						$params[$i] = $this->create($name, $store);
-					} else {
+					if (!$this->exists($name)) {
 						$name = $this->get_class_name_from_type($p_type_name);
-						$params[$i] = $this->create($name, $store);
 					}
+					$params[$i] = $this->create($name, $store);
 				}
 				continue;
 			}

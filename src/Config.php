@@ -67,7 +67,7 @@ final class Config implements ConfigInterface
 	/** @param array<string, mixed> $data */
 	public function __unserialize(array $data): void
 	{
-		if (!isset($data['config']) || !is_array($data['config'])) {
+		if (!isset($data['config']) or !is_array($data['config'])) {
 			throw new ConfigUnexpectedValueException('Config requires a "config" array');
 		}
 

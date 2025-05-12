@@ -15,13 +15,15 @@ class IndexController
 
 	public function action_default(): void
 	{
-		if ($this->ExampleModel->test()) {
-			echo 'TRUE!!!';
-		}
-		echo "DEFAULT ";
-		exit(__FILE__);
-		
-		$IndexPage->view('default');
+		exit(<<<__
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Test</title>
+	</head>
+	<body>hello, world</body>
+</html>
+__);
 	}
 
 	public function action_test(): void

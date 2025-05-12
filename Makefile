@@ -19,16 +19,16 @@ run: ## Run the Docker image
 runint: ## Run the Docker image for integration tests
 	@docker run -d --rm -v `pwd`:/var/www/html --name $(NAME) $(NAME)
 
-setup: ## Set up environment in container
+install: ## Set up environment in container
 	@docker exec -it $(NAME) /usr/bin/composer install
+
+update: ## Update existing environment in container
+	@docker exec -it $(NAME) /usr/bin/composer update
 
 # setup: ## Set up environment in container
 # 	@docker exec -it $(NAME) curl https://raw.githubusercontent.com/composer/getcomposer.org/76a7060ccb93902cd7576b67264ad91c8a2700e2/web/installer | php -- --quiet
 # 	@docker exec -it $(NAME) php composer.phar install
 	
-
-update: ## Update existing environment in container
-	@docker exec -it $(NAME) php composer.phar update
 
 # start: ## Start container to run tests (if container built and stopped)
 # 	@docker container start $(NAME)

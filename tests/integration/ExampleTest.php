@@ -7,6 +7,8 @@ namespace PHPCanvas;
 // use PHPCanvas\Http\ResponseInterface;
 // use PHPCanvas\Routing\DispatchInterface;
 use PHPUnit\Framework\TestCase;
+use Throwable;
+
 // use RuntimeException;
 // use Throwable;
 
@@ -19,7 +21,7 @@ class ExampleTest extends TestCase
 		try {
 			$this->client = new TestHTTPClient;
 		} catch (Throwable $e) {
-			throw new RuntimeException('Could not set up HTTP client; ' . $e->getMessage());
+			$this->fail('Could not set up HTTP client; ' . $e->getMessage());
 		}
 	}
 
@@ -28,7 +30,7 @@ class ExampleTest extends TestCase
 		$response = $this->client->get('');
 		$this->assertEquals(<<<__
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
 		<title>
 			Test

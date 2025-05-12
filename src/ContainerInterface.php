@@ -20,7 +20,7 @@ interface ContainerInterface
 
 	public function register(string $name, Closure $closure): void;
 
-	public function create(string $name, bool $store = false): mixed;
+	public function create(string $name, bool $store = false): object;
 
 	/** @param array<mixed> $args */
 	public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed;

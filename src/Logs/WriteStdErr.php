@@ -4,7 +4,7 @@ namespace PHPCanvas\Logs;
 
 class WriteStdErr implements LogWriteInterface
 {
-	private mixed $fp;
+	protected mixed $fp;
 
 	public function __construct()
 	{

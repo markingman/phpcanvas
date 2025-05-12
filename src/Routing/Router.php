@@ -225,12 +225,6 @@ class Router implements RouterInterface
 			if (isset($tried[$i])) {
 				continue;
 			}
-// 			if ($this->routes[$i]->action === 'test'){
-// echo $url.'   ';
-// var_dump($this->routes[$i]->regx);
-// 			exit('a');
-// 			}
-// 			var_dump($this->routes);exit;
 			if (preg_match($this->routes[$i]->regx, $url, $m)) {
 				if (($return = $this->parse_route($method, $this->routes[$i], $m, $url)) !== false) {
 					return $return;
@@ -374,7 +368,7 @@ class Router implements RouterInterface
 	private function add_route_regx(bool $any, string $path): string
 	{
 		$esc = '~';
-		$route_esc = preg_replace('~\{[^}]+}~', PHP_EOL, $path);//temporarily mark var positions ("{markers}") with EOL placeholder chars safely escape preg_quote()
+		$route_esc = $this->preg_replace('~\{[^}]+}~', PHP_EOL, $path);//temporarily mark var positions ("{markers}") with EOL placeholder chars safely escape preg_quote()
 		if (!is_string($route_esc)) {
 			throw new RouterException('Cannot add route path', RouterError::ADD_ROUTE);
 		}
@@ -389,7 +383,7 @@ class Router implements RouterInterface
 
 	private function add_route_rewrite(bool $any, string $path): string
 	{
-		if (!is_string($sprintf = preg_replace('~{([^}]+)}\**~', '%s', $path))) {
+		if (!is_string($sprintf = $this->preg_replace('~{([^}]+)}\**~', '%s', $path))) {
 			throw new RouterException("Invalid regx in '$path'", RouterError::REWRITE_FAIL);
 		}
 
@@ -419,5 +413,78 @@ class Router implements RouterInterface
 		}
 
 		return $methodi;
+	}
+
+	public function __serialize(): array
+	{
+		return [
+			'iname' => $this->iname,
+			'routes' => $this->routes,/*array_map(function ($route) {
+				// Remove closures — cannot be serialized
+				if ($route instanceof Route) {
+					$route->callback = null;
+				}
+				return $route;
+			}, $this->routes),*/
+			'index' => $this->index,
+			'i' => $this->i,
+			'action_default' => $this->action_default,
+		];
+	}
+
+	/** @param array<string, mixed> $data */
+	public function __unserialize(array $data): void
+	{
+		if (!isset($data['iname']) or !is_array($data['iname'])) {
+			throw new RouterException('Router requires valid \'iname\' array', RouterError::UNSERIALIZE);
+		}
+		foreach ($data['iname'] as $k => $v) {
+			if (!is_string($k) or !is_int($v)) {
+				throw new RouterException('Router requires valid \'iname\' array', RouterError::UNSERIALIZE);
+			}
+		}
+
+		if (!isset($data['routes']) or !is_array($data['routes'])) {
+			throw new RouterException('Router requires valid \'routes\' array', RouterError::UNSERIALIZE);
+		}
+		foreach ($data['routes'] as $k => $v) {
+			if (!is_int($k) or !$v instanceof Route) {
+				throw new RouterException('Router requires valid \'routes\' array', RouterError::UNSERIALIZE);
+			}
+		}
+
+		if (!isset($data['index']) or !is_array($data['index'])) {
+			throw new RouterException('Router requires valid \'routes\' array', RouterError::UNSERIALIZE);
+		}
+		foreach ($data['index'] as $k => $v) {
+			if (!is_string($k) or !is_array($v)) {
+				throw new RouterException('Router requires valid \'index\' array', RouterError::UNSERIALIZE);
+			}
+			foreach ($v as $i) {
+				if (!is_int($i)) {
+					throw new RouterException('Router requires valid \'index\' array', RouterError::UNSERIALIZE);
+				}
+			}
+		}
+
+		if (!isset($data['i']) or !is_int($data['i'])) {
+			throw new RouterException('Router requires \'i\' integer', RouterError::UNSERIALIZE);
+		}
+
+		if (!isset($data['action_default']) or !is_string($data['action_default'])) {
+			throw new RouterException('Router requires \'action_default\' string', RouterError::UNSERIALIZE);
+		}
+
+		$this->iname = $data['iname'];
+		$this->routes = $data['routes'];
+		$this->index = $data['index'];
+		$this->i = $data['i'];
+		$this->action_default = $data['action_default'];
+	}
+
+	/** @return string|string[] */
+	protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
+	{
+		return preg_replace($pattern, $replacement, $subject);
 	}
 }

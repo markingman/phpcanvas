@@ -3,6 +3,8 @@
 namespace PHPCanvas\Http;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use DomainException;
 
 class RequestTest extends TestCase
 {
@@ -12,494 +14,487 @@ class RequestTest extends TestCase
 	protected array $files = [];
 	protected array $server = [];
 	protected array $cookie = [];
-	protected Request $Request;
-
-	public function setUp(): void
-	{
-		$this->headers = [];
-		$this->get = [];
-		$this->post = [];
-		$this->files = [];
-		$this->server = [];
-		$this->cookie = [];
-
-		$this->Request = new Request(
-			$this->headers,
-			$this->get,
-			$this->post,
-			$this->files,
-			$this->server,
-			$this->cookie
-		);
-	}
 
 	public function testCreate(): void
 	{
-		$this->assertInstanceOf(RequestInterface::class, $this->Request);
+		$this->assertInstanceOf(RequestInterface::class, new Request([], [], [], [], []));
 	}
 
 	public function testSetGetHeaders(): void
 	{
-		$res = $this->Request->get_header('X-TEST');
-		$this->assertNull($res);
+		$Request = new class([], [], [], [], []) extends Request {
+			public string $test_php_sapi_name_value = '';
+			/** @var array<string, string> */
+			public array $test_getallheaders_value = [];
 
-		$res = $this->Request->set_headers();
-		$this->assertNull($res);
+			protected function php_sapi_name(): string
+			{
+				return $this->test_php_sapi_name_value;
+			}
+		
+			/** @return array<string, string> */
+			protected function getallheaders(): array
+			{
+				return $this->test_getallheaders_value;
+			}
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals([], $res);
-		}
+			/** @return array<string, string> */
+			public function test_get_headers(): array
+			{
+				return $this->headers;
+			}
 
-		$this->Request->set_headers(['X-TEST' => 'test']);
+			public function test_reset_headers(): void
+			{
+				$this->headers = null;
+			}
+		};
 
-		$res = $this->Request->get_header('X-TEST');
-		$this->assertEquals('test', $res);
+		$Request->test_php_sapi_name_value = 'cli';
+		$Request->set_headers();
+		$this->assertSame([], $Request->test_get_headers());
 
-		$res = $this->Request->get_header('X-UNKOWN');
-		$this->assertNull($res);
+		$Request->test_php_sapi_name_value = 'server';
+		$Request->test_getallheaders_value = ['x-example' => 'example'];
+		$Request->set_headers();
+		$this->assertSame(['x-example' => 'example'], $Request->test_get_headers());
+
+		$Request->set_headers(['X-Updated' => 'updated']);
+		$this->assertSame(['x-updated' => 'updated'], $Request->test_get_headers());
+
+		$Request->set_headers([]);
+		$this->assertSame([], $Request->test_get_headers());
+
+		$Request->set_headers(['X-Updated' => 'updated']);
+		$this->assertSame('updated', $Request->get_header('x-updated'));
+		$this->assertSame('updated', $Request->get_header('X-Updated'));
+		$this->assertNull($Request->get_header('X-Test'));
+
+		$Request->test_reset_headers();
+		$Request->test_getallheaders_value = [];
+		$this->assertNull($Request->get_header('X-Test'));
+		$Request->test_reset_headers();
+		$Request->test_getallheaders_value = ['x-test' => 'value'];
+		$this->assertSame('value', $Request->get_header('X-Test'));
+
+		$Request = new Request([], [], [], [], []);
+		$this->assertNull($Request->get_header('X-Test'));
+		$Request->set_headers();
+		$this->assertNull($Request->get_header('X-Test'));
+		$Request->set_headers(['X-Test' => 'test']);
+		$this->assertSame('test', $Request->get_header('X-Test'));
+
+		$Request = new class([], [], [], [], []) extends Request {
+			protected function php_sapi_name(): string
+			{
+				return 'server';
+			}
+		};
+
+		$Request->set_headers();
+		$this->assertNull($Request->get_header('X-Test'));
+		$Request->set_headers(['X-Test' => 'test']);
+		$this->assertSame('test', $Request->get_header('X-Test'));
 	}
 
-	public function testSetGetGet(): void
+	public function testSetAndGetGet(): void
 	{
-		$_GET = ['foo' => 'bar1'];
-		$this->Request->set_get();
+		$Request = new Request(GET:[
+			'foo' => 'bar',
+			'var' => 'value',
+			'var_bad' => '!`$$',
+			'var_bad2' => '1value',
+			'int' => '100',
+			'int_neg' => '-1',
+			'int_bad' => '`@)',
+			'val' => 'string value',
+			'val_complex' => '[string], & (value);',
+			'val_bad' => '•`value',
+			'array' => ['a', 'b'],
+			'array_int' => ['10', '20'],
+			'array_complex' => ['a', '!`$$'],
+		],POST:[],FILES:[],SERVER:[],COOKIE:[]);
 
-		$res = $this->Request->get_get('foo');
-		$this->assertEquals('bar1', $res);
+		$this->assertNull($Request->get_get('bar'));
+		$this->assertSame('bar', $Request->get_get('foo'));
 
-		$get = ['foo' => 'bar'];
-		$this->Request->set_get($get);
+		$this->assertNull($Request->get_get('new'));
+		$Request->set_get_value('new', 'value');
+		$this->assertSame('value', $Request->get_get('new'));
 
-		$res = $this->Request->get_get('foo');
-		$this->assertEquals('bar', $res);
+		$this->assertSame('!`$$', $Request->get_get('var_bad'));
+
+		$this->assertSame(0, $Request->get_int_from_get('int_unknown'));
+		$this->assertSame(10, $Request->get_int_from_get('int_unknown', 10));
+
+		$this->assertSame(100, $Request->get_int_from_get('int'));
+		$this->assertSame(101, $Request->get_int_from_get('int', 101, min_range: 102));
+
+		$this->assertSame(0, $Request->get_int_from_get('int_neg'));
+		$this->assertSame(-1, $Request->get_int_from_get('int_neg', 0, -10));
+		$this->assertSame(-1, $Request->get_int_from_get('int_neg', 0, -1));
+
+		$this->assertSame(100, $Request->get_int_from_get(['int_unknown', 'int']));
+		$this->assertSame(100, $Request->get_int_from_get(['int', 'int_unknown']));
+
+		$this->assertSame(1, $Request->get_int_from_get('int_bad', 1));
+
+		$Request->set_get_value('int_new', '200');
+		$this->assertSame(200, $Request->get_int_from_get('int_new'));
+
+		$this->assertSame('value', $Request->get_var_from_get('var'));
+		$this->assertSame('', $Request->get_var_from_get('var_unknown'));
+		$this->assertSame('default', $Request->get_var_from_get('var_unknown', 'default'));
+
+		$this->assertSame('', $Request->get_var_from_get('var_bad'));
+		$this->assertSame('', $Request->get_var_from_get('var_bad2'));
+
+		$this->assertSame('string value', $Request->get_val_from_get('val'));
+		$this->assertSame('[string], & (value);', $Request->get_val_from_get('val_complex'));
+		$this->assertSame('', $Request->get_val_from_get('val_unknown'));
+		$this->assertSame('default', $Request->get_val_from_get('val_unknown', 'default'));
+
+		$this->assertSame('', $Request->get_var_from_get('val_bad'));
+
+		$this->assertSame('value', $Request->get_sel_from_get('var', ['value', 'other']));
+		$this->assertSame('', $Request->get_sel_from_get('other', ['value', 'other']));
+		$this->assertSame('default', $Request->get_sel_from_get('other', ['value', 'other'], 'default'));
+
+		$this->assertSame('', $Request->get_sel_from_get('var_bad', ['!`$$', 'other']));
+
+		$this->assertSame(['a', 'b'], $Request->get_array_from_get('array'));
+		$this->assertSame(['10', '20'], $Request->get_array_from_get('array_int'));
+		$this->assertSame(['a', '!`$$'], $Request->get_array_from_get('array_complex'));
+		$this->assertSame(['c'], $Request->get_array_from_get('array_unknown', ['c']));
 	}
 
-	public function testSetGetValue(): void
+	public function testGetPost(): void
 	{
-		$_GET = ['foo' => 'bar1'];
-		$this->Request->set_get();
+		$Request = new Request(GET:[],POST:[
+			'foo' => 'bar',
+			'var' => 'value',
+			'var_bad' => '!`$$',
+			'var_bad2' => '1value',
+			'int' => '100',
+			'int_neg' => '-1',
+			'int_bad' => '`@)',
+			'val' => 'string value',
+			'val_complex' => '[string], & (value);',
+			'val_bad' => '•`value',
+			'array' => ['a', 'b'],
+			'array_int' => ['10', '20'],
+			'array_complex' => ['a', '!`$$'],
+		],FILES:[],SERVER:[],COOKIE:[]);
 
-		$res = $this->Request->get_get('a');
-		$this->assertEquals('', $res);
+		$this->assertNull($Request->get_post('bar'));
+		$this->assertSame('bar', $Request->get_post('foo'));
 
-		$this->Request->set_get_value('a', 'B');
+		$this->assertNull($Request->get_post('new'));
 
-		$res = $this->Request->get_get('a');
-		$this->assertEquals('B', $res);
+		$this->assertSame('!`$$', $Request->get_post('var_bad'));
+
+		$this->assertSame(0, $Request->get_int_from_post('int_unknown'));
+		$this->assertSame(10, $Request->get_int_from_post('int_unknown', 10));
+
+		$this->assertSame(100, $Request->get_int_from_post('int'));
+		$this->assertSame(101, $Request->get_int_from_post('int', 101, min_range: 102));
+
+		$this->assertSame(0, $Request->get_int_from_post('int_neg'));
+		$this->assertSame(-1, $Request->get_int_from_post('int_neg', 0, -10));
+		$this->assertSame(-1, $Request->get_int_from_post('int_neg', 0, -1));
+
+		$this->assertSame(100, $Request->get_int_from_post(['int_unknown', 'int']));
+		$this->assertSame(100, $Request->get_int_from_post(['int', 'int_unknown']));
+
+		$this->assertSame(1, $Request->get_int_from_post('int_bad', 1));
+
+		$this->assertSame('value', $Request->get_var_from_post('var'));
+		$this->assertSame('', $Request->get_var_from_post('var_unknown'));
+		$this->assertSame('default', $Request->get_var_from_post('var_unknown', 'default'));
+
+		$this->assertSame('', $Request->get_var_from_post('var_bad'));
+		$this->assertSame('', $Request->get_var_from_post('var_bad2'));
+
+		$this->assertSame('string value', $Request->get_val_from_post('val'));
+		$this->assertSame('[string], & (value);', $Request->get_val_from_post('val_complex'));
+		$this->assertSame('', $Request->get_val_from_post('val_unknown'));
+		$this->assertSame('default', $Request->get_val_from_post('val_unknown', 'default'));
+
+		$this->assertSame('', $Request->get_var_from_post('val_bad'));
+
+		$this->assertSame('value', $Request->get_sel_from_post('var', ['value', 'other']));
+		$this->assertSame('', $Request->get_sel_from_post('other', ['value', 'other']));
+		$this->assertSame('default', $Request->get_sel_from_post('other', ['value', 'other'], 'default'));
+
+		$this->assertSame('', $Request->get_sel_from_post('var_bad', ['!`$$', 'other']));
+
+		$this->assertSame(['a', 'b'], $Request->get_array_from_post('array'));
+		$this->assertSame(['10', '20'], $Request->get_array_from_post('array_int'));
+		$this->assertSame(['a', '!`$$'], $Request->get_array_from_post('array_complex'));
+		$this->assertSame(['c'], $Request->get_array_from_post('array_unknown', ['c']));
 	}
 
-	public function testSetGetPost(): void
+
+	public function testGetFiles(): void
 	{
-		$_POST = ['foo' => 'bar1'];
-		$this->Request->set_post();
-
-		$res = $this->Request->get_post('foo');
-		$this->assertEquals('bar1', $res);
-
-		$post = ['foo' => 'bar'];
-		$this->Request->set_post($post);
-
-		$res = $this->Request->get_post('foo');
-		$this->assertEquals('bar', $res);
-	}
-
-	public function testSetGetFiles(): void
-	{
-		$file = [
+		$Request = new Request(GET:[],POST:[],FILES:[
+		'file' => [
 			'name' => 'test.jpg',
 			'type' => 'image/jpeg',
 			'tmp_name' => '/tmp/phpn3FyFr',
 			'error' => 0,
 			'size' => 1024,
 			'full_path' => '/example/test.jpg',
-		];
+		],
+		'file_bad' => 'value',
+		],SERVER:[],COOKIE:[]);
 
-		$_FILES = ['foo' => $file];
-		$this->Request->set_files();
+		$this->assertEquals([
+			'name' => 'test.jpg',
+			'type' => 'image/jpeg',
+			'tmp_name' => '/tmp/phpn3FyFr',
+			'error' => 0,
+			'size' => 1024,
+			'full_path' => '/example/test.jpg',
+		], $Request->get_file('file'));
 
-		$res = $this->Request->get_file('foo');
-		$this->assertEquals($file, $res);
-
-		$files = ['foo' => $file];
-		$this->Request->set_files($files);
-
-		$res = $this->Request->get_file('foo');
-		$this->assertEquals($file, $res);
+		$this->assertNull($Request->get_file('file_bad'));
+		$this->assertNull($Request->get_file('file_unknown'));
 	}
 
-	public function testSetGetServer(): void
+	public function testGetServer(): void
 	{
-		$_SERVER = ['foo' => 'bar1'];
-		$this->Request->set_server();
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'server' => 'value',
+			'server_bad' => ['value'],
+		],COOKIE:[]);
 
-		$res = $this->Request->get_server('foo');
-		$this->assertEquals('bar1', $res);
+		$this->assertEquals('value', $Request->get_server('server'));
 
-		$server = ['foo' => 'bar'];
-		$this->Request->set_server($server);
-
-		$res = $this->Request->get_server('foo');
-		$this->assertEquals('bar', $res);
+		$this->assertNull($Request->get_server('server_bad'));
+		$this->assertNull($Request->get_server('server_unknown'));
 	}
 
-	public function testSetGetCookie(): void
+	public function testGetCookie(): void
 	{
-		$_COOKIE = ['foo' => 'bar1'];
-		$this->Request->set_cookie();
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[
+			'cookie' => 'value',
+			'cookie_complex' => '{"key":"value"}',
+			'cookie_bad' => 100,
+		]);
 
-		$res = $this->Request->get_cookie('foo');
-		$this->assertEquals('bar1', $res);
+		$this->assertEquals('value', $Request->get_cookie('cookie'));
+		$this->assertEquals('{"key":"value"}', $Request->get_cookie('cookie_complex'));
 
-		$cookie = ['foo' => 'bar'];
-		$this->Request->set_cookie($cookie);
-
-		$res = $this->Request->get_cookie('foo');
-		$this->assertEquals('bar', $res);
+		$this->assertNull($Request->get_cookie('cookie_bad'));
+		$this->assertNull($Request->get_cookie('cookie_unknown'));
 	}
 
 	public function testSetGetMethod(): void
 	{
-		$server = ['REQUEST_METHOD' => 'PATCH'];
-		$this->Request->set_server($server);
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'REQUEST_METHOD' => 'PATCH',
+		],COOKIE:[]);
 
-		$res = $this->Request->get_method();
-		$this->assertEquals('PATCH', $res);
+		$this->assertEquals('PATCH', $Request->get_method());
 
-		//$get = ['A' => 'a'];
-
-		$this->Request->set_method('POST');
-
-		$res = $this->Request->get_method();
-		$this->assertEquals('POST', $res);
+		$Request->set_method('POST');
+		$this->assertEquals('POST', $Request->get_method());
 	}
 
 	public function testSetGetPath(): void
 	{
-		$_SERVER['REDIRECT_URL'] = '/redirect/path';
-		$this->Request->set_server();
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'REQUEST_URI' => '/redirect/path',
+		],COOKIE:[]);
 
-		$res = $this->Request->get_path();
-		$this->assertEquals('/redirect/path', $res);
+		$this->assertEquals('/redirect/path', $Request->get_path());
 
-		$this->Request->set_path('http://example.com/test/path?a=1&b=2');
-		$res = $this->Request->get_path();
-		$this->assertEquals('/test/path', $res);
+		$Request->set_path('http://example.com/test/path?a=1&b=2');
+		$this->assertEquals('/test/path', $Request->get_path());
 
-		$this->Request->set_path('/test/path/only');
-		$res = $this->Request->get_path();
-		$this->assertEquals('/test/path/only', $res);
+		$Request->set_path('/test/path/only');
+		$this->assertEquals('/test/path/only', $Request->get_path());
 	}
 
-	public function testSetGetUA(): void
+	public function testSetInvalidInput(): void
 	{
-		$_SERVER['HTTP_USER_AGENT'] = 'ua-string-1';
-		$this->Request->set_server();
+		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[]) extends Request {
+			public function test_invalid_input(): void
+			{
+				$this->get_int_request('INVALID');
+			}
+		};
 
-		$res = $this->Request->get_ua();
-		$this->assertEquals('ua-string-1', $res);
+		$this->expectException(DomainException::class);
+		$this->expectExceptionMessage("Unsupported input source: 'INVALID'");
+// 		$this->expectExceptionCode(500);
 
-		$this->Request->set_ua('ua-string-2');
-		$res = $this->Request->get_ua();
-		$this->assertEquals('ua-string-2', $res);
+		try {
+			$Request->test_invalid_input();
+		} catch (ResponseException $e) {
+// 			$this->assertSame(ResponseError::MIME_TYPE, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
-	public function testSetGetIP(): void
+	public function testSetInvalidPath(): void
 	{
-		$_SERVER['REMOTE_ADDR'] = '1.1.1.1';
-		$this->Request->set_server();
+		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[
+			'REQUEST_URI' => 'BAD_PATH',
+		],COOKIE:[]) extends Request {
+			protected function parse_url(string $url, int $component = -1): int|string|array|null|false
+			{
+				return false;
+			}
+		};
 
-		$res = $this->Request->get_ip();
-		$this->assertEquals('1.1.1.1', $res);
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Set path parse URL failed');
+// 		$this->expectExceptionCode(500);
 
-		$this->Request->set_ip('--invalid--');
-		$res = $this->Request->get_ip();
-		$this->assertEquals('', $res);
-
-		$this->Request->set_ip('0.0.0.0');
-		$res = $this->Request->get_ip();
-		$this->assertEquals('0.0.0.0', $res);
+		try {
+			$Request->get_path();
+		} catch (ResponseException $e) {
+// 			$this->assertSame(ResponseError::MIME_TYPE, $e->getErrorCode());
+			throw $e;
+		}
 	}
-
-	public function testSetGetIPProxy(): void
-	{
-		$_SERVER['HTTP_X_FORWARDED_FOR'] = '2.2.2.2';
-		unset($_SERVER['REMOTE_ADDR']);
-		$this->Request->set_server();
-
-		$res = $this->Request->get_ip();
-		$this->assertEquals('2.2.2.2', $res);
-	}
-
-	public function testSetGetReferer(): void
-	{
-		$_SERVER['HTTP_REFERER'] = 'http://example.com';
-		$this->Request->set_server();
-
-		$res = $this->Request->get_ref();
-		$this->assertEquals('http://example.com', $res);
-
-		$this->Request->set_ref('http://example.com/1');
-		$res = $this->Request->get_ref();
-		$this->assertEquals('http://example.com/1', $res);
-	}
-
-// 
-
-	public function testSetGetIntFromGet(): void
-	{
-		$_GET['id'] = '1';
-		$_GET['c'] = '2';
-		$_GET['i'] = '-1';
-		$this->Request->set_get();
-
-		$res = $this->Request->get_int_from_get('id');
-		$this->assertEquals('1', $res);
-
-		$res = $this->Request->get_int_from_get(['a', 'b', 'c']);
-		$this->assertEquals('2', $res);
-
-		$res = $this->Request->get_int_from_get('z', 100);
-		$this->assertEquals(100, $res);
-
-		$res = $this->Request->get_int_from_get('i', min_range: -2);
-		$this->assertEquals(-1, $res);
-	}
-
-	public function testSetGetIntFromPost(): void
-	{
-		$_POST['id'] = '1';
-		$_POST['c'] = '2';
-		$_POST['i'] = '-1';
-		$this->Request->set_post();
-
-		$res = $this->Request->get_int_from_post('id');
-		$this->assertEquals('1', $res);
-
-		$res = $this->Request->get_int_from_post(['a', 'b', 'c']);
-		$this->assertEquals('2', $res);
-
-		$res = $this->Request->get_int_from_post('z', 100);
-		$this->assertEquals(100, $res);
-
-		$res = $this->Request->get_int_from_post('i', min_range: -2);
-		$this->assertEquals(-1, $res);
-	}
-
-
-	public function testSetGetVarFromGet(): void
-	{
-		$_GET['a'] = 'aA';
-		$_GET['c'] = 'cC';
-		$this->Request->set_get();
-
-		$res = $this->Request->get_var_from_get('a');
-		$this->assertEquals('aA', $res);
-
-		$res = $this->Request->get_var_from_get(['z', 'y', 'c']);
-		$this->assertEquals('cC', $res);
-
-		$res = $this->Request->get_var_from_get('z', 'zZ');
-		$this->assertEquals('zZ', $res);
-	}
-
-	public function testSetGetVarFromPost(): void
-	{
-		$_POST['a'] = 'aA';
-		$_POST['c'] = 'cC';
-		$this->Request->set_post();
-
-		$res = $this->Request->get_var_from_post('a');
-		$this->assertEquals('aA', $res);
-
-		$res = $this->Request->get_var_from_post(['z', 'y', 'c']);
-		$this->assertEquals('cC', $res);
-
-		$res = $this->Request->get_var_from_post('z', 'zZ');
-		$this->assertEquals('zZ', $res);
-	}
-
-
-	public function testSetGetValFromGet(): void
-	{
-		$_GET['a'] = 'a A';
-		$_GET['c'] = 'c C';
-		$this->Request->set_get();
-
-		$res = $this->Request->get_val_from_get('a');
-		$this->assertEquals('a A', $res);
-
-		$res = $this->Request->get_val_from_get('c');
-		$this->assertEquals('c C', $res);
-
-		$res = $this->Request->get_val_from_get('z', 'z Z');
-		$this->assertEquals('z Z', $res);
-	}
-
-	public function testSetGetValFromPost(): void
-	{
-		$_POST['a'] = 'a A';
-		$_POST['c'] = 'c C';
-		$this->Request->set_post();
-
-		$res = $this->Request->get_val_from_post('a');
-		$this->assertEquals('a A', $res);
-
-		$res = $this->Request->get_val_from_post('c');
-		$this->assertEquals('c C', $res);
-
-		$res = $this->Request->get_val_from_post('z', 'z Z');
-		$this->assertEquals('z Z', $res);
-	}
-
-
-	public function testSetGetSelFromGet(): void
-	{
-		$_GET['a'] = 'aA';
-		$_GET['c'] = 'cC';
-		$this->Request->set_get();
-
-		$res = $this->Request->get_sel_from_get('x');
-		$this->assertEquals('', $res);
-
-		$res = $this->Request->get_sel_from_get('a', ['aA', 'bB']);
-		$this->assertEquals('aA', $res);
-
-		$res = $this->Request->get_sel_from_get('c', ['cC']);
-		$this->assertEquals('cC', $res);
-
-		$res = $this->Request->get_sel_from_get('z', ['zZ'], 'zZ');
-		$this->assertEquals('zZ', $res);
-	}
-
-	public function testSetGetSelFromPost(): void
-	{
-		$_POST['a'] = 'aA';
-		$_POST['c'] = 'cC';
-		$this->Request->set_post();
-
-		$res = $this->Request->get_sel_from_post('x');
-		$this->assertEquals('', $res);
-
-		$res = $this->Request->get_sel_from_post('a', ['aA', 'bB']);
-		$this->assertEquals('aA', $res);
-
-		$res = $this->Request->get_sel_from_post('c', ['cC']);
-		$this->assertEquals('cC', $res);
-
-		$res = $this->Request->get_sel_from_post('z', ['zZ'], 'zZ');
-		$this->assertEquals('zZ', $res);
-	}
-
-
-	public function testSetGetArrayFromGet(): void
-	{
-		$_GET['a'] = ['aa', 'bb', 'cc'];
-		$_GET['b'] = ['p' => ['g' => 'G', 'h' => 'H'], 'jj', 'ii', [1, 2, 3]];
-		$_GET['c'] = ['jj', 'ii'];
-		$this->Request->set_get();
-
-		$res = $this->Request->get_array_from_get('x');
-		$this->assertEquals([], $res);
-
-		$res = $this->Request->get_array_from_get('a', ['dd', 'ee']);
-		$this->assertEquals(['aa', 'bb', 'cc'], $res);
-
-		$res = $this->Request->get_array_from_get('c', ['cC']);
-		$this->assertEquals(['jj', 'ii'], $res);
-
-		$res = $this->Request->get_array_from_get('z', ['zZ']);
-		$this->assertEquals(['zZ'], $res);
-
-		$res = $this->Request->get_array_from_get('b');
-		$this->assertEquals(['jj', 'ii'], $res);
-	}
-
-	public function testSetGetArrayFromPost(): void
-	{
-		$_POST['a'] = ['aa', 'bb', 'cc'];
-		$_POST['b'] = ['p' => ['g' => 'G', 'h' => 'H'], 'jj', 'ii', [1, 2, 3]];
-		$_POST['c'] = ['jj', 'ii'];
-		$this->Request->set_post();
-
-		$res = $this->Request->get_array_from_post('x');
-		$this->assertEquals([], $res);
-
-		$res = $this->Request->get_array_from_post('a', ['dd', 'ee']);
-		$this->assertEquals(['aa', 'bb', 'cc'], $res);
-
-		$res = $this->Request->get_array_from_post('c', ['cC']);
-		$this->assertEquals(['jj', 'ii'], $res);
-
-		$res = $this->Request->get_array_from_post('z', ['zZ']);
-		$this->assertEquals(['zZ'], $res);
-
-		$res = $this->Request->get_array_from_post('b');
-		$this->assertEquals(['jj', 'ii'], $res);
-	}
-
 
 	public function testGetRequest(): void
 	{
-		$_SERVER['REQUEST_METHOD'] = 'POST';
-		$_SERVER['REDIRECT_URL'] = '/redirect/path';
-		$this->Request->set_server();
+		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[
+			'REQUEST_METHOD' => 'POST',
+			'REQUEST_URI' => '/redirect/path',
+		],COOKIE:[]) extends Request {
+// 			protected function parse_url(string $url, int $component = -1): int|string|array|null|false
+// 			{
+// 				return false;
+// 			}
+		};
 
-		$res = $this->Request->get_request();
+		$res = $Request->get_request();
 		$this->assertIsArray($res);
 		$this->assertEquals(['POST', '/redirect/path'], $res);
 
-		$res = $this->Request->get_request('DELETE');
+		$res = $Request->get_request('DELETE');
 		$this->assertIsArray($res);
 		$this->assertEquals(['DELETE', '/redirect/path'], $res);
 
-		$res = $this->Request->get_request(path: '/test');
+		$res = $Request->get_request(path: '/test');
 		$this->assertIsArray($res);
 		$this->assertEquals(['DELETE', '/test'], $res);
 
-		$res = $this->Request->get_request('GET', '/path');
+		$res = $Request->get_request('GET', '/path');
 		$this->assertIsArray($res);
 		$this->assertEquals(['GET', '/path'], $res);
 	}
 
-	public function testIsPost(): void
+	public function testGetUA(): void
 	{
-		$_SERVER['REQUEST_METHOD'] = 'GET';
-		$this->Request->set_server();
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'HTTP_USER_AGENT' => 'ua-string-1',
+		],COOKIE:[]);
 
-		$res = $this->Request->is_post();
-		$this->assertFalse($res);
+		$this->assertEquals('ua-string-1', $Request->get_ua());
 
-		$res = $this->Request->set_method('POST');
-		$res = $this->Request->is_post();
-		$this->assertTrue($res);
+		$Request->set_ua('ua-string-2');
+		$this->assertEquals('ua-string-2', $Request->get_ua());
+	}
+
+	public function testGetIP(): void
+	{
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'REMOTE_ADDR' => '1.1.1.1',
+		],COOKIE:[]);
+
+		$this->assertEquals('1.1.1.1', $Request->get_ip());
+
+		$Request->set_ip('--invalid--');
+		$this->assertEquals('', $Request->get_ip());
+
+		$Request->set_ip('0.0.0.0');
+		$this->assertEquals('0.0.0.0', $Request->get_ip());
+	}
+
+	public function testGetIPProxy(): void
+	{
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'HTTP_X_FORWARDED_FOR' => '1.1.1.2',
+		],COOKIE:[]);
+
+		$this->assertEquals('1.1.1.2', $Request->get_ip());
+	}
+
+	public function testSetGetReferer(): void
+	{
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'HTTP_REFERER' => 'http://example.com',
+		],COOKIE:[]);
+
+		$this->assertEquals('http://example.com', $Request->get_ref());
+
+		$Request->set_ref('http://example.com/1');
+		$this->assertEquals('http://example.com/1', $Request->get_ref());
 	}
 
 	public function testIsSSL(): void
 	{
-		$res = $this->Request->is_ssl();
-		$this->assertFalse($res);
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[]);
+		$this->assertFalse($Request->is_ssl());
 
-		$_SERVER['HTTPS'] = 'yes';
-		$_SERVER['SERVER_PORT'] = 443;
-		$this->Request->set_server();
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'HTTPS' => 'yes',
+			'SERVER_PORT' => '443',
+		],COOKIE:[]);
 
-		$res = $this->Request->is_ssl(no_cache: true);
-		$this->assertTrue($res);
+		$this->assertTrue($Request->is_ssl());
+		$this->assertTrue($Request->is_ssl(44300));
+		$Request->clear_cache();
+		$this->assertFalse($Request->is_ssl(44300));
+	}
 
-		$res = $this->Request->is_ssl(port: null, no_cache: true);
-		$this->assertTrue($res);
+	public function testIsPost(): void
+	{
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'REQUEST_METHOD' => 'GET',
+		],COOKIE:[]);
+
+		$this->assertFalse($Request->is_post());
+
+		$Request->set_method('POST');
+		$this->assertTrue($Request->is_post());
+
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'REQUEST_METHOD' => 'POST',
+		],COOKIE:[]);
+
+		$this->assertTrue($Request->is_post());
 	}
 
 	public function testIsAjax(): void
 	{
-		$res = $this->Request->is_ajax();
-		$this->assertFalse($res);
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[]);
+		$this->assertFalse($Request->is_ajax());
 
-		$_SERVER['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest';
-		$this->Request->set_server();
+		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+			'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+		],COOKIE:[]);
+		$this->assertTrue($Request->is_ajax());
 
-		$res = $this->Request->is_ajax(no_cache: true);
-		$this->assertTrue($res);
+		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[
+			'ACCEPT' => 'application/json',
+		],COOKIE:[]) extends Request {
+			public function test_unset_cache(): void
+			{
+				$this->is_ajax = false;
+			}
+		};
+
+		$this->assertTrue($Request->is_ajax());
+		$Request->test_unset_cache();
+		$this->assertFalse($Request->is_ajax());
+		$Request->clear_cache();
+		$this->assertTrue($Request->is_ajax());
 	}
 }

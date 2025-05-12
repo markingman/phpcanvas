@@ -2,16 +2,16 @@
 
 namespace PHPCanvas\Exception;
 
-use RuntimeException;
+use LogicException;
 use Throwable;
 
-class DispatchException extends RuntimeException
+class ResponseException extends LogicException
 {
-	private readonly DispatchError $error;
+	private readonly ResponseError $error;
 
 	public function __construct(
 		string $message,
-		DispatchError $error,
+		ResponseError $error,
 		int $code = 500,
 		?Throwable $previous = null
 	) {
@@ -19,7 +19,7 @@ class DispatchException extends RuntimeException
 		parent::__construct($error->value . '; ' . $message, $code, $previous);
 	}
 
-	public function getErrorCode(): DispatchError
+	public function getErrorCode(): ResponseError
 	{
 		return $this->error;
 	}

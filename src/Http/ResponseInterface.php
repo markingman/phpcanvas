@@ -4,23 +4,41 @@ namespace PHPCanvas\Http;
 
 interface ResponseInterface
 {
-	/*function set_request(\PHPCanvas\Http\RequestInterface $Request);
+	public function set_terminate_after_response(bool $terminate_after_response): self;
 
-	function set_view(\PHPCanvas\View\ViewInterface $View);
+	public function set_char_set(string $set): self;
 
-	function set_header($key, $value);
+	public function set_response_code(int $code): self;
 
-	function unset_header($key);
+	public function set_header(string $key, string $value): self;
 
-	function view($template = null, $vars = array());
+	public function unset_header(string $key): void;
 
-	function html($template = null, $vars = array());
+	public function set_cookie(
+		string $name,
+		string $value = '',
+		int $expires = 0,
+		string $path = '',
+		string $domain = '',
+		bool $secure = false,
+		bool $httponly = false,
+	): self;
 
-	function text($string = '')
+	public function unset_cookie(string $key): self;
 
-	function json($vars = '')
+	public function html(string $html): void;
 
-	function respond($content = '');*/
+	public function text(string $text): void;
+
+	public function json(string $json): void;
+
+	public function file(
+		string $file,
+		bool $set_content_length = false,
+		bool $unlink_file = true,
+		bool $inline = false
+	): void;
+
 	public function redirect(string $to, int $code = 303): void;
 
 	public function respond(string|callable|null $content = '', bool $remove_headers = false): void;

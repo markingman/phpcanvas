@@ -6,7 +6,6 @@ use PHPCanvas\Exception\ObjectCacheError;
 use PHPCanvas\Exception\ObjectCacheException;
 use PHPCanvas\Test\TestClassPlainSimple;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 class ObjectCacheTest extends TestCase
 {
@@ -28,7 +27,7 @@ class ObjectCacheTest extends TestCase
 	public function setUp(): void
 	{
 		if (is_null(static::$tmpdir) or !is_dir(static::$tmpdir)) {
-			throw new RuntimeException('Could not find tmpdir dir');
+			$this->fail('Could not find tmpdir dir');
 		}
 
 		$this->dir_cache = static::$tmpdir;
@@ -89,7 +88,7 @@ class ObjectCacheTest extends TestCase
 		};
 
 		$this->expectException(ObjectCacheException::class);
-		$this->expectExceptionMessage('FILE_WRITE; Could not write cache file');
+		$this->expectExceptionMessage('OBJECT_CACHE_FILE_WRITE');
 		$this->expectExceptionCode(500);
 
 		try {
@@ -110,7 +109,7 @@ class ObjectCacheTest extends TestCase
 		};
 
 		$this->expectException(ObjectCacheException::class);
-		$this->expectExceptionMessage('FILE_WRITE; Could not write cache file');
+		$this->expectExceptionMessage('OBJECT_CACHE_FILE_WRITE');
 		$this->expectExceptionCode(500);
 
 		try {
@@ -124,8 +123,8 @@ class ObjectCacheTest extends TestCase
 
 	public function testGetCacheNoFile(): void
 	{
-		$this->assertFileDoesNotExist($this->cache_file('nofile'));
-		$this->assertFalse($this->ObjectCache->cache_get('nofile', TestClassPlainSimple::class), 'Cache is FALSE if file not readable');
+		$this->assertFileDoesNotExist($this->cache_file('nofile', ''));
+		$this->assertNull($this->ObjectCache->cache_get('nofile', TestClassPlainSimple::class), 'Cache is FALSE if file not readable');
 	}
 
 	public function testGetCacheNotReadable(): void
@@ -140,7 +139,7 @@ class ObjectCacheTest extends TestCase
 		$ObjectCacheMock->cache_put('notreadable', new TestClassPlainSimple());
 
 		$this->expectException(ObjectCacheException::class);
-		$this->expectExceptionMessage('OBJECT_CACHE_FILE_READ; Could not read cache file');
+		$this->expectExceptionMessage('OBJECT_CACHE_FILE_READ');
 		$this->expectExceptionCode(500);
 		try {
 			$ObjectCacheMock->cache_get('notreadable', TestClassPlainSimple::class);
@@ -162,7 +161,7 @@ class ObjectCacheTest extends TestCase
 		$ObjectCacheMock->cache_put('notreadable', new TestClassPlainSimple());
 
 		$this->expectException(ObjectCacheException::class);
-		$this->expectExceptionMessage('OBJECT_CACHE_FILE_READ; Could not read cache file');
+		$this->expectExceptionMessage('OBJECT_CACHE_FILE_READ');
 		$this->expectExceptionCode(500);
 		try {
 			$ObjectCacheMock->cache_get('notreadable', TestClassPlainSimple::class);
@@ -182,7 +181,7 @@ class ObjectCacheTest extends TestCase
 		);
 
 		$this->expectException(ObjectCacheException::class);
-		$this->expectExceptionMessage('OBJECT_CACHE_UNSERIALIZE; Could not unserialize cache file');
+		$this->expectExceptionMessage('OBJECT_CACHE_UNSERIALIZE');
 		$this->expectExceptionCode(500);
 
 		try {
@@ -200,14 +199,14 @@ class ObjectCacheTest extends TestCase
 			serialize(['a'])
 		);
 
-		$this->assertFalse($this->ObjectCache->cache_get('notobject', TestClassPlainSimple::class), 'Cache is FALSE if not an object');
+		$this->assertNull($this->ObjectCache->cache_get('notobject', TestClassPlainSimple::class), 'Cache is FALSE if not an object');
 	}
 
 	public function testGetCacheWrongObject(): void
 	{
 		$this->ObjectCache->cache_put('wrongobject', (object)[]);
 
-		$this->assertFalse($this->ObjectCache->cache_get('wrongobject', TestClassPlainSimple::class), 'Cache is FALSE if wrong type of object');
+		$this->assertNull($this->ObjectCache->cache_get('wrongobject', TestClassPlainSimple::class), 'Cache is FALSE if wrong type of object');
 	}
 
 	public function testGet(): void

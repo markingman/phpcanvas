@@ -49,6 +49,9 @@ class ErrorHandler
 		504 => '504 Gateway Timeout',
 	];
 
+	protected static int $error_log_msg_type = 0;
+	protected static ?string $error_log_destination = null;
+
 	protected bool $terminate = true;
 	protected bool $debug = false;
 
@@ -101,7 +104,7 @@ class ErrorHandler
 		if (static::is_cli()) {
 			static::echo(vsprintf(
 				PHP_EOL .
-				"\033[3;101m  %1\$s  \033[0m" . PHP_EOL .
+				"\e[3;101m  %1\$s  \e[0m" . PHP_EOL .
 				'%2$s' . PHP_EOL .
 				'%3$s:%4$s' . PHP_EOL .
 				PHP_EOL,
@@ -116,10 +119,10 @@ class ErrorHandler
 			$code = array_key_exists($e->getCode(), static::ERROR_CODES) ? $e->getCode() : 500;
 
 			if (is_array($m) and ($m['format'] ?? '') === 'json') {
-				header('Content-Type: application/json', true, $code);
+				static::header('Content-Type: application/json', true, $code);
 				$res = '{"error": "%s"}';
 			} else {
-				header('Content-Type: text/html', true, $code);
+				static::header('Content-Type: text/html', true, $code);
 				$res = <<<__
 <!DOCTYPE html>
 <html lang="en">
@@ -141,7 +144,7 @@ __;
 
 	protected static function error_log(string $log): void
 	{
-		error_log($log);
+		error_log($log, static::$error_log_msg_type, static::$error_log_destination);
 	}
 
 	protected static function severity_label(int $severity): string
@@ -164,7 +167,22 @@ __;
 
 	protected static function is_cli(): bool
 	{
-		return (PHP_SAPI === 'cli');
+		return str_contains(static::php_sapi_name(), 'cli');
+	}
+
+	protected static function echo(string $string): void
+	{
+		echo $string;
+	}
+
+	protected static function php_sapi_name(): string
+	{
+		return php_sapi_name();
+	}
+
+	protected static function header(string $header, bool $replace = true, int $response_code = 0): void
+	{
+		header($header, $replace, $response_code);
 	}
 
 	public function set_terminate(bool $terminate): void
@@ -189,8 +207,9 @@ __;
 
 	public function handle_error(int $errno, string $errstr, ?string $errfile = null, ?int $errline = null): bool
 	{
-		$this->handle_exception(// change error messages into ErrorException
-			// note this is not `throw new ...`
+		// change error messages into ErrorException
+		$this->handle_exception(
+		// note this is not `throw new ...`
 			new ErrorException($errstr, 0, $errno, $errfile, $errline)
 		);
 
@@ -206,7 +225,7 @@ __;
 		if ($this->view) {// callback can ignore or view
 			($this->view)($e, null);
 		} elseif (static::is_cli()) {
-			static::view($e, null);
+			static::view($e);
 		}
 
 		if ($this->terminate) {
@@ -216,7 +235,7 @@ __;
 
 	public function handle_shutdown(): void
 	{
-		if (($err = error_get_last()) !== null) {
+		if (($err = $this->error_get_last()) !== null) {
 			if (((E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR) & $err['type']) !== 0) {
 				// fatal error handler
 				$this->handle_error($err['type'], $err['message'], $err['file'], $err['line']);
@@ -224,13 +243,14 @@ __;
 		}
 	}
 
-	protected function exit(int $code = 1): void
+	/** @return array{0: int, 1: string, 2: ?string, 3: ?int}|null */
+	protected function error_get_last(): ?array
 	{
-		exit(($code >= 1 and $code <= 255) ? $code : 1);
+		return error_get_last();
 	}
 
-	protected static function echo(string $string): void
+	protected function exit(int $code = 1): void
 	{
-		echo $string;
+		exit(($code >= 1 and $code <= 255) ? $code : 1);// @codeCoverageIgnore
 	}
 }

@@ -2,7 +2,6 @@
 
 namespace PHPCanvas\Routing;
 
-use Exception;
 use PHPCanvas\ContainerInterface;
 use PHPCanvas\Exception\DispatchError;
 use PHPCanvas\Exception\DispatchException;
@@ -35,6 +34,7 @@ class Dispatch implements DispatchInterface
 
 		if (str_starts_with($RouteMatch->controller, 'http') and str_contains($RouteMatch->controller, '://')) { //Router can make http redirect
 			$this->go_to($RouteMatch->controller);
+			return;
 		}
 
 		$this->controller = $RouteMatch->controller;
@@ -54,16 +54,12 @@ class Dispatch implements DispatchInterface
 			throw new DispatchException(sprintf('Could not instantiate controller "%s"', $this->controller), DispatchError::FAILED_INSTANTIATE, 500, $e);
 		}
 
-		if (!is_object($Controller)) {
-			throw new DispatchException(sprintf('Unexpectant controller format "%s"', $this->controller), DispatchError::FAILED_INSTANTIATE, 500);
-		}
-
-		if (!is_callable([$Controller, $this->action])) {
+		if (!$this->is_callable([$Controller, $this->action])) {
 			throw new DispatchException(sprintf('Could not find action "%s::%s"', $this->controller, $this->action), DispatchError::NO_ACTION, 404);
 		}
 
 		try {
-			if (is_callable([$Controller, '__invoke'])) {
+			if ($this->is_callable([$Controller, '__invoke'])) {
 				$this->call($Controller, '__invoke');
 			}
 		} catch (Throwable $e) {
@@ -72,7 +68,7 @@ class Dispatch implements DispatchInterface
 
 		try {
 			$this->call($Controller, $this->action);
-		} catch (Exception $e) {
+		} catch (Throwable $e) {
 			throw new DispatchException(sprintf('Could not call action "%s::%s"', $this->controller, $this->action), DispatchError::FAILED_ACTION, 500, $e);
 		}
 	}
@@ -107,7 +103,7 @@ class Dispatch implements DispatchInterface
 		return $this->Router->get_routes();
 	}
 
-	public function instantiate(string $class, /*string $name,*/ bool $store = false): mixed
+	public function instantiate(string $class, /*string $name,*/ bool $store = false): object
 	{
 		return $this->Container->create($class, $store);
 	}
@@ -125,6 +121,16 @@ class Dispatch implements DispatchInterface
 
 	protected function exit(): void
 	{
-		exit;
+		exit;// @codeCoverageIgnore
+	}
+
+// 	protected function is_object(mixed $value): bool
+// 	{
+// 		return is_object($value);
+// 	}
+
+	protected function is_callable(mixed $value): bool
+	{
+		return is_callable($value);
 	}
 }

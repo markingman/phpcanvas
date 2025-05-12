@@ -16,14 +16,6 @@ class ApplicationException extends RuntimeException
 		?Throwable $previous = null
 	) {
 		$this->error = $error;
-		if ($previous !== null) {
-			$message .= '; ' . (
-				strlen($previous->getMessage()) > 64
-					? substr($previous->getMessage(), 0, 64) . '...'
-					: $previous->getMessage()
-				);
-
-		}
 		parent::__construct($error->value . '; ' . $message, $code, $previous);
 	}
 

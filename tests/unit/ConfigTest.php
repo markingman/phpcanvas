@@ -118,7 +118,12 @@ class ConfigTest extends TestCase
 
 		$config = new Config();
 
-		$config->__unserialize([]);
+		try {
+			$config->__unserialize([]);
+		} catch (ConfigUnexpectedValueException $e) {
+// 			$this->assertSame(ConfigError::CALL_ERR, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testUnserializeNotArray(): void

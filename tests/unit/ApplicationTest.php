@@ -75,10 +75,15 @@ class ApplicationTest extends TestCase
 		);
 
 		$this->expectException(ApplicationException::class);
-		$this->expectExceptionMessage('APPLICATION_CALL_ERR; Could not call controller; Original dispatch error');
+		$this->expectExceptionMessage('APPLICATION_CALL_ERR');
 		$this->expectExceptionCode(400);
 
-		$app->run();
+		try {
+			$app->run();
+		} catch (ContainerException $e) {
+			$this->assertSame(ApplicationException::CALL_ERR, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	public function testRunWrapsDispatchExceptionsLongMessage(): void
@@ -101,10 +106,15 @@ class ApplicationTest extends TestCase
 		);
 
 		$this->expectException(ApplicationException::class);
-		$this->expectExceptionMessage('APPLICATION_CALL_ERR; Could not call controller; Original dispatch error');
+		$this->expectExceptionMessage('APPLICATION_CALL_ERR');
 		$this->expectExceptionCode(400);
 
-		$app->run();
+		try {
+			$app->run();
+		} catch (ContainerException $e) {
+			$this->assertSame(ApplicationException::CALL_ERR, $e->getErrorCode());
+			throw $e;
+		}
 	}
 
 	protected function setUp(): void
@@ -116,7 +126,7 @@ class ApplicationTest extends TestCase
 			$this->Response = $this->createMock(ResponseInterface::class);
 			$this->Dispatch = $this->createMock(DispatchInterface::class);
 		} catch (Throwable $e) {
-			throw new RuntimeException('Could not set up test; ' . $e->getMessage());
+			$this->fail('Could not set up test; ' . $e->getMessage());
 		}
 	}
 }
