@@ -8,20 +8,6 @@ class WriteErrorLogTest extends TestCase
 {
 	protected string $logDir;
 
-	protected function setUp(): void
-	{
-		$this->logDir = sys_get_temp_dir() . '/logtest_' . bin2hex(random_bytes(4));
-		mkdir($this->logDir);
-	}
-
-	protected function tearDown(): void
-	{
-		foreach (glob($this->logDir . '/*.log') ?: [] as $file) {
-			unlink($file);
-		}
-		rmdir($this->logDir);
-	}
-
 	public function testWriteCreatesLogFile(): void
 	{
 		$writer = new WriteErrorLog($this->logDir);
@@ -39,5 +25,19 @@ class WriteErrorLogTest extends TestCase
 
 		// Should not write to parent directories
 		$this->assertFileExists($this->logDir . '/tricky_path.log');
+	}
+
+	protected function setUp(): void
+	{
+		$this->logDir = sys_get_temp_dir() . '/logtest_' . bin2hex(random_bytes(4));
+		mkdir($this->logDir);
+	}
+
+	protected function tearDown(): void
+	{
+		foreach (glob($this->logDir . '/*.log') ?: [] as $file) {
+			unlink($file);
+		}
+		rmdir($this->logDir);
 	}
 }

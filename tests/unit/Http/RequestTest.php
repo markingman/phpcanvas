@@ -2,9 +2,9 @@
 
 namespace PHPCanvas\Http;
 
+use DomainException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use DomainException;
 
 class RequestTest extends TestCase
 {
@@ -31,7 +31,7 @@ class RequestTest extends TestCase
 			{
 				return $this->test_php_sapi_name_value;
 			}
-		
+
 			/** @return array<string, string> */
 			protected function getallheaders(): array
 			{
@@ -99,7 +99,7 @@ class RequestTest extends TestCase
 
 	public function testSetAndGetGet(): void
 	{
-		$Request = new Request(GET:[
+		$Request = new Request(GET: [
 			'foo' => 'bar',
 			'var' => 'value',
 			'var_bad' => '!`$$',
@@ -113,7 +113,7 @@ class RequestTest extends TestCase
 			'array' => ['a', 'b'],
 			'array_int' => ['10', '20'],
 			'array_complex' => ['a', '!`$$'],
-		],POST:[],FILES:[],SERVER:[],COOKIE:[]);
+		], POST: [], FILES: [], SERVER: [], COOKIE: []);
 
 		$this->assertNull($Request->get_get('bar'));
 		$this->assertSame('bar', $Request->get_get('foo'));
@@ -170,7 +170,7 @@ class RequestTest extends TestCase
 
 	public function testGetPost(): void
 	{
-		$Request = new Request(GET:[],POST:[
+		$Request = new Request(GET: [], POST: [
 			'foo' => 'bar',
 			'var' => 'value',
 			'var_bad' => '!`$$',
@@ -184,7 +184,7 @@ class RequestTest extends TestCase
 			'array' => ['a', 'b'],
 			'array_int' => ['10', '20'],
 			'array_complex' => ['a', '!`$$'],
-		],FILES:[],SERVER:[],COOKIE:[]);
+		], FILES: [], SERVER: [], COOKIE: []);
 
 		$this->assertNull($Request->get_post('bar'));
 		$this->assertSame('bar', $Request->get_post('foo'));
@@ -237,17 +237,17 @@ class RequestTest extends TestCase
 
 	public function testGetFiles(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[
-		'file' => [
-			'name' => 'test.jpg',
-			'type' => 'image/jpeg',
-			'tmp_name' => '/tmp/phpn3FyFr',
-			'error' => 0,
-			'size' => 1024,
-			'full_path' => '/example/test.jpg',
-		],
-		'file_bad' => 'value',
-		],SERVER:[],COOKIE:[]);
+		$Request = new Request(GET: [], POST: [], FILES: [
+			'file' => [
+				'name' => 'test.jpg',
+				'type' => 'image/jpeg',
+				'tmp_name' => '/tmp/phpn3FyFr',
+				'error' => 0,
+				'size' => 1024,
+				'full_path' => '/example/test.jpg',
+			],
+			'file_bad' => 'value',
+		], SERVER: [], COOKIE: []);
 
 		$this->assertEquals([
 			'name' => 'test.jpg',
@@ -264,10 +264,10 @@ class RequestTest extends TestCase
 
 	public function testGetServer(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'server' => 'value',
 			'server_bad' => ['value'],
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('value', $Request->get_server('server'));
 
@@ -277,7 +277,7 @@ class RequestTest extends TestCase
 
 	public function testGetCookie(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [], COOKIE: [
 			'cookie' => 'value',
 			'cookie_complex' => '{"key":"value"}',
 			'cookie_bad' => 100,
@@ -292,9 +292,9 @@ class RequestTest extends TestCase
 
 	public function testSetGetMethod(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'REQUEST_METHOD' => 'PATCH',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('PATCH', $Request->get_method());
 
@@ -304,9 +304,9 @@ class RequestTest extends TestCase
 
 	public function testSetGetPath(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'REQUEST_URI' => '/redirect/path',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('/redirect/path', $Request->get_path());
 
@@ -319,7 +319,7 @@ class RequestTest extends TestCase
 
 	public function testSetInvalidInput(): void
 	{
-		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[]) extends Request {
+		$Request = new class(GET: [], POST: [], FILES: [], SERVER: [], COOKIE: []) extends Request {
 			public function test_invalid_input(): void
 			{
 				$this->get_int_request('INVALID');
@@ -340,9 +340,9 @@ class RequestTest extends TestCase
 
 	public function testSetInvalidPath(): void
 	{
-		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new class(GET: [], POST: [], FILES: [], SERVER: [
 			'REQUEST_URI' => 'BAD_PATH',
-		],COOKIE:[]) extends Request {
+		], COOKIE: []) extends Request {
 			protected function parse_url(string $url, int $component = -1): int|string|array|null|false
 			{
 				return false;
@@ -363,10 +363,10 @@ class RequestTest extends TestCase
 
 	public function testGetRequest(): void
 	{
-		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new class(GET: [], POST: [], FILES: [], SERVER: [
 			'REQUEST_METHOD' => 'POST',
 			'REQUEST_URI' => '/redirect/path',
-		],COOKIE:[]) extends Request {
+		], COOKIE: []) extends Request {
 // 			protected function parse_url(string $url, int $component = -1): int|string|array|null|false
 // 			{
 // 				return false;
@@ -392,9 +392,9 @@ class RequestTest extends TestCase
 
 	public function testGetUA(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'HTTP_USER_AGENT' => 'ua-string-1',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('ua-string-1', $Request->get_ua());
 
@@ -404,9 +404,9 @@ class RequestTest extends TestCase
 
 	public function testGetIP(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'REMOTE_ADDR' => '1.1.1.1',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('1.1.1.1', $Request->get_ip());
 
@@ -419,18 +419,18 @@ class RequestTest extends TestCase
 
 	public function testGetIPProxy(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'HTTP_X_FORWARDED_FOR' => '1.1.1.2',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('1.1.1.2', $Request->get_ip());
 	}
 
 	public function testSetGetReferer(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'HTTP_REFERER' => 'http://example.com',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertEquals('http://example.com', $Request->get_ref());
 
@@ -440,13 +440,13 @@ class RequestTest extends TestCase
 
 	public function testIsSSL(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[]);
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [], COOKIE: []);
 		$this->assertFalse($Request->is_ssl());
 
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'HTTPS' => 'yes',
 			'SERVER_PORT' => '443',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertTrue($Request->is_ssl());
 		$this->assertTrue($Request->is_ssl(44300));
@@ -456,35 +456,35 @@ class RequestTest extends TestCase
 
 	public function testIsPost(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'REQUEST_METHOD' => 'GET',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertFalse($Request->is_post());
 
 		$Request->set_method('POST');
 		$this->assertTrue($Request->is_post());
 
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'REQUEST_METHOD' => 'POST',
-		],COOKIE:[]);
+		], COOKIE: []);
 
 		$this->assertTrue($Request->is_post());
 	}
 
 	public function testIsAjax(): void
 	{
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[],COOKIE:[]);
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [], COOKIE: []);
 		$this->assertFalse($Request->is_ajax());
 
-		$Request = new Request(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [
 			'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
-		],COOKIE:[]);
+		], COOKIE: []);
 		$this->assertTrue($Request->is_ajax());
 
-		$Request = new class(GET:[],POST:[],FILES:[],SERVER:[
+		$Request = new class(GET: [], POST: [], FILES: [], SERVER: [
 			'ACCEPT' => 'application/json',
-		],COOKIE:[]) extends Request {
+		], COOKIE: []) extends Request {
 			public function test_unset_cache(): void
 			{
 				$this->is_ajax = false;

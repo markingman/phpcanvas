@@ -14,7 +14,6 @@ class Controller
 		protected Dispatch $Dispatch,
 		protected Request $Request,
 		protected Response $Response
-	)
-	{
+	) {
 	}
 }

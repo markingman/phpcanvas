@@ -11,9 +11,9 @@ use PHPCanvas\Http\RequestInterface;
 use PHPCanvas\Http\Response;
 use PHPCanvas\Http\ResponseInterface;
 use PHPCanvas\Test\TestClassPlainSimple;
-use PHPCanvas\Test\TestClassWithObjectArguments;
 use PHPCanvas\Test\TestClassWithInvokeException;
 use PHPCanvas\Test\TestClassWithMethodException;
+use PHPCanvas\Test\TestClassWithObjectArguments;
 use PHPCanvas\Test\TestClassWithSimpleMethods;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -440,13 +440,13 @@ class DispatchTest extends TestCase
 	{
 		$Router = new Router;
 		$Router->add_route(
-				name: 'test',
-				path: 'path',
-				controller: 'Controller',
-				action: null,
-				callback: null,
-				vars: null,
-				method: null,
+			name: 'test',
+			path: 'path',
+			controller: 'Controller',
+			action: null,
+			callback: null,
+			vars: null,
+			method: null,
 		);
 		$Dispatch = new Dispatch(
 			Container: new Container,
@@ -459,13 +459,13 @@ class DispatchTest extends TestCase
 		);
 
 		$this->assertEquals([
-		new Route(
+			new Route(
 				regx: '~^path$~',
 				controller: 'Controller',
 				action: 'default',
-				vars:[],
+				vars: [],
 				method: 0,
-				sprintf:'path',
+				sprintf: 'path',
 				name: 'test',
 			),
 		], $Dispatch->get_routes());

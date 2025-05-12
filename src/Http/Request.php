@@ -399,7 +399,7 @@ class Request implements RequestInterface
 
 	protected function filter_int(mixed $value, int $default = 0, int $min_range = 0): int
 	{
-		return (int)$this->filter_var($value, FILTER_VALIDATE_INT, ['options'=>['default' => $default, 'min_range' => $min_range]]);
+		return (int)$this->filter_var($value, FILTER_VALIDATE_INT, ['options' => ['default' => $default, 'min_range' => $min_range]]);
 	}
 
 	/**
@@ -420,7 +420,7 @@ class Request implements RequestInterface
 		if (($var = filter_var($value, $filter, $options)) !== false) {
 			if (is_int($var)) {
 				return (string)$var;
-			}			
+			}
 			if (is_string($var)) {
 				return trim($var);
 			}
@@ -455,6 +455,12 @@ class Request implements RequestInterface
 		return getallheaders();
 	}
 
+	/** @return array{scheme?: string, host?: string, port?: int<0, 65535>, user?: string, pass?: string, path?: string, query?: string, fragment?: string}|int<0, 65535>|string|false|null */
+	protected function parse_url(string $url, int $component = -1): int|string|array|null|false
+	{
+		return parse_url($url, $component);
+	}
+
 	/**  @param string|string[] $vars */
 	private function use_getx_input_type(string|array $vars = 'id'): bool
 	{
@@ -479,11 +485,5 @@ class Request implements RequestInterface
 	private function is_usable_input(array $input, string $var): bool
 	{
 		return (isset($input[$var]) and is_string($input[$var]));
-	}
-
-	/** @return array{scheme?: string, host?: string, port?: int<0, 65535>, user?: string, pass?: string, path?: string, query?: string, fragment?: string}|int<0, 65535>|string|false|null */
-	protected function parse_url(string $url, int $component = -1): int|string|array|null|false
-	{
-		return parse_url($url, $component);
 	}
 }

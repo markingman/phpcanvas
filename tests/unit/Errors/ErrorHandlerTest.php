@@ -2,14 +2,19 @@
 
 namespace PHPCanvas\Errors;
 
+use ErrorException;
+use PHPCanvas\Logs\LogHandler;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
-use ErrorException;
-use PHPCanvas\Logs\LogHandler;
 
 class ErrorHandlerTest extends TestCase
 {
+	protected static function error_log(string $log): void
+	{
+		error_log($log);
+	}
+
 	public function testCanCreate(): void
 	{
 		$this->assertInstanceOf(ErrorHandler::class, new ErrorHandler());
@@ -60,7 +65,8 @@ class ErrorHandlerTest extends TestCase
 			}
 		};
 
-		$this->assertNull($ErrorHandler->set_view(function (Throwable $e): void {}));
+		$this->assertNull($ErrorHandler->set_view(function (Throwable $e): void {
+		}));
 		$this->assertTrue($ErrorHandler->test_view_set());
 	}
 
@@ -73,7 +79,8 @@ class ErrorHandlerTest extends TestCase
 			}
 		};
 
-		$this->assertNull($ErrorHandler->set_log(function (Throwable $e): void {}));
+		$this->assertNull($ErrorHandler->set_log(function (Throwable $e): void {
+		}));
 		$this->assertTrue($ErrorHandler->test_log_set());
 	}
 
@@ -81,6 +88,7 @@ class ErrorHandlerTest extends TestCase
 	{
 		$ErrorHandler = new class extends ErrorHandler {
 			public static string $test_log_value = '';
+
 			protected static function error_log(string $log): void
 			{
 				static::$test_log_value = $log;
@@ -96,23 +104,25 @@ class ErrorHandlerTest extends TestCase
 
 		$ErrorHandler->log(new RuntimeException('Text exception'), null, true);
 
-		$normalised= $this->normalise_log_line($ErrorHandler::$test_log_value);
+		$normalised = $this->normalise_log_line($ErrorHandler::$test_log_value);
 
 		$lines = explode(PHP_EOL, preg_replace('/^#\d+ .+$/m', '...', $normalised));
 		foreach ($lines as $i => &$line) {
 			if ($line === '...') {
 				$line = "#$i ...";
 			}
-			if ($i >= 3) {break;}
+			if ($i >= 3) {
+				break;
+			}
 		}
 
-		$normalised = trim(preg_replace('/(?:^\.\.\.\r?' . PHP_EOL .'?)+/m', '...' .PHP_EOL,  implode(PHP_EOL, $lines)));
+		$normalised = trim(preg_replace('/(?:^\.\.\.\r?' . PHP_EOL . '?)+/m', '...' . PHP_EOL, implode(PHP_EOL, $lines)));
 
 		$this->assertSame(
 			'####-##-##T##:##:##+##:##	E_ERROR[0] RuntimeException: Text exception in .../unit/Errors/ErrorHandlerTest.php:###' . PHP_EOL .
-			'#1 ...' . PHP_EOL.
-			'#2 ...' . PHP_EOL.
-			'#3 ...' . PHP_EOL.
+			'#1 ...' . PHP_EOL .
+			'#2 ...' . PHP_EOL .
+			'#3 ...' . PHP_EOL .
 			'...',
 			$normalised
 		);
@@ -124,14 +134,14 @@ class ErrorHandlerTest extends TestCase
 			->disableOriginalConstructor()
 			->onlyMethods(['log'])
 			->getMock();
-	
+
 		$mock->expects($this->once())
 			->method('log')
 			->with(
-				$this->isType('string'), 
-				$this->equalTo(E_ERROR)  
+				$this->isType('string'),
+				$this->equalTo(E_ERROR)
 			);
-	
+
 		ErrorHandler::log(new RuntimeException("Test exception"), $mock);
 	}
 
@@ -140,10 +150,12 @@ class ErrorHandlerTest extends TestCase
 		$ErrorHandler = new class extends ErrorHandler {
 			public static string $test_echo_value = '';
 			public static string $test_php_sapi_name = '';
+
 			protected static function echo(string $string): void
 			{
 				static::$test_echo_value = $string;
 			}
+
 			protected static function php_sapi_name(): string
 			{
 				return static::$test_php_sapi_name;
@@ -153,8 +165,8 @@ class ErrorHandlerTest extends TestCase
 		$ErrorHandler::$test_php_sapi_name = 'cli';
 		$ErrorHandler->view(new RuntimeException('Text exception'), []);
 		$this->assertSame(
-			"\e[3;101m  RuntimeException  \e[0m" . PHP_EOL .'Text exception'. PHP_EOL . '.../unit/Errors/ErrorHandlerTest.php:###',
-			trim(preg_replace('#.*/tests/(.+):\d+#', '.../$1:###',$ErrorHandler::$test_echo_value))
+			"\e[3;101m  RuntimeException  \e[0m" . PHP_EOL . 'Text exception' . PHP_EOL . '.../unit/Errors/ErrorHandlerTest.php:###',
+			trim(preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
 		);
 
 		$ErrorHandler::$test_php_sapi_name = 'server';
@@ -187,64 +199,67 @@ __,
 	public function testHandleErrorException(): void
 	{
 		$ErrorHandler = new class extends ErrorHandler {
-            public ErrorException $test_exception;
-            public function handle_exception(Throwable $e): void
-            {
-                $this->test_exception = $e;
-            }
-        };
+			public ErrorException $test_exception;
+
+			public function handle_exception(Throwable $e): void
+			{
+				$this->test_exception = $e;
+			}
+		};
 		$ErrorHandler->set_terminate(false);
-        $res = $ErrorHandler->handle_error(E_WARNING, 'Error message', '/tmp/err.php', 1);
+		$res = $ErrorHandler->handle_error(E_WARNING, 'Error message', '/tmp/err.php', 1);
 		$this->assertTrue($res);
 
-        $this->assertInstanceOf(ErrorException::class, $ErrorHandler->test_exception);
-        $this->assertEquals('Error message', $ErrorHandler->test_exception->getMessage());
-        $this->assertEquals(E_WARNING, $ErrorHandler->test_exception->getSeverity());
-        $this->assertEquals('/tmp/err.php', $ErrorHandler->test_exception->getFile());
-        $this->assertEquals(1, $ErrorHandler->test_exception->getLine());
+		$this->assertInstanceOf(ErrorException::class, $ErrorHandler->test_exception);
+		$this->assertEquals('Error message', $ErrorHandler->test_exception->getMessage());
+		$this->assertEquals(E_WARNING, $ErrorHandler->test_exception->getSeverity());
+		$this->assertEquals('/tmp/err.php', $ErrorHandler->test_exception->getFile());
+		$this->assertEquals(1, $ErrorHandler->test_exception->getLine());
 	}
 
 	public function testHandleException(): void
 	{
-        $ErrorHandler = new class extends ErrorHandler {
-        	public static bool $test_is_cli_value = false;
+		$ErrorHandler = new class extends ErrorHandler {
+			public static bool $test_is_cli_value = false;
+
 			protected static function is_cli(): bool
 			{
 				return static::$test_is_cli_value;
 			}
-        };
+		};
 		$ErrorHandler->set_terminate(false);
 
 		$excep = new ErrorException('Test exception');
 
-        $log_called = null;
+		$log_called = null;
 		$ErrorHandler->set_log(function (Throwable $e) use (&$log_called) {
-            $log_called = $e;
-        });
+			$log_called = $e;
+		});
 
-        $view_called = null;
-        $ErrorHandler->set_view(function (Throwable $e, $m) use (&$view_called) {
-            $view_called = [$e, $m];
-        });
+		$view_called = null;
+		$ErrorHandler->set_view(function (Throwable $e, $m) use (&$view_called) {
+			$view_called = [$e, $m];
+		});
 
 		$ErrorHandler->handle_exception($excep);
 
-        $this->assertSame($excep, $log_called);
+		$this->assertSame($excep, $log_called);
 
-        $this->assertSame([$excep, null], $view_called);
+		$this->assertSame([$excep, null], $view_called);
 
 		$ErrorHandler::$test_is_cli_value = true;
 		$ErrorHandler->handle_exception($excep);
 
-        $this->assertSame($excep, $log_called);
+		$this->assertSame($excep, $log_called);
 
-        $this->assertSame([$excep, null], $view_called);
+		$this->assertSame([$excep, null], $view_called);
 
-        $ErrorHandler = new class extends ErrorHandler {
-        	public static bool $test_is_cli_value = false;
-        	/** @var array{0: Throwable, 1: mixed}|null */
-        	public static ?array $test_view_called = null;
-        	public static bool $test_exit_called = false;
+		$ErrorHandler = new class extends ErrorHandler {
+			public static bool $test_is_cli_value = false;
+			/** @var array{0: Throwable, 1: mixed}|null */
+			public static ?array $test_view_called = null;
+			public static bool $test_exit_called = false;
+
 			protected static function is_cli(): bool
 			{
 				return static::$test_is_cli_value;
@@ -259,86 +274,89 @@ __,
 			{
 				static::$test_exit_called = true;
 			}
-        };
+		};
 
 		$ErrorHandler->set_terminate(false);
 
 		$ErrorHandler->handle_exception($excep);
 
-        $this->assertNull($ErrorHandler::$test_view_called);
+		$this->assertNull($ErrorHandler::$test_view_called);
 
 		$ErrorHandler::$test_is_cli_value = true;
 		$ErrorHandler->handle_exception($excep);
 
-        $this->assertSame([$excep, null], $view_called);
+		$this->assertSame([$excep, null], $view_called);
 
 		$ErrorHandler->set_terminate(true);
 		$ErrorHandler->handle_exception($excep);
 
-        $this->assertSame([$excep, null], $view_called);
-        $this->assertTrue($ErrorHandler::$test_exit_called);
+		$this->assertSame([$excep, null], $view_called);
+		$this->assertTrue($ErrorHandler::$test_exit_called);
 	}
 
-    public function testHandleShutdown(): void
-    {
-        $ErrorHandler = new class extends ErrorHandler {
-        	/** @var array{0: int, 1: string, 2: ?string, 3: ?int}|null */
-        	public ?array $test_handle_error_called = null;
+	public function testHandleShutdown(): void
+	{
+		$ErrorHandler = new class extends ErrorHandler {
+			/** @var array{0: int, 1: string, 2: ?string, 3: ?int}|null */
+			public ?array $test_handle_error_called = null;
 			public bool $test_error_get_last_null = true;
-            public function handle_error(int $errno, string $errstr, ?string $errfile = null, ?int $errline = null): bool
-            {
-                $this->test_handle_error_called = [ $errno, $errstr, $errfile, $errline ];
-                return true;
-            }
+
+			public function handle_error(int $errno, string $errstr, ?string $errfile = null, ?int $errline = null): bool
+			{
+				$this->test_handle_error_called = [$errno, $errstr, $errfile, $errline];
+
+				return true;
+			}
 
 			/** @return array{0: int, 1: string, 2: ?string, 3: ?int} */
 			protected function error_get_last(): ?array
 			{
 				return $this->test_error_get_last_null ? null : [
 					'type' => E_ERROR,
-	    	        'message' => 'Fatal error occurred',
-		            'file' => '/path/script.php',
-	    	        'line' => 99,
-    	    	];
+					'message' => 'Fatal error occurred',
+					'file' => '/path/script.php',
+					'line' => 99,
+				];
 			}
-        };
+		};
 
-        $ErrorHandler->handle_shutdown();
+		$ErrorHandler->handle_shutdown();
 
-        $this->assertNull($ErrorHandler->test_handle_error_called);
+		$this->assertNull($ErrorHandler->test_handle_error_called);
 
 		$ErrorHandler->test_error_get_last_null = false;
-        $ErrorHandler->handle_shutdown();
+		$ErrorHandler->handle_shutdown();
 
-        $this->assertIsArray($ErrorHandler->test_handle_error_called);
-        $this->assertSame(E_ERROR, $ErrorHandler->test_handle_error_called[0] ?? null);
-        $this->assertSame('Fatal error occurred', $ErrorHandler->test_handle_error_called[1] ?? null);
-        $this->assertSame('/path/script.php', $ErrorHandler->test_handle_error_called[2] ?? null);
-        $this->assertSame(99, $ErrorHandler->test_handle_error_called[3] ?? null);
-    }
-   
+		$this->assertIsArray($ErrorHandler->test_handle_error_called);
+		$this->assertSame(E_ERROR, $ErrorHandler->test_handle_error_called[0] ?? null);
+		$this->assertSame('Fatal error occurred', $ErrorHandler->test_handle_error_called[1] ?? null);
+		$this->assertSame('/path/script.php', $ErrorHandler->test_handle_error_called[2] ?? null);
+		$this->assertSame(99, $ErrorHandler->test_handle_error_called[3] ?? null);
+	}
+
 	public function testSeverityLabel(): void
 	{
 		$ErrorHandler = new class extends ErrorHandler {
-			public static function test_severity_label(int $severity): string {
+			public static function test_severity_label(int $severity): string
+			{
 				return self::severity_label($severity);
 			}
 		};
 
 		foreach ([
-			E_COMPILE_ERROR     => 'E_COMPILE_ERROR',
-			E_CORE_ERROR        => 'E_CORE_ERROR',
-			E_DEPRECATED        => 'E_DEPRECATED',
-			E_ERROR             => 'E_ERROR',
-			E_NOTICE            => 'E_NOTICE',
-			E_PARSE             => 'E_PARSE',
-			E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
-			E_USER_DEPRECATED   => 'E_USER_DEPRECATED',
-			E_USER_ERROR        => 'E_USER_ERROR',
-			E_USER_WARNING      => 'E_USER_WARNING',
-			E_WARNING           => 'E_WARNING',
-			-1              => 'E_UNKNOWN', // Custom/unmatched
-		] as $code => $expectedLabel) {
+					 E_COMPILE_ERROR => 'E_COMPILE_ERROR',
+					 E_CORE_ERROR => 'E_CORE_ERROR',
+					 E_DEPRECATED => 'E_DEPRECATED',
+					 E_ERROR => 'E_ERROR',
+					 E_NOTICE => 'E_NOTICE',
+					 E_PARSE => 'E_PARSE',
+					 E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
+					 E_USER_DEPRECATED => 'E_USER_DEPRECATED',
+					 E_USER_ERROR => 'E_USER_ERROR',
+					 E_USER_WARNING => 'E_USER_WARNING',
+					 E_WARNING => 'E_WARNING',
+					 -1 => 'E_UNKNOWN', // Custom/unmatched
+				 ] as $code => $expectedLabel) {
 			$this->assertSame(
 				$expectedLabel,
 				$ErrorHandler::test_severity_label($code),
@@ -366,10 +384,11 @@ __,
 			{
 				ob_start();
 				static::echo('test-string');
+
 				return ob_get_clean();
 			}
 		};
-	
+
 		$this->assertSame('test-string', $ErrorHandler::testEcho());
 	}
 
@@ -382,24 +401,19 @@ __,
 				return $this->error_get_last();
 			}
 		};
-	
-		$this->assertNull($ErrorHandler->testGetErrorLast());
-	}
 
-	protected static function error_log(string $log): void
-	{
-		error_log($log);
+		$this->assertNull($ErrorHandler->testGetErrorLast());
 	}
 
 	public function testErrorLog(): void
 	{
-	
+
 		if (!$tmpfile = tmpfile()) {
 			$this->fail('Could not create tmpfile');
 		}
-	
+
 		$filename = stream_get_meta_data($tmpfile)['uri'];
-	
+
 		$ErrorHandler = new class extends ErrorHandler {
 			public static function testGetErrorLogMsgType(): int
 			{
@@ -426,37 +440,37 @@ __,
 				return static::error_log('test');
 			}
 		};
-	
-		$this->assertSame(0,$ErrorHandler::testGetErrorLogMsgType());
+
+		$this->assertSame(0, $ErrorHandler::testGetErrorLogMsgType());
 		$this->assertNull($ErrorHandler::testGetErrorDestination());
 
-	$ErrorHandler::testSetErrorLogMsgType(3);
-	$ErrorHandler::testSetErrorDestination($filename);
+		$ErrorHandler::testSetErrorLogMsgType(3);
+		$ErrorHandler::testSetErrorDestination($filename);
 
 		$this->assertNull($ErrorHandler->testErrorLog());
-	
+
 		rewind($tmpfile);
 		$this->assertSame('test', stream_get_contents($tmpfile));
 		fclose($tmpfile);
-	
-	$ErrorHandler::testSetErrorLogMsgType(0);
-	$ErrorHandler::testSetErrorDestination(null);
+
+		$ErrorHandler::testSetErrorLogMsgType(0);
+		$ErrorHandler::testSetErrorDestination(null);
 	}
 
-	private function normalise_log_line(string $log):string
+	private function normalise_log_line(string $log): string
 	{
 		return preg_replace(
-				[
-					'/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2}/',
-					'~ /.*/tests/(.+):\d+~',
-					'/:(\d+)$/'
-				],
-				[
-					'####-##-##T##:##:##+##:##',
-					' .../$1:###',
-					':###'
-				],
-			    trim($log)
-			);
+			[
+				'/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2}/',
+				'~ /.*/tests/(.+):\d+~',
+				'/:(\d+)$/'
+			],
+			[
+				'####-##-##T##:##:##+##:##',
+				' .../$1:###',
+				':###'
+			],
+			trim($log)
+		);
 	}
 }

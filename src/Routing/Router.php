@@ -286,135 +286,6 @@ class Router implements RouterInterface
 		return $methods;
 	}
 
-	/**
-	 * @param array<string> $m
-	 */
-	protected function parse_route(string $method, Route $route, array $m, string $url): RouteMatch|false
-	{
-		if (!is_null($route->callback)) {
-			$ret = ($route->callback)($method, $route, $m, $url);
-
-			if ($ret === false) {
-				return false;
-			}
-
-			if (!$ret instanceof RouteMatch) {
-				throw new RouterException('callback returned invalid structure', RouterError::INVALID_CALLBACK);
-			}
-
-			return $ret;
-		}
-
-		if (empty($route->controller)) {
-			return false;
-		}
-
-		if (!$this->is_route_method($method, $route->method)) {
-			return false;
-		}
-
-		return new RouteMatch(
-			controller: $route->controller,
-			action: $route->action,
-			vars: $this->get_route_vars($route->vars, $m)
-		);
-	}
-
-	/**
-	 * Determines the route index used for fast lookup.
-	 * Defaults to the first static path segment if none provided.
-	 */
-	private function add_route_index(?string $index, string $path): string
-	{
-		$index = $index ?? '';
-
-		if (empty($index)) {
-			preg_match('~^([^/{]+/)~', $path, $m);
-
-			if (count($m) === 2) {
-				$index = substr($m[1], 0, -1);
-			}
-		}
-
-		return $index;
-	}
-
-	/**
-	 * @param ?array<string, string> $vars
-	 * @return array<string, string>
-	 */
-	private function add_route_vars(?array $vars, string $path): array
-	{
-		preg_match_all('~{([^}]+)}~', $path, $m);
-
-		$inline_vars = [];
-		if (count($m) === 2) {
-			$inline_vars = array_fill_keys($m[1], '');
-		}
-
-		if (is_null($vars)) {
-			$vars = [];
-		}
-
-		foreach ($inline_vars as $k => $v) {
-			if (!isset($vars[$k])) {
-				$vars[(string)$k] = (string)$v;
-			}
-		}
-
-		return $vars;
-	}
-
-	private function add_route_regx(bool $any, string $path): string
-	{
-		$esc = '~';
-		$route_esc = $this->preg_replace('~\{[^}]+}~', PHP_EOL, $path);//temporarily mark var positions ("{markers}") with EOL placeholder chars safely escape preg_quote()
-		if (!is_string($route_esc)) {
-			throw new RouterException('Cannot add route path', RouterError::ADD_ROUTE);
-		}
-		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
-		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholders with capture groups for path variables
-		if ($any) {
-			$route_esc .= '.*';//TODO is this .* or just * ?
-		}
-
-		return $esc . '^' . $route_esc . '$' . $esc;//make regx using $esc chars
-	}
-
-	private function add_route_rewrite(bool $any, string $path): string
-	{
-		if (!is_string($sprintf = $this->preg_replace('~{([^}]+)}\**~', '%s', $path))) {
-			throw new RouterException("Invalid regx in '$path'", RouterError::REWRITE_FAIL);
-		}
-
-		if ($any) {
-			$sprintf .= '%s';
-		}
-
-		return $sprintf;
-	}
-
-	/** @param array<string>|string|null $method */
-	private function add_route_normalise_method(array|string|null $method): int
-	{
-		if (is_string($method)) {
-			$method = [strtoupper($method)];
-		} elseif (is_array($method)) {
-			$method = array_map('strtoupper', $method);
-		} else {
-			$method = [];
-		}
-
-		$methodi = 0;
-		foreach (static::METHODS as $method_type => $method_val) {
-			if (in_array($method_type, $method)) {
-				$methodi += $method_val;
-			}
-		}
-
-		return $methodi;
-	}
-
 	public function __serialize(): array
 	{
 		return [
@@ -482,9 +353,139 @@ class Router implements RouterInterface
 		$this->action_default = $data['action_default'];
 	}
 
+	/**
+	 * @param array<string> $m
+	 */
+	protected function parse_route(string $method, Route $route, array $m, string $url): RouteMatch|false
+	{
+		if (!is_null($route->callback)) {
+			$ret = ($route->callback)($method, $route, $m, $url);
+
+			if ($ret === false) {
+				return false;
+			}
+
+			if (!$ret instanceof RouteMatch) {
+				throw new RouterException('callback returned invalid structure', RouterError::INVALID_CALLBACK);
+			}
+
+			return $ret;
+		}
+
+		if (empty($route->controller)) {
+			return false;
+		}
+
+		if (!$this->is_route_method($method, $route->method)) {
+			return false;
+		}
+
+		return new RouteMatch(
+			controller: $route->controller,
+			action: $route->action,
+			vars: $this->get_route_vars($route->vars, $m)
+		);
+	}
+
 	/** @return string|string[] */
 	protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
 	{
 		return preg_replace($pattern, $replacement, $subject);
+	}
+
+	/**
+	 * Determines the route index used for fast lookup.
+	 * Defaults to the first static path segment if none provided.
+	 */
+	private function add_route_index(?string $index, string $path): string
+	{
+		$index = $index ?? '';
+
+		if (empty($index)) {
+			preg_match('~^([^/{]+/)~', $path, $m);
+
+			if (count($m) === 2) {
+				$index = substr($m[1], 0, -1);
+			}
+		}
+
+		return $index;
+	}
+
+	/**
+	 * @param ?array<string, string> $vars
+	 * @return array<string, string>
+	 */
+	private function add_route_vars(?array $vars, string $path): array
+	{
+		preg_match_all('~{([^}]+)}~', $path, $m);
+
+		$inline_vars = [];
+		if (count($m) === 2) {
+			$inline_vars = array_fill_keys($m[1], '');
+		}
+
+		if (is_null($vars)) {
+			$vars = [];
+		}
+
+		foreach ($inline_vars as $k => $v) {
+			if (!isset($vars[$k])) {
+				$vars[(string)$k] = (string)$v;
+			}
+		}
+
+		return $vars;
+	}
+
+	private function add_route_regx(bool $any, string $path): string
+	{
+		$esc = '~';
+		$route_esc = $this->preg_replace('~\{[^}]+}~', PHP_EOL,
+			$path);//temporarily mark var positions ("{markers}") with EOL placeholder chars safely escape preg_quote()
+		if (!is_string($route_esc)) {
+			throw new RouterException('Cannot add route path', RouterError::ADD_ROUTE);
+		}
+		$route_esc = preg_quote($route_esc, $esc);//ensure anything in /url/path is now preg escaped
+		$route_esc = str_replace(PHP_EOL, '([^/]+)', $route_esc);//replace placeholders with capture groups for path variables
+		if ($any) {
+			$route_esc .= '.*';//TODO is this .* or just * ?
+		}
+
+		return $esc . '^' . $route_esc . '$' . $esc;//make regx using $esc chars
+	}
+
+	private function add_route_rewrite(bool $any, string $path): string
+	{
+		if (!is_string($sprintf = $this->preg_replace('~{([^}]+)}\**~', '%s', $path))) {
+			throw new RouterException("Invalid regx in '$path'", RouterError::REWRITE_FAIL);
+		}
+
+		if ($any) {
+			$sprintf .= '%s';
+		}
+
+		return $sprintf;
+	}
+
+	/** @param array<string>|string|null $method */
+	private function add_route_normalise_method(array|string|null $method): int
+	{
+		if (is_string($method)) {
+			$method = [strtoupper($method)];
+		} elseif (is_array($method)) {
+			$method = array_map('strtoupper', $method);
+		} else {
+			$method = [];
+		}
+
+		$methodi = 0;
+		foreach (static::METHODS as $method_type => $method_val) {
+			if (in_array($method_type, $method)) {
+				$methodi += $method_val;
+			}
+		}
+
+		return $methodi;
 	}
 }

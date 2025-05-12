@@ -2,7 +2,7 @@
 
 namespace App;
 
-use LogicException;
+use Closure;
 use PHPCanvas\Application;
 use PHPCanvas\Config;
 use PHPCanvas\Container;
@@ -18,7 +18,6 @@ use PHPCanvas\Routing\Dispatch;
 use PHPCanvas\Routing\Links;
 use PHPCanvas\Routing\Router;
 use Throwable;
-use Closure;
 
 // Generic bootstrap (copy and create new as required)
 // Hint: consider Composer autoload files 
@@ -56,7 +55,7 @@ function app(): Application
 	}
 	$Container->set('Config', $Config);
 
-// 	if (!$Router = $ObjectCache->cache_get('Router', Router::class)) {
+	if (!$Router = $ObjectCache->cache_get('Router', Router::class)) {
 		$Router = new Router();
 		$routes = (Closure::bind(function (): mixed {
 			return include(__DIR__ . '/routes.php');
@@ -78,7 +77,7 @@ function app(): Application
 			}
 		}
 		$ObjectCache->cache_put('Router', $Router);
-// 	}
+	}
 	$Container->set('Router', $Router);
 
 	// Example inline register
@@ -93,6 +92,7 @@ function app(): Application
 
 	$Container->register('Links', function (ContainerInterface $Container): Links {
 		$Config = $Container->get_as('Config', Config::class);
+
 		return new Links($Container->get_as('Router', Router::Class), $Config->list()['SITE_URL'] ?? '', $Config->list()['SITE_PATH'] ?? '');
 	});
 

@@ -2,9 +2,9 @@
 
 namespace PHPCanvas;
 
+use PHPCanvas\Exception\ConfigUnexpectedValueException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use PHPCanvas\Exception\ConfigUnexpectedValueException;
 
 class ConfigTest extends TestCase
 {

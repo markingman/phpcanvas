@@ -11,35 +11,19 @@ class LogHandlerTest extends TestCase
 		$this->assertInstanceOf(LogHandler::class, new LogHandler(new LogFormatterString(new WriteStdErr())));
 	}
 
-	protected function createMockLogFormatter(): LogFormatterInterface
-	{
-		return new class implements LogFormatterInterface {
-			public string $test_value = '';
-		
-			/** @param array<string, mixed> $context */
-			public function write(string $log, string $type = '', int $level = 0, array $context = []): void
-			{
-				$this->test_value = sprintf(
-					'log: %s; type: %s; level: %d; context: %s',
-					$log, $type, $level, json_encode((object)$context) ?: 'JSON_ENCODE_ERR'
-				);
-			}
-		};
-	}
-
 	public function testLogEmerg(): void
 	{
 		$MockLogFormatter = $this->createMockLogFormatter();
 		foreach ([
-			'emerg' => LOG_EMERG,
-			'alert' => LOG_ALERT,
-			'crit' => LOG_CRIT,
-			'err' => LOG_ERR,
-			'warning' => LOG_WARNING,
-			'notice' => LOG_NOTICE,
-			'info' => LOG_INFO,
-			'debug' => LOG_DEBUG,
-		] as $method => $level){
+					 'emerg' => LOG_EMERG,
+					 'alert' => LOG_ALERT,
+					 'crit' => LOG_CRIT,
+					 'err' => LOG_ERR,
+					 'warning' => LOG_WARNING,
+					 'notice' => LOG_NOTICE,
+					 'info' => LOG_INFO,
+					 'debug' => LOG_DEBUG,
+				 ] as $method => $level) {
 			$MockLogFormatter->test_value = '';
 			$LogHandler = new LogHandler($MockLogFormatter, 'test');
 			$LogHandler->$method('Log message', ['test' => 'value']);
@@ -49,5 +33,21 @@ class LogHandlerTest extends TestCase
 				"Method '$method' should log correct message"
 			);
 		}
+	}
+
+	protected function createMockLogFormatter(): LogFormatterInterface
+	{
+		return new class implements LogFormatterInterface {
+			public string $test_value = '';
+
+			/** @param array<string, mixed> $context */
+			public function write(string $log, string $type = '', int $level = 0, array $context = []): void
+			{
+				$this->test_value = sprintf(
+					'log: %s; type: %s; level: %d; context: %s',
+					$log, $type, $level, json_encode((object)$context) ?: 'JSON_ENCODE_ERR'
+				);
+			}
+		};
 	}
 }

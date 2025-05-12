@@ -34,6 +34,7 @@ class Dispatch implements DispatchInterface
 
 		if (str_starts_with($RouteMatch->controller, 'http') and str_contains($RouteMatch->controller, '://')) { //Router can make http redirect
 			$this->go_to($RouteMatch->controller);
+
 			return;
 		}
 

@@ -10,33 +10,6 @@ class TestHTTPClient
 {
 	protected Client $client;
 
-	public function get(string $url, array $options = []): array
-	{
-		return $this->request('GET', $url, $options);
-	}
-
-	public function post(string $url, array $options = []): array
-	{
-		return $this->request('GET', $url, $options);
-	}
-
-    public function request(string $method, string $url, array $options = [], $tidy = true): array
-    {
-        $this->client ??= new Client(['base_uri' => 'http://localhost/']);
-        $res = $this->client->request($method, $url, $options);
-
-		$body = (string)$res->getBody();
-		if ($tidy) {
-			$body = $this->tidy($body);
-		}
-
-        return [
-            'status' => $res->getStatusCode(),
-            'headers' => $res->getHeaders(),
-            'body' => $body,
-        ];
-    }
-
 	public static function tidy(string $html, bool $diagnose = true): string
 	{
 		$tidy = new tidy();
@@ -64,5 +37,32 @@ class TestHTTPClient
 				$output . PHP_EOL .
 				'<!--' . PHP_EOL . trim($tidy->errorBuffer ?? '') . PHP_EOL . '-->';
 		}
+	}
+
+	public function get(string $url, array $options = []): array
+	{
+		return $this->request('GET', $url, $options);
+	}
+
+	public function post(string $url, array $options = []): array
+	{
+		return $this->request('GET', $url, $options);
+	}
+
+	public function request(string $method, string $url, array $options = [], $tidy = true): array
+	{
+		$this->client ??= new Client(['base_uri' => 'http://localhost/']);
+		$res = $this->client->request($method, $url, $options);
+
+		$body = (string)$res->getBody();
+		if ($tidy) {
+			$body = $this->tidy($body);
+		}
+
+		return [
+			'status' => $res->getStatusCode(),
+			'headers' => $res->getHeaders(),
+			'body' => $body,
+		];
 	}
 }
