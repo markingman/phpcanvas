@@ -286,12 +286,22 @@ class Router implements RouterInterface
 		return $methods;
 	}
 
+
+	/**
+	 * @return array{
+	 *     iname: array<string, int>,
+	 *     routes: array<int, Route>,
+	 *     index: array<string, int[]>,
+	 *     i: int,
+	 *     action_default: string
+	 * }
+	 */
 	public function __serialize(): array
 	{
 		return [
 			'iname' => $this->iname,
 			'routes' => $this->routes,/*array_map(function ($route) {
-				// Remove closures — cannot be serialized
+				// TODO: remove closures — cannot be serialized
 				if ($route instanceof Route) {
 					$route->callback = null;
 				}
@@ -316,7 +326,7 @@ class Router implements RouterInterface
 		}
 
 		if (!isset($data['routes']) or !is_array($data['routes'])) {
-			throw new RouterException('Router requires valid \'routes\' array', RouterError::UNSERIALIZE);
+			throw new RouterException('Router requires a \'routes\' array', RouterError::UNSERIALIZE);
 		}
 		foreach ($data['routes'] as $k => $v) {
 			if (!is_int($k) or !$v instanceof Route) {

@@ -18,6 +18,8 @@ use PHPCanvas\Routing\Dispatch;
 use PHPCanvas\Routing\Links;
 use PHPCanvas\Routing\Router;
 use Throwable;
+use PHPCanvas\Test\App\View\LoadPartials;
+use LogicException;
 
 // Generic bootstrap (copy and create new as required)
 // Hint: consider Composer autoload files 
@@ -25,8 +27,9 @@ use Throwable;
 function app(): Application
 {
 	$regs = __DIR__ . '/registry';
+	$tmpdir = sys_get_temp_dir();// TEMP DIR NOT FOR PRODUCTION (Only this test example)
 
-	$ObjectCache = new ObjectCache(sys_get_temp_dir());// TEMP DIR NOT FOR PRODUCTION (Only this test example)
+	$ObjectCache = new ObjectCache($tmpdir);
 	$Container = new Container($regs);
 
 	$Container->set('Log', new LogHandler(new LogFormatterString(new WriteStdErr())));
@@ -115,6 +118,14 @@ function app(): Application
 			Response: $Container->get_as('Response', Response::class),
 			Dispatch: $Container->get_as('Dispatch', Dispatch::class),
 		);
+	});
+
+	$Container->register('LoadPartials', function () use ($tmpdir): LoadPartials {
+		if (!is_dir($dir = __DIR__ . '/src/App/View/Partials')) {
+			throw new LogicException('Could not find Partials dir');
+		}
+
+		return new LoadPartials($dir, $tmpdir . DIRECTORY_SEPARATOR . 'partials.php'/*, $hash */);
 	});
 
 	// Example locate distinct path

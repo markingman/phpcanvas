@@ -17,7 +17,7 @@ return [
 		'method' => 'GET'
 	],
 
-	'example-test' => [
+	'example/test' => [
 		'path' => 'example/test',
 		'controller' => ExampleController::class,
 		'action' => 'test',

@@ -44,7 +44,7 @@ class ObjectCache implements ObjectCacheInterface
 			throw new ObjectCacheException('Could not read cache file', ObjectCacheError::FILE_READ);
 		}
 
-		if (!$class = @unserialize($serialized, ['allowed_classes' => [$instanceof]])) {
+		if (!$class = @unserialize($serialized, ['allowed_classes' => true])) {
 			throw new ObjectCacheException('Could not unserialize cache file', ObjectCacheError::UNSERIALIZE);
 		}
 

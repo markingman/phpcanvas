@@ -243,7 +243,7 @@ __;
 		}
 	}
 
-	/** @return array{0: int, 1: string, 2: ?string, 3: ?int}|null */
+	/** @return array{'type': int, 'message': string, 'file': ?string, 'line': ?int}|null */
 	protected function error_get_last(): ?array
 	{
 		return error_get_last();
