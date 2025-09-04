@@ -33,9 +33,9 @@ if (!is_string($req)) {
 // 	exit;
 // }
 
-// if (preg_match('/\.(?:png|jpg|jpeg|gif|svg|css|js)$/', $req)) {
-// 	return false;// serve resource as-is
-// }
+if (preg_match('/\.(?:png|jpg|jpeg|gif|svg|css|js)$/', $req)) {
+	return false;// serve resource as-is
+}
 
 require_once __DIR__ . '/../../bootstrap.php';
 

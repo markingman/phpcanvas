@@ -21,7 +21,7 @@ class DefaultTemplate extends AbstractTemplate
 <html lang="en">
 	<head>
 		<title><?= htmlspecialchars($this->title) ?></title>
-		<link href="<?//= static::path_css('main.css') ?>" rel="" type="stylesheet">
+		<link href="<?= static::path_css('main.css') ?>" rel="stylesheet">
 	</head>
 	<body>
 		<main>

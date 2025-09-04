@@ -2,7 +2,6 @@
 
 namespace PHPCanvas\Test\App\View\Layouts;
 
-// use function PHPCanvas\Test\App\View\Partials\htmlentities;
 use function PHPCanvas\Test\App\View\Partials\htmlentities;
 
 class Block /*implements StringView*/
@@ -20,6 +19,6 @@ class Block /*implements StringView*/
 	<?= htmlentities($this->title) ?>
 </div>
 <?php
-		return ob_get_clean();
+		return (string)ob_get_clean();
 	}
 }

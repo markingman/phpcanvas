@@ -6,19 +6,21 @@ use RuntimeException;
 
 abstract class AbstractTemplate
 {
+	abstract public function __invoke(): string;
+
 	public static function path_css(string $file = ''): string
 	{
-		return $this->path('css', $file);
+		return static::path_asset('css', $file);
 	}
 
 	public static function path_js(string $file = ''): string
 	{
-		return $this->path('js', $file);
+		return static::path_asset('js', $file);
 	}
 
 	public static function path_img(string $file = ''): string
 	{
-		return $this->path('img', $file);
+		return static::path_asset('img', $file);
 	}
 
 	public static function ob_start(): void
@@ -35,7 +37,7 @@ abstract class AbstractTemplate
 		return $ob;
 	}
 
-	private static function path_asset(string $path, string $file): string
+	protected static function path_asset(string $path, string $file): string
 	{
 		return '/' . $path . ($file? '/' . htmlentities($file) : '');
 	}
