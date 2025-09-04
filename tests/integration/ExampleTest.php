@@ -3,11 +3,15 @@
 namespace PHPCanvas;
 
 use PHPUnit\Framework\TestCase;
-use Throwable;
 
 class ExampleTest extends TestCase
 {
 	protected TestHTTPClient $client;
+
+	protected function setUp(): void
+	{
+		$this->client = new TestHTTPClient;
+	}
 
 	public function testExample(): void
 	{
@@ -36,14 +40,5 @@ __,
 //
 // 		$this->assertEquals(500, $res['status']);
 // 		$this->assertStringContainsString('Internal Server Error', $res['body']);
-	}
-
-	protected function setUp(): void
-	{
-		try {
-			$this->client = new TestHTTPClient;
-		} catch (Throwable $e) {
-			$this->fail('Could not set up HTTP client; ' . $e->getMessage());
-		}
 	}
 }

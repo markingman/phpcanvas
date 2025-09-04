@@ -371,7 +371,7 @@ class DispatchTest extends TestCase
 		) extends Dispatch {
 			public function set_controller(): void
 			{
-				$this->controller = 'testController';
+				$this->controller = 'TestController';
 			}
 
 			public function set_action(): void
@@ -386,7 +386,7 @@ class DispatchTest extends TestCase
 		$Dispatch->set_controller();
 		$Dispatch->set_action();
 
-		$this->assertSame('testController', $Dispatch->get_controller());
+		$this->assertSame('TestController', $Dispatch->get_controller());
 		$this->assertSame('testAction', $Dispatch->get_action());
 	}
 

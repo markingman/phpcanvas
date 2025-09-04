@@ -3,20 +3,28 @@
 namespace PHPCanvas;
 
 use PHPCanvas\Exception\ApplicationException;
+use PHPCanvas\Exception\ApplicationError;
+use PHPCanvas\Exception\ContainerException;
 use PHPCanvas\Http\RequestInterface;
 use PHPCanvas\Http\ResponseInterface;
 use PHPCanvas\Routing\DispatchInterface;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
+use PHPUnit\Framework\MockObject\MockObject;
 
 class ApplicationTest extends TestCase
 {
-	private $Config;
-	private $Container;
-	private $Request;
-	private $Response;
-	private $Dispatch;
+	/** @var MockObject&ConfigInterface */
+	private ConfigInterface $Config;
+	/** @var MockObject&ContainerInterface */
+	private ContainerInterface $Container;
+	/** @var MockObject&RequestInterface */
+	private RequestInterface $Request;
+	/** @var MockObject&ResponseInterface */
+	private ResponseInterface $Response;
+	/** @var MockObject&DispatchInterface */
+	private DispatchInterface $Dispatch;
 
 	public function testRunCallsDispatcherWithProvidedMethodAndPath(): void
 	{
@@ -81,7 +89,7 @@ class ApplicationTest extends TestCase
 		try {
 			$app->run();
 		} catch (ContainerException $e) {
-			$this->assertSame(ApplicationException::CALL_ERR, $e->getErrorCode());
+			$this->assertSame(ApplicationError::CALL_ERR, $e->getErrorCode());
 			throw $e;
 		}
 	}
@@ -112,7 +120,7 @@ class ApplicationTest extends TestCase
 		try {
 			$app->run();
 		} catch (ContainerException $e) {
-			$this->assertSame(ApplicationException::CALL_ERR, $e->getErrorCode());
+			$this->assertSame(ApplicationError::CALL_ERR, $e->getErrorCode());
 			throw $e;
 		}
 	}
