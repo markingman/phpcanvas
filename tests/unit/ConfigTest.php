@@ -5,6 +5,7 @@ namespace PHPCanvas;
 use PHPCanvas\Exception\ConfigUnexpectedValueException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Throwable;
 
 class ConfigTest extends TestCase
 {
@@ -38,6 +39,7 @@ class ConfigTest extends TestCase
 			}
 
 			self::$$name = static::$tmpdir . '/' . $name . '.php';
+
 			if (!file_put_contents(self::$$name, '<?php return ' . var_export($configs[$name], true) . ';')) {
 				throw new RuntimeException("Could not write ConfigTest fixture file '$name'");
 			}
@@ -51,42 +53,29 @@ class ConfigTest extends TestCase
 
 	public function setUp(): void
 	{
-		$this->Config = new Config([self::$config1, self::$config2]);
+		try {
+			$this->Config = new Config([self::$config1, self::$config2]);
+		} catch (Throwable $e) {
+			throw new RuntimeException('Could not instantiate Config', previous: $e);
+		}
 	}
-
-	public function testCreate(): void
-	{
-		$this->assertInstanceOf(ConfigInterface::class, $this->Config);
-	}
-
-// 	public function testCreateEmpty()
-// 	{
-// 		$this->assertInstanceOf(ConfigInterface::class, new Config());
-// 	}
 
 	public function testCreateWithExtraParameters(): void
 	{
+		/**
+		 * @property string $adhoc1
+		 * @property string $adhoc2
+		 */
+// 		$Config = new class ([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => 'value2']) extends Config{};
 		$Config = new Config([self::$config1], ['adhoc1' => 'value1', 'adhoc2' => 'value2']);
-		$this->assertSame('value1', $Config->adhoc1);
-		$this->assertSame('value2', $Config->adhoc2);
+		$this->assertSame('value1', $Config->get('adhoc1'));
+		$this->assertSame('value2', $Config->get('adhoc2'));
 	}
 
 	public function testGet(): void
 	{
-		$this->assertSame('A', $this->Config->a);
-		$this->assertSame('B', $this->Config->b);
-	}
-
-	public function testSet(): void
-	{
-		$this->Config->b = 'B2';
-		$this->assertSame('B2', $this->Config->b);
-	}
-
-	public function testUnset(): void
-	{
-		unset($this->Config->bbb);
-		$this->assertFalse(isset($this->Config->bbb));
+		$this->assertSame('A', $this->Config->get('a'));
+		$this->assertSame('B', $this->Config->get('b'));
 	}
 
 	public function testList(): void
@@ -104,26 +93,21 @@ class ConfigTest extends TestCase
 
 	public function testUnserializable(): void
 	{
-		$value = $this->Config->a;
+		$value = $this->Config->get('a');
 		$serialized = serialize($this->Config);
 		$Config2 = unserialize($serialized);
 		$this->assertInstanceOf(ConfigInterface::class, $Config2);
-		$this->assertSame($Config2->a, $value);
+		$this->assertSame($Config2->get('a'), $value);
 	}
 
 	public function testUnserializeEmpty(): void
 	{
+		$config = new Config();
+
 		$this->expectException(ConfigUnexpectedValueException::class);
 		$this->expectExceptionMessage('Config requires a "config" array');
 
-		$config = new Config();
-
-		try {
-			$config->__unserialize([]);
-		} catch (ConfigUnexpectedValueException $e) {
-// 			$this->assertSame(ConfigError::CALL_ERR, $e->getErrorCode());
-			throw $e;
-		}
+		$config->__unserialize([]);
 	}
 
 	public function testUnserializeNotArray(): void

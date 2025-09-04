@@ -33,24 +33,14 @@ final class Config implements ConfigInterface
 		}
 	}
 
-	public function __get(string $k): ?string
+	public function get(string $k): ?string
 	{
 		return $this->config[$k] ?? null;
 	}
 
-	public function __set(string $k, string $v): void
-	{
-		$this->config[$k] = $v;
-	}
-
-	public function __isset(string $k): bool
+	public function isset(string $k): bool
 	{
 		return isset($this->config[$k]);
-	}
-
-	public function __unset(string $k): void
-	{
-		unset($this->config[$k]);
 	}
 
 	/** @return array<string, string> */

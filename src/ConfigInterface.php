@@ -10,11 +10,9 @@ interface ConfigInterface
 	 */
 	public function __construct(array $paths = [], ?array $config = null);
 
-	public function __get(string $k): ?string;
+	public function get(string $k): ?string;
 
-	public function __set(string $k, string $v): void;
-
-	public function __unset(string $k): void;
+	public function isset(string $k): bool;
 
 	/** @return array<string, string> */
 	public function list(): array;
