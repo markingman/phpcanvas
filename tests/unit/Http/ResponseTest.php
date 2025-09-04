@@ -410,9 +410,8 @@ class ResponseTest extends TestCase
 
 	public function testHeaderRemoveIsActuallyExecuted(): void
 	{
-		$called = [];
-
 		$Response = new class(false) extends Response {
+			/** @var array<string> $called */
 			public array $called = [];
 
 			protected function echo(string $echo): void

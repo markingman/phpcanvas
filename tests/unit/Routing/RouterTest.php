@@ -5,6 +5,8 @@ namespace PHPCanvas\Routing;
 use PHPCanvas\Exception\RouterError;
 use PHPCanvas\Exception\RouterException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Throwable;
 
 class RouterTest extends TestCase
 {
@@ -27,7 +29,6 @@ class RouterTest extends TestCase
 
 	/**
 	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
 	 */
 	public static function __test_callback_empty_function(string $method, Route $route, array $m, string $url): RouteMatch|false
 	{
@@ -40,7 +41,6 @@ class RouterTest extends TestCase
 
 	/**
 	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
 	 */
 	public static function __test_callback_route_function(string $method, Route $route, array $m, string $url): RouteMatch|false
 	{
@@ -57,7 +57,6 @@ class RouterTest extends TestCase
 
 	/**
 	 * @param array<string> $m
-	 * @return false|array{string, string, array<string, string>}
 	 */
 	public static function __test_callback_method_function(string $method, Route $route, array $m, string $url): RouteMatch|false
 	{
@@ -74,12 +73,11 @@ class RouterTest extends TestCase
 
 	public function setUp(): void
 	{
-		$this->Router = new Router('default');
-	}
-
-	public function testCreate(): void
-	{
-		$this->assertInstanceOf(RouterInterface::class, $this->Router);
+		try {
+			$this->Router = new Router('default');
+		} catch (Throwable $e) {
+			throw new RuntimeException('Could not create Router', previous: $e);
+		}
 	}
 
 	public function testAddRouteNoPathFailure(): void
@@ -595,7 +593,7 @@ class RouterTest extends TestCase
 		$this->expectExceptionCode(500);
 
 		try {
-			$res = $this->Router->match_route('GET', '/callback');
+			$this->Router->match_route('GET', '/callback');
 		} catch (RouterException $e) {
 			$this->assertSame(RouterError::INVALID_CALLBACK, $e->getErrorCode());
 			throw $e;
@@ -736,46 +734,46 @@ class RouterTest extends TestCase
 
 		$exp = [
 			new Route(
-				regx: '~^test$~',
 				controller: 'App\\Controller\\Test',
-				action: 'default',
 				vars: [],
+				action: 'default',
 				method: 0,
 				sprintf: 'test',
 				name: 'test1',
+				regx: '~^test$~',
 			),
 			new Route(
-				regx: '~^test2/foo$~',
 				controller: 'App\\Controller\\Test2',
-				action: 'foo',
 				vars: [],
+				action: 'foo',
+				method: 0,
 				sprintf: 'test2/foo',
 
 				name: 'test2',
-				method: 0,
+				regx: '~^test2/foo$~',
 			),
 			new Route(
-				regx: '~^test3/foo/([^/]+)$~',
 				controller: 'App\\Controller\\Test3',
-				action: 'default',
-				sprintf: 'test3/foo/%s',
-				method: Router::METHODS['GET'] + Router::METHODS['POST'],
 				vars: [
 					'var1' => 'VAR1_DEFAULT',
 					'var2' => '',
 				],
+				action: 'default',
+				method: Router::METHODS['GET'] + Router::METHODS['POST'],
+				sprintf: 'test3/foo/%s',
 				name: 'test3',
+				regx: '~^test3/foo/([^/]+)$~',
 			),
 			new Route(
-				regx: '~^callback$~',
 				controller: '',
-				action: 'default',
-				sprintf: 'callback',
 				vars: [],
+				action: 'default',
 				method: Router::METHODS['POST'] + Router::METHODS['PUT'],
+				sprintf: 'callback',
+				name: 'test4',
+				regx: '~^callback$~',
 				callback: function (string $method, Route $route, array $m, string $url) {
 				},
-				name: 'test4',
 			)
 		];
 
@@ -873,29 +871,27 @@ class RouterTest extends TestCase
 	public function testParseRouteEmptyController(): void
 	{
 		$Router = new class('default') extends Router {
-			public function testParseRoute(): bool
+			public function testParseRoute(): RouteMatch|bool
 			{
 				return $this->parse_route('GET', new Route(
-
-					regx: '',
 					controller: '',
-					action: '',
 					vars: [],
+					action: '',
 					method: 0,
 					sprintf: '',
 					name: '',
-
-
+					regx: '',
 				), [], 'path');
 			}
 		};
+
 		$this->assertFalse($Router->testParseRoute());
 	}
 
 	public function testAddRouteRegxInvalid(): void
 	{
 		$Router = new class('default') extends Router {
-			/** @return string|string[] */
+			/** @return string|string[]|null */
 			protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
 			{
 				return null;
@@ -918,7 +914,7 @@ class RouterTest extends TestCase
 		$Router = new class('default') extends Router {
 			private int $test_preg_replace_called = 0;
 
-			/** @return string|string[] */
+			/** @return string|string[]|null */
 			protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
 			{
 				$this->test_preg_replace_called++;
@@ -1025,9 +1021,9 @@ class RouterTest extends TestCase
 			path: '/foo/{id}',
 			controller: 'TestController',
 			action: 'show',
-			method: ['GET'],
+			index: 'foo',
 			vars: ['id' => ''],
-			index: 'foo'
+			method: ['GET']
 		);
 
 		$dumpBefore = $router->dump();
@@ -1048,6 +1044,7 @@ class RouterTest extends TestCase
 		$beforeRoute = reset($dumpBefore['routes']);
 		$afterRoute = reset($dumpAfter['routes']);
 
+		$this->assertInstanceOf(Route::class, $beforeRoute);
 		$this->assertInstanceOf(Route::class, $afterRoute);
 		$this->assertSame($beforeRoute->controller, $afterRoute->controller);
 		$this->assertSame($beforeRoute->action, $afterRoute->action);

@@ -9,7 +9,7 @@ class ResponseTestOrig extends TestCase
 {
 	use TestHelpersTrait;
 
-	protected ?Response $Response = null;
+	protected Response $Response;
 
 	public static function setUpBeforeClass(): void
 	{
@@ -51,8 +51,9 @@ class ResponseTestOrig extends TestCase
 
 	public function testUnSetHeader(): void
 	{
-		$null = $this->Response->unset_header('test');
-		$this->assertNull($null);
+		$this->Response->unset_header('test');
+
+		$this->assertTrue(true, 'No exception was expected');
 	}
 
 	public function testSetCookie(): void
@@ -185,7 +186,7 @@ class ResponseTestOrig extends TestCase
 		file_put_contents(static::$tmpdir . 'file.html', "line1\nline2\nline3\n");
 
 		ob_start();
-		$this->Response->respond(static::$tmpdir . 'file.html', true, true);
+		$this->Response->respond(static::$tmpdir . 'file.html', true);
 		$res = ob_get_clean();
 
 		$this->assertEquals("line1\nline2\nline3\n", $res);
@@ -193,7 +194,7 @@ class ResponseTestOrig extends TestCase
 
 	public function testRedirect(): void
 	{
-		$null = $this->Response->redirect('http://example.com', code: 307);
+		$this->Response->redirect('http://example.com', code: 307);
 
 		$res = http_response_code();
 		$this->assertEquals(307, $res);

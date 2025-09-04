@@ -65,8 +65,8 @@ class ErrorHandlerTest extends TestCase
 			}
 		};
 
-		$this->assertNull($ErrorHandler->set_view(function (Throwable $e): void {
-		}));
+		$ErrorHandler->set_view(function (Throwable $e): void {
+		});
 		$this->assertTrue($ErrorHandler->test_view_set());
 	}
 
@@ -79,8 +79,8 @@ class ErrorHandlerTest extends TestCase
 			}
 		};
 
-		$this->assertNull($ErrorHandler->set_log(function (Throwable $e): void {
-		}));
+		$ErrorHandler->set_log(function (Throwable $e): void {
+		});
 		$this->assertTrue($ErrorHandler->test_log_set());
 	}
 
@@ -106,7 +106,7 @@ class ErrorHandlerTest extends TestCase
 
 		$normalised = $this->normalise_log_line($ErrorHandler::$test_log_value);
 
-		$lines = explode(PHP_EOL, preg_replace('/^#\d+ .+$/m', '...', $normalised));
+		$lines = explode(PHP_EOL, (string)preg_replace('/^#\d+ .+$/m', '...', $normalised));
 		foreach ($lines as $i => &$line) {
 			if ($line === '...') {
 				$line = "#$i ...";
@@ -116,7 +116,7 @@ class ErrorHandlerTest extends TestCase
 			}
 		}
 
-		$normalised = trim(preg_replace('/(?:^\.\.\.\r?' . PHP_EOL . '?)+/m', '...' . PHP_EOL, implode(PHP_EOL, $lines)));
+		$normalised = trim((string)preg_replace('/(?:^\.\.\.\r?' . PHP_EOL . '?)+/m', '...' . PHP_EOL, implode(PHP_EOL, $lines)));
 
 		$this->assertSame(
 			'####-##-##T##:##:##+##:##	E_ERROR[0] RuntimeException: Text exception in .../unit/Errors/ErrorHandlerTest.php:###' . PHP_EOL .
@@ -166,7 +166,7 @@ class ErrorHandlerTest extends TestCase
 		$ErrorHandler->view(new RuntimeException('Text exception'), []);
 		$this->assertSame(
 			"\e[3;101m  RuntimeException  \e[0m" . PHP_EOL . 'Text exception' . PHP_EOL . '.../unit/Errors/ErrorHandlerTest.php:###',
-			trim(preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
+			trim((string)preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
 		);
 
 		$ErrorHandler::$test_php_sapi_name = 'server';
@@ -185,21 +185,21 @@ class ErrorHandlerTest extends TestCase
 </body>
 </html>
 __,
-			trim(preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
+			trim((string)preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
 		);
 
 		$ErrorHandler::$test_php_sapi_name = 'server';
 		$ErrorHandler->view(new RuntimeException('Text exception'), ['format' => 'json']);
 		$this->assertSame(
 			'{"error": "500 Internal Server Error"}',
-			trim(preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
+			trim((string)preg_replace('#.*/tests/(.+):\d+#', '.../$1:###', $ErrorHandler::$test_echo_value))
 		);
 	}
 
 	public function testHandleErrorException(): void
 	{
 		$ErrorHandler = new class extends ErrorHandler {
-			public ErrorException $test_exception;
+			public Throwable $test_exception;
 
 			public function handle_exception(Throwable $e): void
 			{
@@ -297,18 +297,18 @@ __,
 	public function testHandleShutdown(): void
 	{
 		$ErrorHandler = new class extends ErrorHandler {
-			/** @var array{0: int, 1: string, 2: ?string, 3: ?int}|null */
+			/** @var array{'type': int, 'message': string, 'file': ?string, 'line': ?int}|null */
 			public ?array $test_handle_error_called = null;
 			public bool $test_error_get_last_null = true;
 
 			public function handle_error(int $errno, string $errstr, ?string $errfile = null, ?int $errline = null): bool
 			{
-				$this->test_handle_error_called = [$errno, $errstr, $errfile, $errline];
+				$this->test_handle_error_called = ['type' => $errno, 'message' => $errstr, 'file' => $errfile, 'line' => $errline];
 
 				return true;
 			}
 
-			/** @return array{0: int, 1: string, 2: ?string, 3: ?int} */
+			/** @return array{'type': int, 'message': string, 'file': ?string, 'line': ?int}|null */
 			protected function error_get_last(): ?array
 			{
 				return $this->test_error_get_last_null ? null : [
@@ -328,10 +328,10 @@ __,
 		$ErrorHandler->handle_shutdown();
 
 		$this->assertIsArray($ErrorHandler->test_handle_error_called);
-		$this->assertSame(E_ERROR, $ErrorHandler->test_handle_error_called[0] ?? null);
-		$this->assertSame('Fatal error occurred', $ErrorHandler->test_handle_error_called[1] ?? null);
-		$this->assertSame('/path/script.php', $ErrorHandler->test_handle_error_called[2] ?? null);
-		$this->assertSame(99, $ErrorHandler->test_handle_error_called[3] ?? null);
+		$this->assertSame(E_ERROR, $ErrorHandler->test_handle_error_called['type']);
+		$this->assertSame('Fatal error occurred', $ErrorHandler->test_handle_error_called['message']);
+		$this->assertSame('/path/script.php', $ErrorHandler->test_handle_error_called['file']);
+		$this->assertSame(99, $ErrorHandler->test_handle_error_called['line']);
 	}
 
 	public function testSeverityLabel(): void
@@ -385,7 +385,7 @@ __,
 				ob_start();
 				static::echo('test-string');
 
-				return ob_get_clean();
+				return (string)ob_get_clean();
 			}
 		};
 
@@ -395,7 +395,7 @@ __,
 	public function testErrorLast(): void
 	{
 		$ErrorHandler = new class extends ErrorHandler {
-			/** @return array{0: int, 1: string, 2: ?string, 3: ?int}|null */
+			/** @return array{'type': int, 'message': string, 'file': ?string, 'line': ?int}|null */
 			public function testGetErrorLast(): ?array
 			{
 				return $this->error_get_last();
@@ -435,9 +435,9 @@ __,
 				static::$error_log_destination = $dest;
 			}
 
-			public function testErrorLog(): null
+			public function testErrorLog(): void
 			{
-				return static::error_log('test');
+				static::error_log('test');
 			}
 		};
 
@@ -447,7 +447,7 @@ __,
 		$ErrorHandler::testSetErrorLogMsgType(3);
 		$ErrorHandler::testSetErrorDestination($filename);
 
-		$this->assertNull($ErrorHandler->testErrorLog());
+		$ErrorHandler->testErrorLog();
 
 		rewind($tmpfile);
 		$this->assertSame('test', stream_get_contents($tmpfile));
@@ -459,7 +459,7 @@ __,
 
 	private function normalise_log_line(string $log): string
 	{
-		return preg_replace(
+		return (string)preg_replace(
 			[
 				'/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2}/',
 				'~ /.*/tests/(.+):\d+~',

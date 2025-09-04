@@ -9,7 +9,7 @@ class WriteStdErrTest extends TestCase
 	public function testWriteToStdErr(): void
 	{
 		$WriteStdErr = new class extends WriteStdErr {
-			public readonly string $test;
+			public string $test = '';
 
 			protected function fwrite(string $log): void
 			{
@@ -32,12 +32,11 @@ class WriteStdErrTest extends TestCase
 
 			public function testFp(): string
 			{
-				$contents = '';
 				rewind($this->fp);
 				$contents = stream_get_contents($this->fp);
 				fclose($this->fp);
 
-				return $contents;
+				return (string)$contents;
 			}
 		};
 

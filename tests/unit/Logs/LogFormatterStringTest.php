@@ -56,16 +56,16 @@ class LogFormatterStringTest extends TestCase
 
 	public function testNow(): void
 	{
-		$LogWrite = new class implements LogWriteInterface {
-			public string $test_write_log_value = '';
-			public string $test_write_type_value = '';
-
-			public function write(string $log, string $type = ''): void
-			{
-				$this->test_write_log_value = $log;
-				$this->test_write_type_value = $type;
-			}
-		};
+//		$LogWrite = new class implements LogWriteInterface {
+//			public string $test_write_log_value = '';
+//			public string $test_write_type_value = '';
+//
+//			public function write(string $log, string $type = ''): void
+//			{
+//				$this->test_write_log_value = $log;
+//				$this->test_write_type_value = $type;
+//			}
+//		};
 
 		$LogFormatterString = new class($this->createMock(LogWriteInterface::class)) extends LogFormatterString {
 			public function getNow(): string
@@ -74,6 +74,6 @@ class LogFormatterStringTest extends TestCase
 			}
 		};
 
-		$this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[\+\-]\d{2}:\d{2})$/', $LogFormatterString->getNow());
+		$this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+\-]\d{2}:\d{2})$/', $LogFormatterString->getNow());
 	}
 }

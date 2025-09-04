@@ -17,8 +17,6 @@ class ControllerTest extends TestCase
 		$mockRequest = $this->createMock(Request::class);
 		$mockResponse = $this->createMock(Response::class);
 
-		$controller = new Controller($Config, $mockDispatch, $mockRequest, $mockResponse);
-
-		$this->assertInstanceOf(Controller::class, $controller);
+		$this->assertInstanceOf(Controller::class, new Controller($Config, $mockDispatch, $mockRequest, $mockResponse));
 	}
 }

@@ -13,7 +13,29 @@ class LogHandlerTest extends TestCase
 
 	public function testLogEmerg(): void
 	{
-		$MockLogFormatter = $this->createMockLogFormatter();
+		$MockLogFormatter = new class implements LogFormatterInterface {
+			protected string $test_value = '';
+
+			public function set_test_value(string $test_value): void
+			{
+				$this->test_value = $test_value;
+			}
+
+			public function get_test_value(): string
+			{
+				return $this->test_value;
+			}
+
+			/** @param array<string, mixed> $context */
+			public function write(string $log, string $type = '', int $level = 0, array $context = []): void
+			{
+				$this->test_value = sprintf(
+					'log: %s; type: %s; level: %d; context: %s',
+					$log, $type, $level, json_encode((object)$context) ?: 'JSON_ENCODE_ERR'
+				);
+			}
+		};
+
 		foreach ([
 					 'emerg' => LOG_EMERG,
 					 'alert' => LOG_ALERT,
@@ -24,12 +46,13 @@ class LogHandlerTest extends TestCase
 					 'info' => LOG_INFO,
 					 'debug' => LOG_DEBUG,
 				 ] as $method => $level) {
-			$MockLogFormatter->test_value = '';
+
+			$MockLogFormatter->set_test_value('');
 			$LogHandler = new LogHandler($MockLogFormatter, 'test');
 			$LogHandler->$method('Log message', ['test' => 'value']);
 			$this->assertSame(
 				sprintf('log: Log message; type: test; level: %d; context: {"test":"value"}', $level),
-				$MockLogFormatter->test_value,
+				$MockLogFormatter->get_test_value(),
 				"Method '$method' should log correct message"
 			);
 		}

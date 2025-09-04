@@ -4,6 +4,8 @@ namespace PHPCanvas\Routing;
 
 use PHPCanvas\Exception\LinksException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Throwable;
 
 class LinksTest extends TestCase
 {
@@ -12,13 +14,17 @@ class LinksTest extends TestCase
 
 	public function setUp(): void
 	{
-		$this->Router = new Router();
-		$this->Links = new Links($this->Router, 'example.com', '');
-	}
+		try {
+			$this->Router = new Router();
+		} catch (Throwable $e) {
+			throw new RuntimeException('Could not create Router', previous: $e);
+		}
 
-	public function testCreate(): void
-	{
-		$this->assertInstanceOf(LinksInterface::class, $this->Links);
+		try {
+			$this->Links = new Links($this->Router, 'example.com', '');
+		} catch (Throwable $e) {
+			throw new RuntimeException('Could not create Links', previous: $e);
+		}
 	}
 
 	public function testGetLinkFail(): void

@@ -8,11 +8,17 @@ use RuntimeException;
 
 class RequestTest extends TestCase
 {
+	/** @var array<string, string> $headers */
 	protected array $headers = [];
+	/** @var array<string, mixed> $get */
 	protected array $get = [];
+	/** @var array<string, mixed> $post */
 	protected array $post = [];
+	/** @var array<string, string|int> $files */
 	protected array $files = [];
+	/** @var array<string, mixed> $server */
 	protected array $server = [];
+	/** @var array<string, mixed> $cookie */
 	protected array $cookie = [];
 
 	public function testCreate(): void
@@ -38,8 +44,8 @@ class RequestTest extends TestCase
 				return $this->test_getallheaders_value;
 			}
 
-			/** @return array<string, string> */
-			public function test_get_headers(): array
+			/** @return array<string, string>|null */
+			public function test_get_headers(): ?array
 			{
 				return $this->headers;
 			}
@@ -328,14 +334,8 @@ class RequestTest extends TestCase
 
 		$this->expectException(DomainException::class);
 		$this->expectExceptionMessage("Unsupported input source: 'INVALID'");
-// 		$this->expectExceptionCode(500);
 
-		try {
-			$Request->test_invalid_input();
-		} catch (ResponseException $e) {
-// 			$this->assertSame(ResponseError::MIME_TYPE, $e->getErrorCode());
-			throw $e;
-		}
+		$Request->test_invalid_input();
 	}
 
 	public function testSetInvalidPath(): void
@@ -353,12 +353,7 @@ class RequestTest extends TestCase
 		$this->expectExceptionMessage('Set path parse URL failed');
 // 		$this->expectExceptionCode(500);
 
-		try {
-			$Request->get_path();
-		} catch (ResponseException $e) {
-// 			$this->assertSame(ResponseError::MIME_TYPE, $e->getErrorCode());
-			throw $e;
-		}
+		$Request->get_path();
 	}
 
 	public function testGetRequest(): void

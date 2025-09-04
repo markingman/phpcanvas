@@ -3,6 +3,8 @@
 namespace PHPCanvas\Logs;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Throwable;
 
 class WriteErrorLogTest extends TestCase
 {
@@ -15,7 +17,7 @@ class WriteErrorLogTest extends TestCase
 
 		$file = $this->logDir . '/unit_test.log';
 		$this->assertFileExists($file);
-		$this->assertStringContainsString('Test log entry', file_get_contents($file));
+		$this->assertStringContainsString('Test log entry', (string)file_get_contents($file));
 	}
 
 	public function testWriteSanitizesFilename(): void
@@ -29,7 +31,11 @@ class WriteErrorLogTest extends TestCase
 
 	protected function setUp(): void
 	{
-		$this->logDir = sys_get_temp_dir() . '/logtest_' . bin2hex(random_bytes(4));
+		try {
+			$this->logDir = sys_get_temp_dir() . '/logtest_' . bin2hex(random_bytes(4));
+		} catch (Throwable $e) {
+			throw new RuntimeException('Could not crate log dir', previous: $e);
+		}
 		mkdir($this->logDir);
 	}
 

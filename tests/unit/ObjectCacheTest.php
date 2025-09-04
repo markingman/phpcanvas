@@ -123,7 +123,7 @@ class ObjectCacheTest extends TestCase
 
 	public function testGetCacheNoFile(): void
 	{
-		$this->assertFileDoesNotExist($this->cache_file('nofile', ''));
+		$this->assertFileDoesNotExist($this->cache_file('nofile'));
 		$this->assertNull($this->ObjectCache->cache_get('nofile', TestClassPlainSimple::class), 'Cache is FALSE if file not readable');
 	}
 

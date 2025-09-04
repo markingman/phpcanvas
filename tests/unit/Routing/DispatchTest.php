@@ -443,10 +443,6 @@ class DispatchTest extends TestCase
 			name: 'test',
 			path: 'path',
 			controller: 'Controller',
-			action: null,
-			callback: null,
-			vars: null,
-			method: null,
 		);
 		$Dispatch = new Dispatch(
 			Container: new Container,
@@ -460,13 +456,13 @@ class DispatchTest extends TestCase
 
 		$this->assertEquals([
 			new Route(
-				regx: '~^path$~',
 				controller: 'Controller',
-				action: 'default',
 				vars: [],
+				action: 'default',
 				method: 0,
 				sprintf: 'path',
 				name: 'test',
+				regx: '~^path$~',
 			),
 		], $Dispatch->get_routes());
 	}
@@ -525,7 +521,7 @@ class DispatchTest extends TestCase
 				}
 			}
 
-			/** @param array<mixed> $args */
+			/* * @param array<mixed> $args */
 // 			public function call(object $class, string $method_name, array $args = [], bool $store = false, bool $force_new = false, bool $store_reflection = false): mixed
 // 			{
 // 				$this->call_called = true;

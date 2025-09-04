@@ -35,6 +35,7 @@ class RouteTest extends TestCase
 		$this->assertSame($sprintf, $route->sprintf);
 		$this->assertSame($name, $route->name);
 		$this->assertSame($regx, $route->regx);
+		$this->assertIsCallable($route->callback);
 		$this->assertSame('Hello', ($route->callback)());
 	}
 }

@@ -29,9 +29,11 @@ class LogFormatterJSONTest extends TestCase
 
 		$LogFormatterJSON->write('Test message', 'INFO', 1, ['test' => 'value']);
 
-		if (!$decoded = json_decode($LogWrite->test_write_log_value, true)) {
+		$decoded = json_decode($LogWrite->test_write_log_value, true);
+		if (!is_array($decoded)) {
 			$this->fail('Unable to decode log');
 		}
+
 		$this->assertSame($decoded['timestamp'], '2025-05-10T10:00:00+00:00');
 		$this->assertSame($decoded['type'], 'INFO');
 		$this->assertSame($decoded['level'], LogLevel::label(1));
@@ -58,16 +60,16 @@ class LogFormatterJSONTest extends TestCase
 
 	public function testNow(): void
 	{
-		$LogWrite = new class implements LogWriteInterface {
-			public string $test_write_log_value = '';
-			public string $test_write_type_value = '';
-
-			public function write(string $log, string $type = ''): void
-			{
-				$this->test_write_log_value = $log;
-				$this->test_write_type_value = $type;
-			}
-		};
+//		$LogWrite = new class implements LogWriteInterface {
+//			public string $test_write_log_value = '';
+//			public string $test_write_type_value = '';
+//
+//			public function write(string $log, string $type = ''): void
+//			{
+//				$this->test_write_log_value = $log;
+//				$this->test_write_type_value = $type;
+//			}
+//		};
 
 		$LogFormatterJSON = new class($this->createMock(LogWriteInterface::class)) extends LogFormatterJSON {
 			public function getNow(): string
@@ -76,6 +78,6 @@ class LogFormatterJSONTest extends TestCase
 			}
 		};
 
-		$this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[\+\-]\d{2}:\d{2})$/', $LogFormatterJSON->getNow());
+		$this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+\-]\d{2}:\d{2})$/', $LogFormatterJSON->getNow());
 	}
 }

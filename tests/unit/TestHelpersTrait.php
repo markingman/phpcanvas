@@ -6,6 +6,7 @@ use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
+use SplFileInfo;
 use Throwable;
 
 trait TestHelpersTrait
@@ -34,8 +35,10 @@ trait TestHelpersTrait
 			RecursiveIteratorIterator::CHILD_FIRST
 		);
 
-		foreach ($it as $file => $info) {
-			$info->isDir() ? rmdir($file) : unlink($file);
+		foreach ($it as $info) {
+			if ($info instanceof SplFileInfo) {
+				$info->isDir() ? rmdir($info->getPathname()) : unlink($info->getPathname());
+			}
 		}
 
 		return rmdir(static::$tmpdir);
