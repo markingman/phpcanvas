@@ -7,8 +7,6 @@ use tidy;
 
 class TestHTTPClient
 {
-	protected Client $client;
-
 	public static function tidy(string $html, bool $diagnose = true): string
 	{
 		$tidy = new tidy();
@@ -38,17 +36,20 @@ class TestHTTPClient
 		}
 	}
 
+	/** @return array{status: int, body: string}  */
 	public function get(string $url/*, array $options = []*/): array
 	{
 		return $this->request('GET', $url/*, $options*/);
 	}
 
+	/** @return array{status: int, body: string}  */
 	public function post(string $url/*, array $options = []*/): array
 	{
 		return $this->request('POST', $url/*, $options*/);
 	}
 
-	public function request(string $method, string $url/*, array $options = []*/, $tidy = true): array
+	/** @return array{status: int, body: string}  */
+	public function request(string $method, string $url/*, array $options = []*/, bool $tidy = true): array
 	{
 		$opts = [
 			CURLOPT_URL => 'http://localhost/' . ltrim($url, '/'),
@@ -72,7 +73,6 @@ class TestHTTPClient
 
 		return [
 			'status' => $httpcode,
-// 			'headers' => $res->getHeaders(),
 			'body' => $response,
 		];
 	}
