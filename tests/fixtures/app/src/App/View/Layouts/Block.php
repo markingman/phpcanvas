@@ -2,9 +2,10 @@
 
 namespace PHPCanvas\Test\App\View\Layouts;
 
+// use function PHPCanvas\Test\App\View\Partials\htmlentities;
 use function PHPCanvas\Test\App\View\Partials\htmlentities;
 
-class Block implements StringView
+class Block /*implements StringView*/
 {
 	public function __construct(
 		protected string $title
@@ -20,6 +21,5 @@ class Block implements StringView
 </div>
 <?php
 		return ob_get_clean();
-
 	}
 }

@@ -8,17 +8,17 @@ abstract class AbstractTemplate
 {
 	public static function path_css(string $file = ''): string
 	{
-		$this->path('css', $file);
+		return $this->path('css', $file);
 	}
 
 	public static function path_js(string $file = ''): string
 	{
-		$this->path('js', $file);
+		return $this->path('js', $file);
 	}
 
 	public static function path_img(string $file = ''): string
 	{
-		$this->path('img', $file);
+		return $this->path('img', $file);
 	}
 
 	public static function ob_start(): void

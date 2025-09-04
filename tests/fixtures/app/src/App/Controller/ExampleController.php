@@ -2,17 +2,19 @@
 
 namespace PHPCanvas\Test\App\Controller;
 
-class ExampleController
+use PHPCanvas\Test\App\View\Pages\ExamplePage;
+
+class ExampleController extends AbstractController
 {
-	public function action_default(): void
+	public function action_default(ExamplePage $ExamplePage): void
 	{
-		echo "DEFAULT ";
-		exit(__FILE__);
+		$ExamplePage->set_var('test');
+		$this->respond_page($ExamplePage);
 	}
 
-	public function action_test(): void
+	public function action_test(ExamplePage $ExamplePage): void
 	{
-		echo "HERE ";
-		exit(__FILE__);
+		$ExamplePage->set_var('example');
+		$this->respond_page($ExamplePage);
 	}
 }

@@ -12,6 +12,8 @@ use SplFileInfo;
 /** Example namespace function loader - consider remote code execution issues in production */
 class LoadPartials
 {
+	private bool $loaded = false;
+
 	public function __construct(
 		protected string $dir,
 		protected string $path,
@@ -52,6 +54,10 @@ class LoadPartials
 
 	private function load(): void
 	{
+		if ($this->loaded) {
+			return;
+		}
+
 		if ($this->hash and $this->hash !== hash_file('sha256', $this->path)) {
 			throw new RuntimeException("Hash mismatch: failed to include $this->path");
 		}
@@ -61,5 +67,7 @@ class LoadPartials
 		}, null, null)($this->path)) {
 			throw new RuntimeException("Failed to include existing temporary file: $this->path");
 		}
+
+		$this->loaded = true;
 	}
 }
