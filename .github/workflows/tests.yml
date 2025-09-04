@@ -1,0 +1,41 @@
+name: Run PHP Tests in Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+env:
+  TEST_IMG_NAME: phpcanvas-test-php
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+         php-version: [ '8.3' ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (PHP ${{ matrix.php-version }})
+        run: |
+          docker build \
+            --build-arg PHP_VERSION=${{ matrix.php-version }} \
+            -t phpcanvas-test-php:${{ matrix.php-version }} .
+
+      - name: Run container and execute tests
+        run: |
+          docker run --rm -v `pwd`:/var/www \
+            phpcanvas-test-php:${{ matrix.php-version }} vendor/bin/phpunit
+
+      - name: Run container and execute analyse
+        run: |
+          docker run --rm -v `pwd`:/var/www \
+            phpcanvas-test-php:${{ matrix.php-version }} vendor/bin/phpstan analyse -c phpstan.neon
+
+
