@@ -26,7 +26,7 @@ class Request implements RequestInterface
 	protected ?string $ua = null;
 	protected ?string $ip = null;
 	protected ?string $ref = null;
-	/** @var array<string, string> $headers */
+	/** @var array<string, string>|null $headers */
 	protected ?array $headers = null;
 
 	/**
