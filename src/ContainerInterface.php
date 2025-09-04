@@ -36,7 +36,7 @@ interface ContainerInterface
 	public function get(string $name, bool $store_created = true): object;
 
 	/**
-	 * Retrieve an instance and confirm it's type or fail
+	 * Retrieve an instance and confirm its type or fail
 	 *
 	 * @template T of object
 	 * @param string $name Service name or alias

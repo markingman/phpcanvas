@@ -6,6 +6,7 @@ use Closure;
 use PHPCanvas\Exception\ContainerError;
 use PHPCanvas\Exception\ContainerException;
 use ReflectionClass;
+use ReflectionException;
 use ReflectionParameter;
 use ReflectionUnionType;
 use Throwable;
@@ -106,9 +107,8 @@ class Container implements ContainerInterface
 	{
 		$class_name = get_class($class);
 
-		$reflection = $this->reflections[$class_name] ?? new ReflectionClass($class_name);
-
 		try {
+			$reflection = $this->reflections[$class_name] ?? new ReflectionClass($class_name);
 			$method = $reflection->getMethod($method_name);
 			$method_params = $method->getParameters();
 			$params = ($args or $method_params) ? $this->set_params($method_params, $args, $store, $force_new) : [];
@@ -274,12 +274,16 @@ class Container implements ContainerInterface
 			}
 
 			$p_opt = $param->isOptional();
+			$p_name = $param->getName();
 			if ($p_opt) {
-				$params[$i] = $param->getDefaultValue();
+				try {
+					$params[$i] = $param->getDefaultValue();
+				} catch (ReflectionException $e) {
+					throw new ContainerException("cannot resolve default value for parameter '$p_name'; " . $e->getMessage(), ContainerError::INVALID_ARGUMENT);
+				}
 				continue;
 			}
 
-			$p_name = $param->getName();
 			$p_type = $param->getType();
 			if (is_null($p_type)) {
 				throw new ContainerException("cannot resolve parameter '$p_name'", ContainerError::INVALID_ARGUMENT);
