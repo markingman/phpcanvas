@@ -2,7 +2,6 @@
 
 namespace PHPCanvas;
 
-use GuzzleHttp\Client;
 use RuntimeException;
 use tidy;
 
@@ -39,30 +38,42 @@ class TestHTTPClient
 		}
 	}
 
-	public function get(string $url, array $options = []): array
+	public function get(string $url/*, array $options = []*/): array
 	{
-		return $this->request('GET', $url, $options);
+		return $this->request('GET', $url/*, $options*/);
 	}
 
-	public function post(string $url, array $options = []): array
+	public function post(string $url/*, array $options = []*/): array
 	{
-		return $this->request('GET', $url, $options);
+		return $this->request('POST', $url/*, $options*/);
 	}
 
-	public function request(string $method, string $url, array $options = [], $tidy = true): array
+	public function request(string $method, string $url/*, array $options = []*/, $tidy = true): array
 	{
-		$this->client ??= new Client(['base_uri' => 'http://localhost/']);
-		$res = $this->client->request($method, $url, $options);
+		$opts = [
+			CURLOPT_URL => 'http://localhost/' . ltrim($url, '/'),
+			CURLOPT_RETURNTRANSFER => true,
+		];
 
-		$body = (string)$res->getBody();
+		if ($method === 'POST') {
+			$opts[CURLOPT_POST] = true;
+		}
+
+		$ch = curl_init();
+		curl_setopt_array($ch, $opts);
+
+		$response = strval(curl_exec($ch));
+		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
 		if ($tidy) {
-			$body = $this->tidy($body);
+			$response = $this->tidy($response);
 		}
 
 		return [
-			'status' => $res->getStatusCode(),
-			'headers' => $res->getHeaders(),
-			'body' => $body,
+			'status' => $httpcode,
+// 			'headers' => $res->getHeaders(),
+			'body' => $response,
 		];
 	}
 }
