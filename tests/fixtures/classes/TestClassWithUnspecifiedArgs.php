@@ -4,7 +4,8 @@ namespace PHPCanvas\Test;
 
 class TestClassWithUnspecifiedArgs
 {
-	public function test(mixed $z): string
+	/** @phpstan-ignore-next-line */
+	public function test($z): string
 	{
 		return is_bool($z) ? 'bool' : 'not-bool';
 	}
