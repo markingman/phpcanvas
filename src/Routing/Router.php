@@ -397,7 +397,7 @@ class Router implements RouterInterface
 		);
 	}
 
-	/** @return string|string[] */
+	/** @return string|string[]|null */
 	protected function preg_replace(string $pattern, string $replacement, string $subject): string|array|null
 	{
 		return preg_replace($pattern, $replacement, $subject);
