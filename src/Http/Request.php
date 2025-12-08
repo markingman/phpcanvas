@@ -284,6 +284,24 @@ class Request implements RequestInterface
 		return [$this->get_method(), $this->get_path()];
 	}
 
+	/** @return array<string, mixed> */
+	public function all_get(): array
+	{
+		return $this->GET;
+	}
+
+	/** @return array<string, mixed> */
+	public function all_post(): array
+	{
+		return $this->POST;
+	}
+
+	/** @return array<string, mixed> */
+	public function all_files(): array
+	{
+		return $this->FILES;
+	}
+
 	public function clear_cache(): void
 	{
 		$this->is_ssl = null;

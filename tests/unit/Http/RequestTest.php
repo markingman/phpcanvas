@@ -433,6 +433,24 @@ class RequestTest extends TestCase
 		$this->assertEquals('http://example.com/1', $Request->get_ref());
 	}
 
+	public function testAllGet(): void
+	{
+		$Request = new Request(GET: ['a' => 'A'], POST: [], FILES: [], SERVER: [], COOKIE: []);
+		$this->assertSame(['a' => 'A'], $Request->all_get());
+	}
+
+	public function testAllPost(): void
+	{
+		$Request = new Request(GET: [], POST: ['a' => 'A'], FILES: [], SERVER: [], COOKIE: []);
+		$this->assertSame(['a' => 'A'], $Request->all_post());
+	}
+
+	public function testAllFiles(): void
+	{
+		$Request = new Request(GET: [], POST: ['a' => 'A'], FILES: ['a' => 'A'], SERVER: [], COOKIE: []);
+		$this->assertSame(['a' => 'A'], $Request->all_files());
+	}
+
 	public function testIsSSL(): void
 	{
 		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [], COOKIE: []);
