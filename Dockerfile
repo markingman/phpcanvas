@@ -1,6 +1,6 @@
 ARG PHP_VERSION=8.3
-ARG COMPOSER_VERSION=2.8.1
-ARG XDEBUG_VERSION=3.4.2
+ARG COMPOSER_VERSION=2.9.2
+ARG XDEBUG_VERSION=3.4.7
 
 FROM php:${PHP_VERSION}-alpine AS base
 ARG XDEBUG_VERSION
@@ -11,6 +11,7 @@ RUN set -eux; \
 		unzip \
 		linux-headers \
 		tidyhtml-dev; \
+	pecl channel-update pecl.php.net; \
 	pecl install xdebug-${XDEBUG_VERSION}; \
 	docker-php-ext-enable xdebug; \
 	docker-php-ext-install tidy; \
@@ -29,9 +30,10 @@ FROM base
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
-COPY . /var/www
 WORKDIR /var/www
-RUN /usr/bin/composer install
+COPY . .
+
+RUN /usr/bin/composer install --prefer-dist
 
 CMD ["php", "-S", "0.0.0.0:80", "-t", "/var/www/tests/fixtures/app/html", "/var/www/tests/fixtures/app/router.php"]
 
