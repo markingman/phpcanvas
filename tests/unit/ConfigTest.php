@@ -85,6 +85,12 @@ class ConfigTest extends TestCase
 		$this->assertCount(105, $config);
 	}
 
+	public function testIsset(): void
+	{
+		$this->assertTrue($this->Config->isset('a'));
+		$this->assertFalse($this->Config->isset('z'));
+	}
+
 	public function testSerializable(): void
 	{
 		$serialized = serialize($this->Config);
