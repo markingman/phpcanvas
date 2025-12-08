@@ -28,10 +28,10 @@ jobs:
 
       - name: Run container and execute tests
         run: |
-          docker run --rm -v `pwd`:/var/www -e XDEBUG_MODE=coverage ${{ env.TEST_IMG_NAME }}:${{ matrix.php-version }} vendor/bin/phpunit
+          docker run --rm -e XDEBUG_MODE=coverage -p 80:80 ${{ env.TEST_IMG_NAME }}:${{ matrix.php-version }} \
+            sh -lc 'php -S 0.0.0.0:80 -t /var/www/tests/fixtures/app/html /var/www/tests/fixtures/app/router.php > /dev/null 2>&1 & \
+            until curl -fsS http://127.0.0.1:80/ >/dev/null; do sleep 0.1; done && vendor/bin/phpunit'
 
       - name: Run container and execute analyse
         run: |
-          docker run --rm -v `pwd`:/var/www ${{ env.TEST_IMG_NAME }}:${{ matrix.php-version }} vendor/bin/phpstan analyse -c phpstan.neon
-
-
+          docker run --rm ${{ env.TEST_IMG_NAME }}:${{ matrix.php-version }} vendor/bin/phpstan analyse --memory-limit 256M -c phpstan.neon

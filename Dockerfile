@@ -33,8 +33,4 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 COPY . .
 
-RUN /usr/bin/composer install --prefer-dist
-
-CMD ["php", "-S", "0.0.0.0:80", "-t", "/var/www/tests/fixtures/app/html", "/var/www/tests/fixtures/app/router.php"]
-
-EXPOSE 80
+RUN /usr/bin/composer install --prefer-dist --no-interaction

@@ -37,15 +37,15 @@ class TestHTTPClient
 	}
 
 	/** @return array{status: int, body: string}  */
-	public function get(string $url/*, array $options = []*/): array
+	public function get(string $url/*, array $options = []*/, bool $tidy = true): array
 	{
-		return $this->request('GET', $url/*, $options*/);
+		return $this->request('GET', $url/*, $options*/, $tidy);
 	}
 
 	/** @return array{status: int, body: string}  */
-	public function post(string $url/*, array $options = []*/): array
+	public function post(string $url/*, array $options = []*/, bool $tidy = true): array
 	{
-		return $this->request('POST', $url/*, $options*/);
+		return $this->request('POST', $url/*, $options*/, $tidy);
 	}
 
 	/** @return array{status: int, body: string}  */
