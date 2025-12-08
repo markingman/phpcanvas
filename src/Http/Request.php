@@ -240,7 +240,7 @@ class Request implements RequestInterface
 		return $this->method ?? '';
 	}
 
-	public function set_method(string $method = null): void
+	public function set_method(?string $method = null): void
 	{
 		// TODO: thow exception for invalid?
 		$this->method = strtoupper($this->filter_var($method, FILTER_UNSAFE_RAW, FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH));

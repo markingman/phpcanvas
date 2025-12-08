@@ -84,7 +84,7 @@ interface RequestInterface
 
 	public function get_method(): string;
 
-	public function set_method(string $method = null): void;
+	public function set_method(?string $method = null): void;
 
 	public function get_path(): string;
 
