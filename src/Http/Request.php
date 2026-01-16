@@ -291,6 +291,12 @@ class Request implements RequestInterface
 	}
 
 	/** @return array<string, mixed> */
+	public function all_getx(): array
+	{
+		return $this->GETX;
+	}
+
+	/** @return array<string, mixed> */
 	public function all_post(): array
 	{
 		return $this->POST;

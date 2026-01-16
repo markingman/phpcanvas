@@ -439,6 +439,13 @@ class RequestTest extends TestCase
 		$this->assertSame(['a' => 'A'], $Request->all_get());
 	}
 
+	public function testAllGetx(): void
+	{
+		$Request = new Request(GET: [], POST: [], FILES: [], SERVER: [], COOKIE: []);
+		$Request->set_get_value('a', 'A');
+		$this->assertSame(['a' => 'A'], $Request->all_getx());
+	}
+
 	public function testAllPost(): void
 	{
 		$Request = new Request(GET: [], POST: ['a' => 'A'], FILES: [], SERVER: [], COOKIE: []);
