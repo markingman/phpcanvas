@@ -369,19 +369,15 @@ class RequestTest extends TestCase
 		};
 
 		$res = $Request->get_request();
-		$this->assertIsArray($res);
 		$this->assertEquals(['POST', '/redirect/path'], $res);
 
 		$res = $Request->get_request('DELETE');
-		$this->assertIsArray($res);
 		$this->assertEquals(['DELETE', '/redirect/path'], $res);
 
 		$res = $Request->get_request(path: '/test');
-		$this->assertIsArray($res);
 		$this->assertEquals(['DELETE', '/test'], $res);
 
 		$res = $Request->get_request('GET', '/path');
-		$this->assertIsArray($res);
 		$this->assertEquals(['GET', '/path'], $res);
 	}
 

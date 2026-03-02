@@ -186,7 +186,7 @@ class ResponseTest extends TestCase
 			/** @var array<string> */
 			public array $sent_headers;
 
-			protected function http_response_code(int $response_code = 0): int|bool
+			protected function http_response_code(int $response_code = 0): int
 			{
 				$this->http_response_code_value = $response_code;
 
@@ -290,7 +290,7 @@ class ResponseTest extends TestCase
 	public function testFileInvalidUnlink(): void
 	{
 		$Response = new class(false) extends Response {
-			protected function readfile(string $filename): int|false
+			protected function readfile(string $filename): int
 			{
 				return 1;
 			}
@@ -350,7 +350,7 @@ class ResponseTest extends TestCase
 				return parent::setcookie($name, $value, $expires_or_options, $path, $domain, $secure, $httponly);
 			}
 
-			protected function http_response_code(int $response_code = 0): int|bool
+			protected function http_response_code(int $response_code = 0): int
 			{
 				$this->http_response_code_value = $response_code;
 
@@ -438,7 +438,7 @@ class ResponseTest extends TestCase
 				return true;
 			}
 
-			protected function http_response_code(int $response_code = 0): int|bool
+			protected function http_response_code(int $response_code = 0): int
 			{
 				$this->called[] = 'http_response_code';
 

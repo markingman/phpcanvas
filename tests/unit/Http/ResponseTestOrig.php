@@ -87,10 +87,8 @@ class ResponseTestOrig extends TestCase
 		$res = http_response_code();
 		$this->assertEquals(200, $res);
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals(['Content-Type: text/html; charset=UTF-8'], $res);
-		}
+		$res = xdebug_get_headers();
+		$this->assertEquals(['Content-Type: text/html; charset=UTF-8'], $res);
 	}
 
 	public function testText(): void
@@ -104,10 +102,8 @@ class ResponseTestOrig extends TestCase
 		$res = http_response_code();
 		$this->assertEquals(200, $res);
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals(['Content-Type: text/plain; charset=UTF-8'], $res);
-		}
+		$res = xdebug_get_headers();
+		$this->assertEquals(['Content-Type: text/plain; charset=UTF-8'], $res);
 	}
 
 	public function testJson(): void
@@ -121,10 +117,8 @@ class ResponseTestOrig extends TestCase
 		$res = http_response_code();
 		$this->assertEquals(200, $res);
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals(['Content-Type: text/javascript; charset=UTF-8'], $res);
-		}
+		$res = xdebug_get_headers();
+		$this->assertEquals(['Content-Type: text/javascript; charset=UTF-8'], $res);
 	}
 
 	public function testFile(): void
@@ -140,14 +134,12 @@ class ResponseTestOrig extends TestCase
 		$res = http_response_code();
 		$this->assertEquals(200, $res);
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals([
-				'Content-Type: text/csv; charset=UTF-8',
-				'Content-Disposition: attachment;filename=file.csv',
-				'Content-Length: 24',
-			], $res);
-		}
+		$res = xdebug_get_headers();
+		$this->assertEquals([
+			'Content-Type: text/csv; charset=UTF-8',
+			'Content-Disposition: attachment;filename=file.csv',
+			'Content-Length: 24',
+		], $res);
 
 		$this->assertFalse(file_exists(static::$tmpdir . '/file.csv'));
 	}
@@ -175,13 +167,11 @@ class ResponseTestOrig extends TestCase
 		$res = http_response_code();
 		$this->assertEquals(401, $res);
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals([
-				'X-Test: test',
-				'Set-Cookie: test=value; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; path=/; domain=example.com; secure; HttpOnly',
-			], $res);
-		}
+		$res = xdebug_get_headers();
+		$this->assertEquals([
+			'X-Test: test',
+			'Set-Cookie: test=value; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0; path=/; domain=example.com; secure; HttpOnly',
+		], $res);
 
 		file_put_contents(static::$tmpdir . 'file.html', "line1\nline2\nline3\n");
 
@@ -199,9 +189,7 @@ class ResponseTestOrig extends TestCase
 		$res = http_response_code();
 		$this->assertEquals(307, $res);
 
-		if (is_callable('xdebug_get_headers')) {
-			$res = xdebug_get_headers();
-			$this->assertEquals(['Location: http://example.com'], $res);
-		}
+		$res = xdebug_get_headers();
+		$this->assertEquals(['Location: http://example.com'], $res);
 	}
 }

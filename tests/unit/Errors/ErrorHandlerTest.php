@@ -374,7 +374,7 @@ __,
 			}
 		};
 
-		$this->assertIsString($ErrorHandler::testPHPSAPIName());
+		$this->assertTrue(strlen($ErrorHandler::testPHPSAPIName()) > 0);
 	}
 
 	public function testEcho(): void

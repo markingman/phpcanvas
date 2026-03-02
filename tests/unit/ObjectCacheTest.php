@@ -64,7 +64,6 @@ class ObjectCacheTest extends TestCase
 	public function testCacheKey(): void
 	{
 		$res = $this->ObjectCache->get_cache_key('class');
-		$this->assertIsString($res);
 		$this->assertStringStartsWith(ObjectCache::FILE_PREFIX, $res);
 	}
 

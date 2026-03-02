@@ -81,7 +81,6 @@ class ConfigTest extends TestCase
 	public function testList(): void
 	{
 		$config = $this->Config->list();
-		$this->assertIsArray($config);
 		$this->assertCount(105, $config);
 	}
 
