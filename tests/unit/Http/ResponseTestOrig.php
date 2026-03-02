@@ -33,32 +33,32 @@ class ResponseTestOrig extends TestCase
 
 	public function testSetCharSet(): void
 	{
-		$null = $this->Response->set_char_set('UTF-16');
-		$this->assertNull($null);
+		$res = $this->Response->set_char_set('UTF-16');
+		$this->assertSame($this->Response, $res);
 	}
 
 	public function testSetResponseCode(): void
 	{
-		$null = $this->Response->set_response_code(500);
-		$this->assertNull($null);
+		$res = $this->Response->set_response_code(500);
+		$this->assertSame($this->Response, $res);
 	}
 
 	public function testSetHeader(): void
 	{
-		$null = $this->Response->set_header('X-Test', 'test');
-		$this->assertNull($null);
+		$res = $this->Response->set_header('X-Test', 'test');
+		$this->assertSame($this->Response, $res);
 	}
 
 	public function testUnSetHeader(): void
 	{
 		$this->Response->unset_header('test');
 
-		$this->assertTrue(true, 'No exception was expected');
+		$this->expectNotToPerformAssertions();
 	}
 
 	public function testSetCookie(): void
 	{
-		$null = $this->Response->set_cookie(
+		$res = $this->Response->set_cookie(
 			name: 'test',
 			value: 'value',
 			expires: time() + 60,
@@ -67,13 +67,13 @@ class ResponseTestOrig extends TestCase
 			secure: true,
 			httponly: true,
 		);
-		$this->assertNull($null);
+		$this->assertSame($this->Response, $res);
 	}
 
 	public function testUnSetCookie(): void
 	{
-		$null = $this->Response->unset_cookie('test');
-		$this->assertNull($null);
+		$res = $this->Response->unset_cookie('test');
+		$this->assertSame($this->Response, $res);
 	}
 
 	public function testHtml(): void
