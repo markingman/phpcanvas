@@ -412,7 +412,10 @@ __,
 			$this->fail('Could not create tmpfile');
 		}
 
-		$filename = stream_get_meta_data($tmpfile)['uri'];
+		if (!$filename = stream_get_meta_data($tmpfile)['uri'] ?? null) {
+			$this->fail('Could not get tmpfile uri');
+		}
+
 
 		$ErrorHandler = new class extends ErrorHandler {
 			public static function testGetErrorLogMsgType(): int
