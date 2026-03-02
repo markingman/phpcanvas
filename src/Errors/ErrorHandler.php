@@ -144,7 +144,10 @@ __;
 
 	protected static function error_log(string $log): void
 	{
-		error_log($log, static::$error_log_msg_type, static::$error_log_destination);
+		error_log($log, match(static::$error_log_msg_type){
+			0, 1, 3, 4 => static::$error_log_msg_type,
+			default => 0
+		}, static::$error_log_destination);
 	}
 
 	protected static function severity_label(int $severity): string
