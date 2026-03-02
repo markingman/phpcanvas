@@ -431,7 +431,7 @@ class Router implements RouterInterface
 		preg_match_all('~{([^}]+)}~', $path, $m);
 
 		$inline_vars = [];
-		if (count($m) === 2) {
+		if (!empty($m[1])) {
 			$inline_vars = array_fill_keys($m[1], '');
 		}
 
