@@ -30,8 +30,8 @@
 	]
   },
   "require-dev": {
-    "phpstan/phpstan": "~1.12",
      "phpunit/phpunit": "^11.5",
+    "phpstan/phpstan": "~2.1.22",
     "ext-tidy": "*",
     "ext-xdebug": "*"
   },
