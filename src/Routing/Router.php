@@ -319,33 +319,41 @@ class Router implements RouterInterface
 		if (!isset($data['iname']) or !is_array($data['iname'])) {
 			throw new RouterException('Router requires valid \'iname\' array', RouterError::UNSERIALIZE);
 		}
+		$iname = [];
 		foreach ($data['iname'] as $k => $v) {
 			if (!is_string($k) or !is_int($v)) {
 				throw new RouterException('Router requires valid \'iname\' array', RouterError::UNSERIALIZE);
 			}
+			$iname[$k] = $v;
 		}
 
 		if (!isset($data['routes']) or !is_array($data['routes'])) {
 			throw new RouterException('Router requires a \'routes\' array', RouterError::UNSERIALIZE);
 		}
+		$routes = [];
 		foreach ($data['routes'] as $k => $v) {
 			if (!is_int($k) or !$v instanceof Route) {
 				throw new RouterException('Router requires valid \'routes\' array', RouterError::UNSERIALIZE);
 			}
+			$routes[$k] = $v;
 		}
 
 		if (!isset($data['index']) or !is_array($data['index'])) {
 			throw new RouterException('Router requires valid \'routes\' array', RouterError::UNSERIALIZE);
 		}
+		$index = [];
 		foreach ($data['index'] as $k => $v) {
 			if (!is_string($k) or !is_array($v)) {
 				throw new RouterException('Router requires valid \'index\' array', RouterError::UNSERIALIZE);
 			}
+			$indexes = [];
 			foreach ($v as $i) {
 				if (!is_int($i)) {
 					throw new RouterException('Router requires valid \'index\' array', RouterError::UNSERIALIZE);
 				}
+				$indexes[] = $i;
 			}
+			$index[$k] = $indexes;
 		}
 
 		if (!isset($data['i']) or !is_int($data['i'])) {
@@ -356,9 +364,9 @@ class Router implements RouterInterface
 			throw new RouterException('Router requires \'action_default\' string', RouterError::UNSERIALIZE);
 		}
 
-		$this->iname = $data['iname'];
-		$this->routes = $data['routes'];
-		$this->index = $data['index'];
+		$this->iname = $iname;
+		$this->routes = $routes;
+		$this->index = $index;
 		$this->i = $data['i'];
 		$this->action_default = $data['action_default'];
 	}

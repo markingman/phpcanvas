@@ -68,7 +68,7 @@ function app(): Application
 				if (is_string($name) and is_array($route)) {
 					$Router->add_route(
 						name: $name,
-						path: $route['path'] ?? '',
+						path: (isset($route['path']) and is_string($route['path'])) ? $route['path'] : '',
 						controller: $route['controller'] ?? '',
 						action: $route['action'] ?? null,
 						callback: $route['callback'] ?? null,

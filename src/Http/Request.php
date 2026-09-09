@@ -85,7 +85,7 @@ class Request implements RequestInterface
 		return (isset($this->POST[$key]) and is_string($this->POST[$key])) ? $this->POST[$key] : null;
 	}
 
-	/**  @return array<string, string|int>|null */
+	/** @return array<mixed, mixed>|null */
 	public function get_file(string $key): ?array
 	{
 		return (!empty($this->FILES[$key]) and is_array($this->FILES[$key])) ? $this->FILES[$key] : null;

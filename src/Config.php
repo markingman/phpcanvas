@@ -61,6 +61,7 @@ final class Config implements ConfigInterface
 			throw new ConfigUnexpectedValueException('Config requires a "config" array');
 		}
 
+		$config = [];
 		foreach ($data['config'] as $k => $v) {
 			if (!is_string($k)) {
 				throw new ConfigUnexpectedValueException('Tried to load non-string Config key');
@@ -69,8 +70,10 @@ final class Config implements ConfigInterface
 			if (!is_string($v)) {
 				throw new ConfigUnexpectedValueException("Tried to load non-string Config value for key '$k'");
 			}
+
+			$config[$k] = $v;
 		}
 
-		$this->config = $data['config'];
+		$this->config = $config;
 	}
 }

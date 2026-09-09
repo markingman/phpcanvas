@@ -7,7 +7,7 @@
 // use SportsBase\View\AppView as View;
 // use SportsBase\View\Users\MembersLoginEntity;
 
-$req = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+$req = parse_url((isset($_SERVER['REQUEST_URI']) and is_string($_SERVER['REQUEST_URI'])) ? $_SERVER['REQUEST_URI'] : '', PHP_URL_PATH);
 $root = realpath(__DIR__ . '/..');
 
 if (!is_string($req)) {
