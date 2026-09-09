@@ -66,9 +66,19 @@ function app(): Application
 		if (is_array($routes)) {
 			foreach ($routes as $name => $route) {
 				if (is_string($name) and is_array($route)) {
+					/** @var array{
+					 *     path?: string,
+					 *     controller?: string,
+					 *     action?: string|null,
+					 *     callback?: Closure|null,
+					 *     index?: string|null,
+					 *     vars?: array<string, string>|null,
+					 *     method?: string|null
+					 * } $route
+					 */
 					$Router->add_route(
 						name: $name,
-						path: (isset($route['path']) and is_string($route['path'])) ? $route['path'] : '',
+						path: $route['path'] ?? '',
 						controller: $route['controller'] ?? '',
 						action: $route['action'] ?? null,
 						callback: $route['callback'] ?? null,
@@ -79,6 +89,7 @@ function app(): Application
 				}
 			}
 		}
+		
 		$ObjectCache->cache_put('Router', $Router);
 	}
 	$Container->set('Router', $Router);
