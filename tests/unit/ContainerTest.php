@@ -14,6 +14,8 @@ use PHPCanvas\Test\TestClassWithSimpleMethods;
 use PHPCanvas\Test\TestClassWithUnionArgs;
 use PHPCanvas\Test\TestClassWithUnspecifiedArgs;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
+use ReflectionParameter;
 use RuntimeException;
 
 class ContainerTest extends TestCase
@@ -838,6 +840,41 @@ class ContainerTest extends TestCase
 		$this->Container->unset('TestClassPlainSimple');
 
 		$this->assertArrayNotHasKey('TestClassPlainSimple', $this->Container->list_instances());
+	}
+
+	public function testSetParamsOptionalDefaultReflectionException(): void
+	{
+		$Container = new class extends Container {
+			/**
+			 * @param array<ReflectionParameter> $params
+			 * @return array<mixed>
+			 */
+			public function testSetParams(array $params): array
+			{
+				return $this->set_params($params);
+			}
+		};
+	
+		$obj = new class {
+			/** @param int ...$args */
+			public function test(...$args): void
+			{
+			}
+		};
+	
+		$reflection = new ReflectionMethod($obj, 'test');
+		$params = $reflection->getParameters();
+	
+		$this->expectException(ContainerException::class);
+		$this->expectExceptionMessage(			"cannot resolve default value for parameter 'args'"	);
+	
+		try {
+			$Container->testSetParams($params);
+		} catch (ContainerException $e) {
+			$this->assertSame(				ContainerError::INVALID_ARGUMENT,				$e->getErrorCode()			);
+	
+			throw $e;
+		}
 	}
 
 	protected function get_test_class_with_simple_methods(): TestClassWithSimpleMethods
