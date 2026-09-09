@@ -3,6 +3,7 @@
 namespace PHPCanvas\Logs;
 
 use RuntimeException;
+use function is_resource;
 
 class WriteStdErr implements LogWriteInterface
 {
@@ -13,10 +14,11 @@ class WriteStdErr implements LogWriteInterface
 	{
 		$fp = defined('STDERR') ? STDERR : fopen('php://stderr', 'w');
 
-		if (!is_resource($fp)) {
+		if (!$this->is_resource($fp)) {
 			throw new RuntimeException('Could not open stderr');
 		}
 
+		/** @var resource $fp */
 		$this->fp = $fp;
 	}
 
@@ -27,8 +29,13 @@ class WriteStdErr implements LogWriteInterface
 
 	protected function fwrite(string $log): void
 	{
-		if (is_resource($this->fp)) {
+		if ($this->is_resource($this->fp)) {
 			fwrite($this->fp, $log . PHP_EOL);
 		}
+	}
+
+	protected function is_resource(mixed $value): bool
+	{
+		return is_resource($value);
 	}
 }

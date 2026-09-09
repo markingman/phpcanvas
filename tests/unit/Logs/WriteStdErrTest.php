@@ -3,6 +3,7 @@
 namespace PHPCanvas\Logs;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class WriteStdErrTest extends TestCase
 {
@@ -20,6 +21,19 @@ class WriteStdErrTest extends TestCase
 		$WriteStdErr->write('Test message', 'CLI');
 
 		$this->assertSame('Test message' . PHP_EOL, $WriteStdErr->test);
+	}
+
+	public function testConstructorThrowsWhenStderrIsNotResource(): void
+	{
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Could not open stderr');
+	
+		new class extends WriteStdErr {
+			protected function is_resource(mixed $value): bool
+			{
+				return false;
+			}
+		};
 	}
 
 	public function testFWrite(): void
@@ -43,5 +57,28 @@ class WriteStdErrTest extends TestCase
 		$WriteStdErr->write('Test message', 'CLI');
 
 		$this->assertSame('Test message', trim($WriteStdErr->testFp()));
+	}
+
+	public function testWriteWhenFpIsNotResource(): void
+	{
+		$WriteStdErr = new class extends WriteStdErr {
+			private int $is_resource_calls = 0;
+	
+			protected function is_resource(mixed $value): bool
+			{
+				$this->is_resource_calls++;
+	
+				return $this->is_resource_calls === 1;
+			}
+	
+			public function getIsResourceCalls(): int
+			{
+				return $this->is_resource_calls;
+			}
+		};
+	
+		$WriteStdErr->write('Test message', 'CLI');
+	
+		$this->assertSame(2, $WriteStdErr->getIsResourceCalls());
 	}
 }
