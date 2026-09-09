@@ -23,9 +23,12 @@ class ExampleTest extends TestCase
 		<title>
 			Test
 		</title>
+		<link href="/css/main.css" rel="stylesheet">
 	</head>
 	<body>
-		hello, world
+		<main>
+			hello, world!
+		</main>
 	</body>
 </html>
 <!--
@@ -34,11 +37,5 @@ No warnings or errors were found.
 -->
 __,
 			$response['body']);
-
-// 		$http = new TestHttpClient();
-// 		$res = $http->request('GET', 'http://localhost/error');
-//
-// 		$this->assertEquals(500, $res['status']);
-// 		$this->assertStringContainsString('Internal Server Error', $res['body']);
 	}
 }

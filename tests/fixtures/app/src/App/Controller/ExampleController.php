@@ -9,12 +9,12 @@ class ExampleController extends AbstractController
 	public function action_default(ExamplePage $ExamplePage): void
 	{
 		$ExamplePage->set_var('test');
-		$this->respond_page($ExamplePage);
+		$this->Response->html($ExamplePage());
 	}
 
 	public function action_test(ExamplePage $ExamplePage): void
 	{
 		$ExamplePage->set_var('example');
-		$this->respond_page($ExamplePage);
+		$this->Response->html($ExamplePage());
 	}
 }

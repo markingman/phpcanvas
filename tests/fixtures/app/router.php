@@ -15,14 +15,15 @@ if (!is_string($req)) {
 	exit('Malformed request');
 }
 
-// if (preg_match('/\.ico$/', $req)) {
+if (preg_match('/\.ico$/', $req)) {
 // 	$src = $root . '/src/html/img/favicon.ico';
 // 	header('Content-Type: image/x-icon');
 // 	header('Content-Length: ' . filesize($src));
 // 	header('Cache-Control: public, max-age=86400');
 // 	readfile($src);
-// 	exit;
-// }
+	http_response_code(404);
+	exit;
+}
 
 // if (in_array($req, ['/dev/img/logo.svg', '/dev/img/logo-title.svg', '/dev/img/qr_code.png'])) {
 // 	$src = $root . $req;

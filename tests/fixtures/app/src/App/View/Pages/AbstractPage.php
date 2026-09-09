@@ -2,17 +2,19 @@
 
 namespace PHPCanvas\Test\App\View\Pages;
 
-use LogicException;
-use PHPCanvas\Test\App\View\Templates\AbstractTemplate;
+use PHPCanvas\Test\App\View\HTMLContext;
+use PHPCanvas\Test\App\View\Preloader;
 
 abstract class AbstractPage implements PageInterface
 {
-	protected function renderTemplate(string $template, string $title, string $content): string
-	{
-		if (!class_exists($template) or !is_subclass_of($template, AbstractTemplate::class)) {
-			throw new LogicException('Invalid template');
-		}
+	public function __construct(
+		protected Preloader $Preloader,
+		protected HTMLContext $HTMLContext
+	) {
+	}
 
-		return (new $template($title, $content))();
+	public function preload(string ...$paths): void
+	{
+		$this->Preloader->preload($paths);
 	}
 }

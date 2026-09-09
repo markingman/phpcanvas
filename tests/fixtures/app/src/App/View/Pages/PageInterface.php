@@ -4,5 +4,5 @@ namespace PHPCanvas\Test\App\View\Pages;
 
 interface PageInterface
 {
-	public function __invoke(): string;
+	public function __invoke(?AbstractContext $vars = null): string;
 }

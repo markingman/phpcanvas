@@ -3,34 +3,27 @@
 namespace PHPCanvas\Test\App\View\Pages;
 
 use PHPCanvas\Test\App\View\Layouts\Block;
-use PHPCanvas\Test\App\View\Templates\DefaultTemplate;
+use function PHPCanvas\Test\App\View\Templates\default_template;
 
 class ExamplePage extends AbstractPage
 {
 	protected string $var;
-
-	public function __construct(
-		// protected UserEntity $UserEntity
-	)
-	{			
-	}
 
 	public function set_var(string $var): void
 	{
 		$this->var = $var;
 	}
 
-	public function __invoke(): string
+	public function __invoke(?AbstractContext $vars = null): string
 	{
 		$title = $this->var === 'test' ? 'Test' : 'Example';
 
-		return $this->renderTemplate(
-			template: DefaultTemplate::class,
-			title: $title,
-			content: (new Block(
-				title: $title,
-			))(),
-		);
+		$this->preload('Partials', 'Templates/default_template.php');
 
+		return default_template(
+			$this->HTMLContext,
+			$title,
+			(new Block())($title)
+		);
 	}
 }

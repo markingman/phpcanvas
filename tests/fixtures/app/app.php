@@ -3,6 +3,7 @@
 namespace App;
 
 use Closure;
+use LogicException;
 use PHPCanvas\Application;
 use PHPCanvas\Config;
 use PHPCanvas\Container;
@@ -14,12 +15,11 @@ use PHPCanvas\Logs\LogFormatterString;
 use PHPCanvas\Logs\LogHandler;
 use PHPCanvas\Logs\WriteStdErr;
 use PHPCanvas\ObjectCache;
+use PHPCanvas\Test\App\View\Preloader;
 use PHPCanvas\Routing\Dispatch;
 use PHPCanvas\Routing\Links;
 use PHPCanvas\Routing\Router;
 use Throwable;
-use PHPCanvas\Test\App\View\LoadPartials;
-use LogicException;
 
 // Generic bootstrap (copy and create new as required)
 // Hint: consider Composer autoload files 
@@ -120,12 +120,12 @@ function app(): Application
 		);
 	});
 
-	$Container->register('LoadPartials', function () use ($tmpdir): LoadPartials {
-		if (!is_dir($dir = __DIR__ . '/src/App/View/Partials')) {
+	$Container->register('Preloader', function (): Preloader {
+		if (!is_dir($dir = __DIR__ . '/src/App/View')) {
 			throw new LogicException('Could not find Partials dir');
 		}
 
-		return new LoadPartials($dir, $tmpdir . DIRECTORY_SEPARATOR . 'partials.php'/*, $hash */);
+		return new Preloader($dir);
 	});
 
 	// Example locate distinct path

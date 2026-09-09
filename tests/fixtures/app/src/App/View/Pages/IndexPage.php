@@ -2,43 +2,21 @@
 
 namespace PHPCanvas\Test\App\View\Pages;
 
-// use App\Entities\UserEntity;
+use InvalidArgumentException;
+use function PHPCanvas\Test\App\View\Templates\default_template;
 
 class IndexPage extends AbstractPage
-{	
-	protected string $var;
-
-	public function __construct(
-		// protected UserEntity $UserEntity
-	)
-	{			
-	}
-
-	public function set_var(string $var): void
+{
+	public function __invoke(?AbstractContext $vars = null): string
 	{
-		$this->var = $var;
-	}
+		$vars instanceof IndexContext || throw new InvalidArgumentException('Excepted ' . IndexContext::class);
 
-	public function __invoke(): string
-	{
-		// $username = $UserEntity->username;
+		$this->preload('Partials', 'Templates/default_template.php');
 
-		// if (empty($this->var)) {
-			// throw new LogicException();
-		// }
-
-		return <<<__
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<title>Test</title>
-	</head>
-	<body>hello, world</body>
-</html>
-__;
-// 		$this->renderTemplate(
-// 			title: 'Index',
-// 			content: '<p>hello, world</p>',
-// 		);
+		return default_template(
+			$this->HTMLContext,
+			'Test',
+			$vars->test ? 'hello, world!' : 'goodbye, world!'
+		);
 	}
 }

@@ -2,23 +2,21 @@
 
 namespace PHPCanvas\Test\App\View\Layouts;
 
+use PHPCanvas\Test\App\View\HTMLContext;
 use function PHPCanvas\Test\App\View\Partials\htmlentities;
 
-class Block /*implements StringView*/
+class Block
 {
-	public function __construct(
-		protected string $title
-	){
-	}
-
-	public function __invoke(): string
+	public function __invoke(string $title): string
 	{
-		ob_start();
-?>
-<div class="example-block">
-	<?= htmlentities($this->title) ?>
-</div>
-<?php
-		return (string)ob_get_clean();
+		HTMLContext::ob_start();
+		?>
+
+		<div class="example-block">
+			<?= htmlentities($title) ?>
+		</div>
+
+		<?php
+		return HTMLContext::ob_get_clean();
 	}
 }
